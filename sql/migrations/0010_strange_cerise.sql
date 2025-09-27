@@ -1,0 +1,1 @@
+ALTER TABLE "categories" ADD COLUMN "main_energy" text DEFAULT '' NOT NULL;
