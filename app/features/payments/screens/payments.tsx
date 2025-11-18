@@ -12,7 +12,6 @@
  * - Empty state handling with call-to-action
  * - Proper formatting of currency and dates
  */
-
 import type { Route } from "./+types/payments";
 
 import { Link } from "react-router";
@@ -28,10 +27,12 @@ import {
   TableHeader,
   TableRow,
 } from "~/core/components/ui/table";
-import { requireAuthentication } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
+import { requireAuthentication } from "~/features/admin/guards.server";
 
-import { getPayments } from "../queries"; // Database query function for payments
+import { getPayments } from "../queries";
+
+// Database query function for payments
 
 /**
  * Meta function for setting page metadata
@@ -65,19 +66,19 @@ export const meta: Route.MetaFunction = () => {
 export async function loader({ request }: Route.LoaderArgs) {
   // Create a server-side Supabase client with the user's session
   const [client] = makeServerClient(request);
-  
+
   // Verify the user is authenticated, redirects to login if not
   await requireAuthentication(client);
-  
+
   // Get the authenticated user's information
   const {
     data: { user },
   } = await client.auth.getUser();
-  
+
   // Fetch the user's payment history from the database
   // Note: Only fetches payments belonging to the authenticated user
   const payments = await getPayments(client, { userId: user!.id });
-  
+
   // Return payment data for the component
   return { payments };
 }
@@ -104,7 +105,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Payments({ loaderData }: Route.ComponentProps) {
   // Extract payment history from loader data
   const { payments } = loaderData;
-  
+
   return (
     <div className="flex w-full flex-col items-center gap-10 pt-0 pb-8">
       {/* Card container for payment history */}
@@ -121,7 +122,7 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
           /* Payment history table */
           <Table>
             <TableCaption>A list of your recent payments.</TableCaption>
-            
+
             {/* Table header with column titles */}
             <TableHeader>
               <TableRow>
@@ -133,7 +134,7 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
                 <TableHead>Receipt</TableHead>
               </TableRow>
             </TableHeader>
-            
+
             {/* Table body with payment records */}
             <TableBody>
               {payments.map((payment) => (
@@ -142,13 +143,13 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
                   <TableCell className="font-medium">
                     {payment.order_id}
                   </TableCell>
-                  
+
                   {/* Payment status column */}
                   <TableCell>{payment.status}</TableCell>
-                  
+
                   {/* Product name column */}
                   <TableCell>{payment.order_name}</TableCell>
-                  
+
                   {/* Amount column with currency formatting */}
                   <TableCell>
                     {payment.total_amount.toLocaleString("en-US", {
@@ -156,7 +157,7 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
                       currency: "KRW",
                     })}
                   </TableCell>
-                  
+
                   {/* Date column with localized formatting */}
                   <TableCell>
                     {new Date(payment.created_at).toLocaleDateString("ko-KR", {
@@ -165,7 +166,7 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
                       day: "numeric",
                     })}
                   </TableCell>
-                  
+
                   {/* Receipt link column */}
                   <TableCell>
                     <Link

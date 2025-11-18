@@ -137,8 +137,8 @@ export default function CommunityPage({ loaderData }: Route.ComponentProps) {
                 />
               </Form>
             </div>
-            <Button asChild>
-              <Link to={`/community/submit`}>Create Discussion</Link>
+            <Button asChild className="font-bold">
+              <Link to={`/community/submit`}>글쓰기</Link>
             </Button>
           </div>
           <div className="space-y-5">

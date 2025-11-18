@@ -71,7 +71,7 @@ import {
 } from "./ui/sheet";
 
 const menus = [
-  /* {
+  {
     name: "기능의학 병원",
     to: "/clinic",
     items: [
@@ -81,7 +81,7 @@ const menus = [
         to: "/clinic",
       },
     ],
-  }, */
+  },
   {
     name: "커뮤니티",
     to: "/community",
@@ -131,21 +131,21 @@ const menus = [
   },
   {
     name: "블로그",
-    to: "/blog",
+    to: "/blog-posts",
     items: [
       {
         name: "전체 글",
         description: "모든 블로그 글을 보세요",
-        to: "/blog",
+        to: "/blog-posts",
       },
       {
         name: "최신 글",
         description: "최신 블로그 글을 보세요",
-        to: "/blog?sort=new",
+        to: "/blog-posts?sort=new",
       },
     ],
   },
-  /* {
+  {
     name: "전문가 그룹",
     to: "/teams",
     items: [
@@ -177,7 +177,7 @@ const menus = [
   {
     name: "법적 문서",
     to: "/legal/terms",
-  }, */
+  },
 ];
 
 /**

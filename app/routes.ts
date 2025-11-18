@@ -42,7 +42,11 @@ export default [
     ]),
 
     ...prefix("/cron", [route("/mailer", "features/cron/api/mailer.tsx")]),
-    ...prefix("/blog", [route("/og", "features/blog/api/og.tsx")]),
+    ...prefix("/blog-posts", [
+      route("/og", "features/blog/api/og.tsx"),
+      route("/upload", "features/blog/api/upload-blog.tsx"),
+      route("/upload-image", "features/blog/api/upload-blog-image.tsx"),
+    ]),
     ...prefix("/clinic", [
       route("/upload-photo", "features/clinic/api/upload-photo.tsx"),
     ]),
@@ -52,6 +56,8 @@ export default [
     route("/auth/confirm", "features/auth/screens/confirm.tsx"),
     index("features/home/screens/home.tsx"),
     route("/error", "core/screens/error.tsx"),
+    // Landing page is accessible to both authenticated and unauthenticated users
+    route("/landing", "features/home/screens/landing.tsx"),
 
     layout("core/layouts/public.layout.tsx", [
       // Routes that should only be visible to unauthenticated users.
@@ -154,10 +160,10 @@ export default [
         { id: "private-admin-products" },
         [
           ...prefix("submit", [
-            index("features/products/pages/submit-page.tsx"),
+            index("features/products/pages/submit-product.tsx"),
           ]),
           ...prefix("promote", [
-            index("features/products/pages/promote-page.tsx"),
+            index("features/products/pages/promote-product.tsx"),
           ]),
         ],
       ),
@@ -241,15 +247,18 @@ export default [
     layout("features/users/layouts/dashboard.layout.tsx", [
       ...prefix("/my", [
         ...prefix("/dashboard", [
-          index("features/users/screens/dashboard.tsx"),
-          route("/health", "features/users/screens/dashboard-health.tsx"),
+          index("features/users/dashboard/pages/dashboard.tsx"),
+          route(
+            "/health",
+            "features/users/dashboard/pages/dashboard-health.tsx",
+          ),
           route(
             "/health/consent",
-            "features/users/screens/medical-consent.tsx",
+            "features/users/dashboard/pages/medical-consent.tsx",
           ),
           route(
             "/health/submit",
-            "features/users/screens/dashboard-health-submit.tsx",
+            "features/users/dashboard/pages/dashboard-health-submit.tsx",
           ),
           route("/cart", "features/users/screens/dashboard-cart.tsx"),
           route(
@@ -271,8 +280,8 @@ export default [
           ),
         ]),
 
-        route("/profile", "features/users/screens/my-profile-page.tsx"),
-        route("/settings", "features/users/screens/settings-page.tsx"),
+        route("/profile", "features/users/api/my/profile/my-profile-page.tsx"),
+        route("/settings", "features/users/api/my/settings/settings-page.tsx"),
         route("/notifications", "features/users/screens/notifications.tsx"),
         route(
           "/notifications/:notificationId/see",
@@ -284,15 +293,20 @@ export default [
         ),
 
         // 관리자 전용 대시보드
-        route("/admin-dashboard", "features/users/screens/admin-dashboard.tsx"),
+        route("/admin-dashboard", "features/admin/pages/admin-dashboard.tsx"),
         // 관리자 제품 관리 페이지들
         route(
           "/admin-dashboard/products",
-          "features/users/screens/admin-products-list.tsx",
+          "features/admin/pages/admin-product-chart.tsx",
         ),
         route(
           "/admin-dashboard/products/:productId",
-          "features/users/screens/admin-product-detail.tsx",
+          "features/admin/pages/admin-product-detail.tsx",
+        ),
+        // 관리자 블로그 관리 페이지
+        route(
+          "/admin-dashboard/blog",
+          "features/blog/pages/admin-blog-page.tsx",
         ),
       ]),
       route("/account/edit", "features/users/screens/account.tsx"),
@@ -302,9 +316,9 @@ export default [
   ...prefix("/legal", [route("/:slug", "features/legal/screens/policy.tsx")]),
 
   layout("features/blog/layouts/blog.layout.tsx", [
-    ...prefix("/blog", [
-      index("features/blog/screens/posts.tsx"),
-      route("/:slug", "features/blog/screens/post.tsx"),
+    ...prefix("/blog-posts", [
+      index("features/blog/pages/posts.tsx"),
+      route("/:slug", "features/blog/pages/post.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig;

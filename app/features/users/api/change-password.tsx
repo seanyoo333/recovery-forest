@@ -13,14 +13,16 @@
  * - Integration with Supabase Auth API for password updates
  * - Detailed error handling for validation and API errors
  */
-
 import type { Route } from "./+types/change-password";
 
 import { data } from "react-router";
 import { z } from "zod";
 
-import { requireAuthentication, requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
+import {
+  requireAuthentication,
+  requireMethod,
+} from "~/features/admin/guards.server";
 
 /**
  * Validation schema for password change form data
@@ -68,13 +70,13 @@ const changePasswordSchema = z
 export async function action({ request }: Route.ActionArgs) {
   // Validate request method (only allow POST)
   requireMethod("POST")(request);
-  
+
   // Create a server-side Supabase client with the user's session
   const [client] = makeServerClient(request);
-  
+
   // Verify the user is authenticated
   await requireAuthentication(client);
-  
+
   // Extract and validate form data
   const formData = await request.formData();
   const {
@@ -82,12 +84,12 @@ export async function action({ request }: Route.ActionArgs) {
     data: validData,
     error,
   } = changePasswordSchema.safeParse(Object.fromEntries(formData));
-  
+
   // Return field-specific validation errors if validation fails
   if (!success) {
     return data({ fieldErrors: error.flatten().fieldErrors }, { status: 400 });
   }
-  
+
   // Submit password change request to Supabase Auth API
   const { error: updateError } = await client.auth.updateUser({
     password: validData.password,
@@ -97,7 +99,7 @@ export async function action({ request }: Route.ActionArgs) {
   if (updateError) {
     return data({ error: updateError.message }, { status: 400 });
   }
-  
+
   // Return success response
   return {
     success: true,

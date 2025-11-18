@@ -14,57 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin_activity_logs: {
-        Row: {
-          action: string
-          admin_id: string
-          created_at: string
-          details: Json | null
-          ip_address: string | null
-          log_id: number
-          target_id: string | null
-          target_type: string
-          user_agent: string | null
-        }
-        Insert: {
-          action: string
-          admin_id: string
-          created_at?: string
-          details?: Json | null
-          ip_address?: string | null
-          log_id?: never
-          target_id?: string | null
-          target_type: string
-          user_agent?: string | null
-        }
-        Update: {
-          action?: string
-          admin_id?: string
-          created_at?: string
-          details?: Json | null
-          ip_address?: string | null
-          log_id?: never
-          target_id?: string | null
-          target_type?: string
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_activity_logs_admin_id_profiles_profile_id_fk"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "admin_activity_logs_admin_id_profiles_profile_id_fk"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-        ]
-      }
       admin_permissions: {
         Row: {
           admin_id: string
@@ -72,7 +21,6 @@ export type Database = {
           created_at: string
           created_by: string | null
           is_active: boolean
-          permissions: Json | null
           updated_at: string
         }
         Insert: {
@@ -81,7 +29,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           is_active?: boolean
-          permissions?: Json | null
           updated_at?: string
         }
         Update: {
@@ -90,7 +37,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           is_active?: boolean
-          permissions?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -123,6 +69,183 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
         ]
+      }
+      blog_posts_meta: {
+        Row: {
+          author: string
+          category: string
+          created_at: string
+          curation_notes: string | null
+          date: string
+          description: string
+          email_sent: boolean | null
+          featured_image_url: string | null
+          imported_at: string | null
+          is_curated: boolean | null
+          is_published: boolean | null
+          mdx_file_path: string
+          naver_blog_url: string | null
+          naver_post_id: string | null
+          post_id: number
+          profile_id: string
+          published_at: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          category: string
+          created_at?: string
+          curation_notes?: string | null
+          date: string
+          description: string
+          email_sent?: boolean | null
+          featured_image_url?: string | null
+          imported_at?: string | null
+          is_curated?: boolean | null
+          is_published?: boolean | null
+          mdx_file_path: string
+          naver_blog_url?: string | null
+          naver_post_id?: string | null
+          post_id?: never
+          profile_id: string
+          published_at?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          category?: string
+          created_at?: string
+          curation_notes?: string | null
+          date?: string
+          description?: string
+          email_sent?: boolean | null
+          featured_image_url?: string | null
+          imported_at?: string | null
+          is_curated?: boolean | null
+          is_published?: boolean | null
+          mdx_file_path?: string
+          naver_blog_url?: string | null
+          naver_post_id?: string | null
+          post_id?: never
+          profile_id?: string
+          published_at?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_meta_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "blog_posts_meta_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      blood_test_results: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          image_url: string | null
+          notes: string | null
+          patient_id: string
+          result_id: number
+          result_unit: string | null
+          result_value: number
+          test_date: string
+          test_id: number
+          updated_at: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          image_url?: string | null
+          notes?: string | null
+          patient_id: string
+          result_id?: never
+          result_unit?: string | null
+          result_value: number
+          test_date: string
+          test_id: number
+          updated_at?: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          image_url?: string | null
+          notes?: string | null
+          patient_id?: string
+          result_id?: never
+          result_unit?: string | null
+          result_value?: number
+          test_date?: string
+          test_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_test_results_patient_id_patient_health_profiles_patient_i"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_health_profiles"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "blood_test_results_test_id_blood_test_types_test_id_fk"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "blood_test_types"
+            referencedColumns: ["test_id"]
+          },
+        ]
+      }
+      blood_test_types: {
+        Row: {
+          clinical_significance: string | null
+          created_at: string
+          reference_max: number | null
+          reference_min: number | null
+          standard_name: string
+          test_id: number
+          unit: string
+          updated_at: string
+          variations: Json | null
+        }
+        Insert: {
+          clinical_significance?: string | null
+          created_at?: string
+          reference_max?: number | null
+          reference_min?: number | null
+          standard_name: string
+          test_id?: never
+          unit: string
+          updated_at?: string
+          variations?: Json | null
+        }
+        Update: {
+          clinical_significance?: string | null
+          created_at?: string
+          reference_max?: number | null
+          reference_min?: number | null
+          standard_name?: string
+          test_id?: never
+          unit?: string
+          updated_at?: string
+          variations?: Json | null
+        }
+        Relationships: []
       }
       bot_message_room_members: {
         Row: {
@@ -249,33 +372,30 @@ export type Database = {
       }
       categories: {
         Row: {
+          academic_name: string
           category_id: number
           created_at: string
           description: string
-          korean_main_energy: string
-          korean_name: string
-          main_energy: string
           name: string
+          target: string
           updated_at: string
         }
         Insert: {
+          academic_name?: string
           category_id?: never
           created_at?: string
           description: string
-          korean_main_energy?: string
-          korean_name?: string
-          main_energy?: string
           name: string
+          target?: string
           updated_at?: string
         }
         Update: {
+          academic_name?: string
           category_id?: never
           created_at?: string
           description?: string
-          korean_main_energy?: string
-          korean_name?: string
-          main_energy?: string
           name?: string
+          target?: string
           updated_at?: string
         }
         Relationships: []
@@ -417,21 +537,21 @@ export type Database = {
       }
       events: {
         Row: {
-          created_at: string | null
+          created_at: string
           event_data: Json | null
           event_id: string
           event_type: Database["public"]["Enums"]["event_type"] | null
           profile_id: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           event_data?: Json | null
           event_id?: string
           event_type?: Database["public"]["Enums"]["event_type"] | null
           profile_id?: string | null
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           event_data?: Json | null
           event_id?: string
           event_type?: Database["public"]["Enums"]["event_type"] | null
@@ -701,6 +821,66 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["team_id"]
+          },
+        ]
+      }
+      patient_health_profiles: {
+        Row: {
+          age: number
+          created_at: string
+          disease: string
+          disease_status: string | null
+          gender: string
+          height_cm: number
+          medication_name: string | null
+          medication_status: Database["public"]["Enums"]["patient_medication_status"]
+          patient_id: string
+          treatment_status: Database["public"]["Enums"]["patient_treatment_status"]
+          updated_at: string
+          weight_kg: number
+        }
+        Insert: {
+          age: number
+          created_at?: string
+          disease: string
+          disease_status?: string | null
+          gender: string
+          height_cm: number
+          medication_name?: string | null
+          medication_status?: Database["public"]["Enums"]["patient_medication_status"]
+          patient_id: string
+          treatment_status: Database["public"]["Enums"]["patient_treatment_status"]
+          updated_at?: string
+          weight_kg: number
+        }
+        Update: {
+          age?: number
+          created_at?: string
+          disease?: string
+          disease_status?: string | null
+          gender?: string
+          height_cm?: number
+          medication_name?: string | null
+          medication_status?: Database["public"]["Enums"]["patient_medication_status"]
+          patient_id?: string
+          treatment_status?: Database["public"]["Enums"]["patient_treatment_status"]
+          updated_at?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_health_profiles_patient_id_profiles_profile_id_fk"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "patient_health_profiles_patient_id_profiles_profile_id_fk"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
           },
         ]
       }
@@ -1217,6 +1397,7 @@ export type Database = {
           name: string
           points: number
           points_updated_at: string
+          post_count: number
           profile_id: string
           role: Database["public"]["Enums"]["user_role"]
           stats: Json | null
@@ -1234,6 +1415,7 @@ export type Database = {
           name: string
           points?: number
           points_updated_at?: string
+          post_count?: number
           profile_id: string
           role?: Database["public"]["Enums"]["user_role"]
           stats?: Json | null
@@ -1251,6 +1433,7 @@ export type Database = {
           name?: string
           points?: number
           points_updated_at?: string
+          post_count?: number
           profile_id?: string
           role?: Database["public"]["Enums"]["user_role"]
           stats?: Json | null
@@ -1572,7 +1755,9 @@ export type Database = {
         Row: {
           author_avatar: string | null
           author_created_at: string | null
+          author_is_following: boolean | null
           author_name: string | null
+          author_profile_id: string | null
           author_role: Database["public"]["Enums"]["user_role"] | null
           author_username: string | null
           content: string | null
@@ -1588,7 +1773,22 @@ export type Database = {
           topic_slug: string | null
           upvotes: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posts_profile_id_profiles_profile_id_fk"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "posts_profile_id_profiles_profile_id_fk"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+        ]
       }
       community_post_list_view: {
         Row: {
@@ -1627,13 +1827,6 @@ export type Database = {
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1642,13 +1835,20 @@ export type Database = {
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
@@ -1770,7 +1970,33 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_bot_room: {
+        Args: { user_id: string }
+        Returns: {
+          bot_message_room_id: number
+        }[]
+      }
+      get_product_stats: {
+        Args: { user_id: string }
+        Returns: {
+          month: string
+          views: number
+        }[]
+      }
+      get_room: {
+        Args: { from_user_id: string; to_user_id: string }
+        Returns: {
+          message_room_id: number
+        }[]
+      }
+      track_event: {
+        Args: {
+          event_data: Json
+          event_type: Database["public"]["Enums"]["event_type"]
+          profile_id?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       admin_role:
@@ -1784,6 +2010,8 @@ export type Database = {
       level: "1" | "2" | "3" | "4" | "5"
       location: "seoul" | "gyeonggi" | "busan"
       notification_type: "follow" | "review" | "reply"
+      patient_medication_status: "none" | "active"
+      patient_treatment_status: "ongoing" | "completed" | "follow_up"
       photo_type: "exterior" | "interior" | "equipment" | "staff" | "other"
       team_position: "doctor" | "nurse" | "nutritionist" | "foresttherapist"
       user_role:
@@ -1932,6 +2160,8 @@ export const Constants = {
       level: ["1", "2", "3", "4", "5"],
       location: ["seoul", "gyeonggi", "busan"],
       notification_type: ["follow", "review", "reply"],
+      patient_medication_status: ["none", "active"],
+      patient_treatment_status: ["ongoing", "completed", "follow_up"],
       photo_type: ["exterior", "interior", "equipment", "staff", "other"],
       team_position: ["doctor", "nurse", "nutritionist", "foresttherapist"],
       user_role: [

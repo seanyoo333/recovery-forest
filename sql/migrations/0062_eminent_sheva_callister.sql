@@ -1,0 +1,1 @@
+CREATE POLICY "blood-test-types-insert" ON "blood_test_types" AS PERMISSIVE FOR INSERT TO "authenticated" WITH CHECK (true);

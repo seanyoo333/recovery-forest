@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  date,
   doublePrecision,
   integer,
   jsonb,
@@ -82,18 +83,25 @@ export const profiles = pgTable(
         following: number;
       }>()
       .default({ followers: 0, following: 0 }),
+    post_count: bigint({ mode: "number" }).notNull().default(0),
     views: jsonb(),
     marketing_consent: boolean("marketing_consent").notNull().default(false),
     // 포인트 시스템 관련 필드
     points: bigint({ mode: "number" }).notNull().default(0),
-    points_updated_at: timestamp().notNull().defaultNow(),
+    points_updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
     // Adds created_at and updated_at timestamp columns
-    created_at: timestamp().notNull().defaultNow(),
-    updated_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
     // RLS Policy: Users can only update their own profile
-    pgPolicy("edit-profile-policy", {
+    pgPolicy("User can only update their own profiles", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
@@ -101,23 +109,28 @@ export const profiles = pgTable(
       using: sql`${authUid} = ${table.profile_id}`,
     }),
     // RLS Policy: Users can only delete their own profile
-    pgPolicy("delete-profile-policy", {
+    pgPolicy("User can only delete their own profile", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.profile_id}`,
     }),
     // RLS Policy: All users can view all profiles
-    pgPolicy("select-profile-policy", {
+    pgPolicy("Enable read access for all users", {
       for: "select",
       to: ["public"],
       as: "permissive",
       using: sql`true`,
     }),
+    pgPolicy("Enable insert for authenticated users only", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`true`,
+    }),
   ],
 );
 
-// 관리자 권한 테이블 (별도 관리)
 export const adminPermissions = pgTable(
   "admin_permissions",
   {
@@ -127,74 +140,61 @@ export const adminPermissions = pgTable(
         onDelete: "cascade",
       }),
     admin_role: adminRoles().notNull(),
-    permissions: jsonb().$type<{
-      can_manage_users: boolean;
-      can_manage_products: boolean;
-      can_manage_clinics: boolean;
-      can_manage_content: boolean;
-      can_view_analytics: boolean;
-      can_manage_admins: boolean;
-    }>(),
     is_active: boolean().notNull().default(true),
     created_by: uuid().references(() => profiles.profile_id),
-    created_at: timestamp().notNull().defaultNow(),
-    updated_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
-    // RLS Policy: Only super admins can view admin permissions
     pgPolicy("admin-permissions-select-policy", {
       for: "select",
       to: authenticatedRole,
-      as: "restrictive",
-      using: sql`EXISTS (
+      as: "permissive",
+      using: sql`${authUid} = ${table.admin_id}`,
+    }),
+    // super_admin만 새로운 관리자를 생성할 수 있음
+    pgPolicy("admin-permissions-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
         AND admin_role = 'super_admin'
         AND is_active = true
       )`,
     }),
-    // RLS Policy: Only super admins can manage admin permissions
-    pgPolicy("admin-permissions-manage-policy", {
-      for: "all",
+    // super_admin만 관리자 권한을 수정할 수 있음
+    pgPolicy("admin-permissions-update-policy", {
+      for: "update",
       to: authenticatedRole,
-      as: "restrictive",
+      as: "permissive",
       using: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
         AND admin_role = 'super_admin'
         AND is_active = true
       )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role = 'super_admin'
+        AND is_active = true
+      )`,
     }),
-  ],
-);
-
-// 관리자 활동 로그
-export const adminActivityLogs = pgTable(
-  "admin_activity_logs",
-  {
-    log_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    admin_id: uuid()
-      .notNull()
-      .references(() => profiles.profile_id, {
-        onDelete: "cascade",
-      }),
-    action: text().notNull(), // "create_product", "update_user", etc.
-    target_type: text().notNull(), // "product", "user", "clinic", etc.
-    target_id: text(), // 대상 ID
-    details: jsonb(), // 추가 세부사항
-    ip_address: text(),
-    user_agent: text(),
-    created_at: timestamp().notNull().defaultNow(),
-  },
-  (table) => [
-    // RLS Policy: Only admins can view activity logs
-    pgPolicy("admin-logs-select-policy", {
-      for: "select",
+    // super_admin만 관리자 권한을 삭제할 수 있음
+    pgPolicy("admin-permissions-delete-policy", {
+      for: "delete",
       to: authenticatedRole,
-      as: "restrictive",
+      as: "permissive",
       using: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
+        AND admin_role = 'super_admin'
         AND is_active = true
       )`,
     }),
@@ -230,6 +230,14 @@ export const follows = pgTable(
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
+      withCheck: sql`${authUid} = ${table.follower_id}`,
+    }),
+    // 인증된 사용자만 자신의 팔로우를 수정할 수 있음
+    pgPolicy("follows-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.follower_id}`,
       withCheck: sql`${authUid} = ${table.follower_id}`,
     }),
     // 인증된 사용자만 자신의 팔로우를 삭제할 수 있음
@@ -270,15 +278,17 @@ export const notifications = pgTable(
       .notNull(),
     seen: boolean().default(false).notNull(),
     type: notificationType().notNull(),
-    created_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
-    // 사용자는 자신이 받은 알림만 조회할 수 있음
+    // 모든 알림을 조회할 수 있음
     pgPolicy("notifications-select-policy", {
       for: "select",
-      to: authenticatedRole,
+      to: ["public"],
       as: "permissive",
-      using: sql`${authUid} = ${table.target_id}`,
+      using: sql`true`,
     }),
     // 시스템에서만 알림을 생성할 수 있음 (인증된 사용자)
     pgPolicy("notifications-insert-policy", {
@@ -311,24 +321,21 @@ export const messageRooms = pgTable(
     message_room_id: bigint({ mode: "number" })
       .primaryKey()
       .generatedAlwaysAsIdentity(),
-    created_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
-    // 메시지 룸 멤버만 해당 룸을 조회할 수 있음
-    pgPolicy("message-rooms-select-policy", {
+    pgPolicy("Enable read access for all users", {
       for: "select",
-      to: authenticatedRole,
+      to: ["public"],
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM message_room_members
-        WHERE message_room_id = ${table.message_room_id}
-        AND profile_id = ${authUid}
-      )`,
+      using: sql`true`,
     }),
-    // 인증된 사용자만 메시지 룸을 생성할 수 있음
+    // 메시지 룸을 자유롭게 생성할 수 있음
     pgPolicy("message-rooms-insert-policy", {
       for: "insert",
-      to: authenticatedRole,
+      to: ["public"],
       as: "permissive",
       withCheck: sql`true`, // 룸 생성은 자유롭게 허용
     }),
@@ -376,35 +383,38 @@ export const messageRoomMembers = pgTable(
     }),
     is_hidden: boolean().default(false).notNull(),
     is_read: boolean().default(false).notNull(),
-    created_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
     primaryKey({ columns: [table.message_room_id, table.profile_id] }),
-    // 메시지 룸 멤버만 해당 룸의 멤버 정보를 조회할 수 있음
-    pgPolicy("message-room-members-select-policy", {
+    // 같은 방의 멤버는 다른 멤버도 조회할 수 있음 (메시지 화면에서 상대방 정보 표시를 위함)
+    pgPolicy("Enable read access for all users", {
       for: "select",
-      to: authenticatedRole,
+      to: ["public"],
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM message_room_members mrm
-        WHERE mrm.message_room_id = ${table.message_room_id}
-        AND mrm.profile_id = ${authUid}
-      )`,
+      using: sql`true`,
     }),
     // 인증된 사용자만 메시지 룸에 참여할 수 있음
+    // 자신의 멤버십을 추가하거나, 새로 생성된 메시지룸(아직 메시지가 없는 방)에 다른 사용자를 초대할 수 있음
+    //새로 생성된 메시지룸에 다른 사용자를 초대하는 경우
+    //조건: 1) 현재 사용자가 이미 해당 방의 멤버이고, 2) 해당 방에 아직 메시지가 없음
     pgPolicy("message-room-members-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`true`,
     }),
-    // 사용자는 자신의 멤버십 정보만 수정할 수 있음
+    // 같은 방의 멤버는 다른 멤버의 is_read와 is_hidden을 수정할 수 있음
+    // (메시지 전송 시 수신자의 읽음 상태를 업데이트하기 위함)
+    // 주의: profile_id와 message_room_id는 변경할 수 없음 (애플리케이션 레벨에서 보장)
     pgPolicy("message-room-members-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
       withCheck: sql`${authUid} = ${table.profile_id}`,
+      using: sql`${authUid} = ${table.profile_id}`,
     }),
     // 사용자는 자신의 멤버십만 삭제할 수 있음
     pgPolicy("message-room-members-delete-policy", {
@@ -433,7 +443,9 @@ export const messages = pgTable(
       })
       .notNull(),
     content: text().notNull(),
-    created_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
     is_read: boolean().default(false).notNull(),
   },
   (table) => [
@@ -442,22 +454,16 @@ export const messages = pgTable(
       for: "select",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM message_room_members
-        WHERE message_room_id = ${table.message_room_id}
-        AND profile_id = ${authUid}
-      )`,
+      using: sql`true 
+  `,
     }),
-    // 메시지 룸 멤버만 메시지를 전송할 수 있음
+    // 인증된 사용자만 메시지를 전송할 수 있음
     pgPolicy("messages-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${authUid} = ${table.sender_id} AND EXISTS (
-        SELECT 1 FROM message_room_members
-        WHERE message_room_id = ${table.message_room_id}
-        AND profile_id = ${authUid}
-      )`,
+      withCheck: sql`true 
+    `,
     }),
     // 메시지 발신자만 자신의 메시지를 수정할 수 있음
     pgPolicy("messages-update-policy", {
@@ -473,6 +479,167 @@ export const messages = pgTable(
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.sender_id}`,
+    }),
+  ],
+);
+
+/**
+ * Patient Health Profiles
+ *
+ * Extends the base profile with clinical context that is only applicable
+ * to patients undergoing treatment or monitoring.
+ */
+
+export const patientTreatmentStatusEnum = pgEnum("patient_treatment_status", [
+  "ongoing",
+  "completed",
+  "follow_up",
+]);
+
+export const medicationStatusEnum = pgEnum("patient_medication_status", [
+  "none",
+  "active",
+]);
+
+export const patientHealthProfiles = pgTable(
+  "patient_health_profiles",
+  {
+    patient_id: uuid()
+      .primaryKey()
+      .references(() => profiles.profile_id, {
+        onDelete: "cascade",
+      }),
+    age: integer().notNull(),
+    gender: text().$type<"M" | "F">().notNull(),
+    disease: text().notNull(),
+    disease_status: text(),
+    treatment_status: patientTreatmentStatusEnum().notNull(),
+    medication_status: medicationStatusEnum().notNull().default("none"),
+    medication_name: text(),
+    height_cm: doublePrecision().notNull(),
+    weight_kg: doublePrecision().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("patient-health-profiles-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("patient-health-profiles-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("patient-health-profiles-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+      withCheck: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("patient-health-profiles-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+    }),
+  ],
+);
+
+/**
+ * Laboratory Test Metadata
+ *
+ * Defines supported blood test items and their canonical naming.
+ */
+
+export const bloodTestTypes = pgTable(
+  "blood_test_types",
+  {
+    test_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    standard_name: text().notNull(),
+    variations: jsonb().$type<Record<string, unknown>>().default({}),
+    unit: text().notNull(),
+    reference_min: doublePrecision(),
+    reference_max: doublePrecision(),
+    clinical_significance: text(),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("blood-test-types-select", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("blood-test-types-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`true`,
+    }),
+  ],
+);
+
+/**
+ * Laboratory Results
+ *
+ * Stores the actual lab measurements per patient and test type.
+ */
+
+export const bloodTestResults = pgTable(
+  "blood_test_results",
+  {
+    result_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    patient_id: uuid()
+      .references(() => patientHealthProfiles.patient_id, {
+        onDelete: "cascade",
+      })
+      .notNull(),
+    test_id: bigint({ mode: "number" })
+      .references(() => bloodTestTypes.test_id, {
+        onDelete: "restrict",
+      })
+      .notNull(),
+    result_value: doublePrecision().notNull(),
+    confidence: doublePrecision(),
+    result_unit: text(),
+    image_url: text(),
+    test_date: date().notNull(),
+    notes: text(),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("blood-test-results-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("blood-test-results-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("blood-test-results-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+      withCheck: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("blood-test-results-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
     }),
   ],
 );

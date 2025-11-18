@@ -29,14 +29,14 @@ export function FollowButton({
   if (!isLoggedIn) {
     return (
       <Button variant="outline" className="w-full" asChild>
-        <Link to="/login">Log in to follow</Link>
+        <Link to="/auth/login">로그인하고 팔로우하기</Link>
       </Button>
     );
   }
   return (
     <fetcher.Form method="post" action={`/users/${username}/follow`}>
-      <Button variant={variant} className="w-full">
-        {optimisitcIsFollowing ? "Unfollow" : "Follow"}
+      <Button variant={variant} className="w-full font-bold">
+        {optimisitcIsFollowing ? "팔로우 취소" : "팔로우 하기"}
       </Button>
     </fetcher.Form>
   );

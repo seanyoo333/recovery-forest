@@ -77,11 +77,7 @@ export const getProductPagesByDateRange = async (
 };
 
 export const getCategories = async (client: SupabaseClient<Database>) => {
-  const { data, error } = await client
-    .from("categories")
-    .select(
-      "category_id, name, description, main_energy, korean_name, korean_main_energy",
-    );
+  const { data, error } = await client.from("categories").select("*");
   if (error) throw error;
   return data;
 };
@@ -92,7 +88,7 @@ export const getCategory = async (
 ) => {
   const { data, error } = await client
     .from("categories")
-    .select("category_id, name, description, korean_name, korean_main_energy")
+    .select("category_id, name, description, academic_name, target")
     .eq("category_id", categoryId)
     .single();
   if (error) throw error;

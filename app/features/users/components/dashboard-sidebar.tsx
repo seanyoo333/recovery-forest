@@ -41,26 +41,7 @@ import TeamSwitcher from "./sidebar-team-switcher";
 import SidebarUser from "./sidebar-user";
 
 const data = {
-  teams: [
-    {
-      name: "SalesForge",
-      logo: BuildingIcon,
-      plan: "Enterprise",
-      url: "/my/dashboard",
-    },
-    {
-      name: "TechCo Solutions",
-      logo: BriefcaseIcon,
-      plan: "Startup",
-      url: "/my/settings",
-    },
-    {
-      name: "GrowthMate",
-      logo: RocketIcon,
-      plan: "Free",
-      url: "/my/profile",
-    },
-  ],
+  teams: [],
   navMain: [
     {
       title: "Health Analytics",
@@ -125,7 +106,7 @@ const data = {
       ],
     },
   ],
-  projects: [
+  /* projects: [
     {
       name: "Sales Team",
       url: "#",
@@ -141,7 +122,7 @@ const data = {
       url: "#",
       icon: MegaphoneIcon,
     },
-  ],
+  ], */
 };
 
 export default function DashboardSidebar({
@@ -168,6 +149,14 @@ export default function DashboardSidebar({
   return (
     <Sidebar collapsible="icon" variant="inset" {...props}>
       <SidebarHeader>
+        <SidebarUser
+          user={{
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+          }}
+        />
+        <div className="border-border my-3 border-t" />
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
@@ -193,16 +182,12 @@ export default function DashboardSidebar({
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarProjects projects={data.projects} />
+        {/* <SidebarProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <SidebarUser
-          user={{
-            name: user.name,
-            email: user.email,
-            avatarUrl: user.avatarUrl,
-          }}
-        />
+        <div className="text-muted-foreground px-3 py-4 text-xs">
+          Evidence Base © {new Date().getFullYear()}
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

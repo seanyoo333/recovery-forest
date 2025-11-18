@@ -168,3 +168,16 @@ export const getReplies = async (
   if (error) throw error;
   return data;
 };
+
+export const getPostCountByProfileId = async (
+  client: SupabaseClient<Database>,
+  { profileId }: { profileId: string },
+) => {
+  const { data, error } = await client
+    .from("profiles")
+    .select("post_count")
+    .eq("profile_id", profileId)
+    .single();
+  if (error) throw new Error(error.message);
+  return data?.post_count ?? 0;
+};

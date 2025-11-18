@@ -14,8 +14,8 @@ import {
 
 export const meta = ({ params }: Route.MetaArgs) => {
   return [
-    { title: `Natural products | Evidence Base` },
-    { name: "description", content: `Browse natural products` },
+    { title: `Category | Evidence Base` },
+    { name: "description", content: `Browse natural products by category` },
   ];
 };
 
@@ -42,7 +42,19 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
   return { category, products, totalPages };
 };
 
+function formatAcademicName(value?: string | null) {
+  if (!value) return undefined;
+  return value
+    .split(/[_\s]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function CategoryPage({ loaderData }: Route.ComponentProps) {
+  const { category, products, totalPages } = loaderData;
+  const academicLabel = formatAcademicName(category?.academic_name);
+  const targetLabel = formatAcademicName(category?.target);
+
   return (
     <div className="space-y-10">
       <Hero

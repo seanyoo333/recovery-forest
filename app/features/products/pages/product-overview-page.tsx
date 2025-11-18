@@ -41,11 +41,11 @@ export default function ProductOverviewPage() {
   return (
     <div className="space-y-10">
       <div className="space-y-1">
-        <h3 className="text-lg font-bold">What is this product?</h3>
+        <h3 className="text-lg font-bold">이 제품은 무엇인가요?</h3>
         <p className="text-muted-foreground">{description}</p>
       </div>
       <div className="space-y-1">
-        <h3 className="text-lg font-bold">How does it work?</h3>
+        <h3 className="text-lg font-bold">어떤 기전 연구가 있나요?</h3>
         <p className="text-muted-foreground">{how_it_works}</p>
       </div>
     </div>

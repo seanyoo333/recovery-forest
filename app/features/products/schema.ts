@@ -41,8 +41,12 @@ export const products = pgTable(
     ),
     promoted_from: timestamp(),
     promoted_to: timestamp(),
-    created_at: timestamp().notNull().defaultNow(),
-    updated_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
     foreignKey({
@@ -69,25 +73,15 @@ export const products = pgTable(
         AND is_active = true
       )`,
     }),
-    // 관리자만 제품을 수정할 수 있음
+    // 인증된 사용자만 제품을 수정할 수 있음
     pgPolicy("products-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM admin_permissions
-        WHERE admin_id = ${authUid}
-        AND admin_role IN ('super_admin', 'product_admin')
-        AND is_active = true
-      )`,
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM admin_permissions
-        WHERE admin_id = ${authUid}
-        AND admin_role IN ('super_admin', 'product_admin')
-        AND is_active = true
-      )`,
+      using: sql`true`,
+      withCheck: sql`true`,
     }),
-    // 관리자만 제품을 삭제할 수 있음
+    // 인증된 사용자만 제품을 삭제할 수 있음
     pgPolicy("products-delete-policy", {
       for: "delete",
       to: authenticatedRole,
@@ -109,12 +103,15 @@ export const categories = pgTable(
       .primaryKey()
       .generatedAlwaysAsIdentity(),
     name: text().notNull(),
-    main_energy: text().notNull().default(""),
-    korean_main_energy: text().notNull().default(""),
-    korean_name: text().notNull().default(""),
+    academic_name: text().notNull().default(""),
+    target: text().notNull().default(""),
     description: text().notNull(),
-    created_at: timestamp().notNull().defaultNow(),
-    updated_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
     // 모든 사용자가 카테고리를 조회할 수 있음
@@ -196,14 +193,22 @@ export const product_upvotes = pgTable(
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`true`,
+    }),
+    // 인증된 사용자만 자신의 제품 업보트를 수정할 수 있음
+    pgPolicy("product-upvotes-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`true`,
+      withCheck: sql`true`,
     }),
     // 인증된 사용자만 자신의 제품 업보트를 삭제할 수 있음
     pgPolicy("product-upvotes-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`true`,
     }),
   ],
 );
@@ -222,8 +227,12 @@ export const reviews = pgTable(
       .notNull(),
     rating: integer().notNull(),
     review: text().notNull(),
-    created_at: timestamp().notNull().defaultNow(),
-    updated_at: timestamp().notNull().defaultNow(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
     check("rating_check", sql`${table.rating} BETWEEN 1 AND 5`),

@@ -23,9 +23,9 @@ import { useEffect, useRef, useState } from "react";
 import { redirect } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
-import { requireAuthentication } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
+import { requireAuthentication } from "~/features/admin/guards.server";
 
 /**
  * Meta function for setting page metadata

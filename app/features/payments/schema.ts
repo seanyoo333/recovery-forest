@@ -66,12 +66,29 @@ export const payments = pgTable(
   },
   (table) => [
     // RLS Policy: Users can only view their own payment records
-    pgPolicy("select-payment-policy", {
+    pgPolicy("payments-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.profile_id}`,
     }),
+    // RLS Policy: Users can only create their own payment records
+    pgPolicy("payments-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    // RLS Policy: Users can only update their own payment records (for status updates, etc.)
+    pgPolicy("payments-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    // RLS Policy: Users cannot delete payment records (audit trail)
+    // DELETE 정책은 추가하지 않음 (결제 내역은 감사 목적으로 삭제 불가)
   ],
 );
 
@@ -99,11 +116,28 @@ export const pointPayments = pgTable(
   },
   (table) => [
     // RLS Policy: Users can only view their own payment records
-    pgPolicy("select-payment-policy", {
+    pgPolicy("point-payments-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.profile_id}`,
     }),
+    // RLS Policy: Users can only create their own payment records
+    pgPolicy("point-payments-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    // RLS Policy: Users can only update their own payment records (for status updates, etc.)
+    pgPolicy("point-payments-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    // RLS Policy: Users cannot delete payment records (audit trail)
+    // DELETE 정책은 추가하지 않음 (결제 내역은 감사 목적으로 삭제 불가)
   ],
 );

@@ -1,0 +1,3 @@
+DROP POLICY IF EXISTS "post-upvotes-update-policy" ON "post_upvotes" CASCADE;--> statement-breakpoint
+CREATE POLICY "post-upvotes-update-policy" ON "post_upvotes" AS PERMISSIVE FOR UPDATE TO "authenticated" USING ((select auth.uid()) = "post_upvotes"."profile_id") WITH CHECK ((select auth.uid()) = "post_upvotes"."profile_id");--> statement-breakpoint
+ALTER POLICY "posts-update-policy" ON "posts" TO authenticated USING (true) WITH CHECK (true);

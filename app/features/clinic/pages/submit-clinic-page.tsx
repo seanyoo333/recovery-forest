@@ -7,11 +7,11 @@ import { Hero } from "~/core/components/hero";
 import InputPair from "~/core/components/input-pair";
 import SelectPair from "~/core/components/select-pair";
 import { Button } from "~/core/components/ui/button";
-import {
-  requireAdminPermission,
-  requireAuthentication,
-} from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
+import {
+  requireAdminRole,
+  requireAuthentication,
+} from "~/features/admin/guards.server";
 
 import { ImageUpload } from "../components/image-upload";
 import { CLINIC_TYPES, LEVELS, LOCATION_TYPES } from "../constants";
@@ -29,7 +29,7 @@ export const meta: Route.MetaFunction = () => {
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
   await requireAuthentication(client);
-  await requireAdminPermission(client, "can_manage_clinics");
+  await requireAdminRole(client);
 
   return {};
 }

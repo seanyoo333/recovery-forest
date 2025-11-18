@@ -98,7 +98,7 @@ export function PostCard({
             </div>
             <div className="text-muted-foreground flex gap-2 text-sm leading-tight">
               <span>
-                {authorUsername || author} on {category}
+                {author || authorUsername} on {category}
               </span>
               <DotIcon className="h-4 w-4" />
               <span>

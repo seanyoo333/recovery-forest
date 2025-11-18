@@ -130,7 +130,7 @@ export function Reply({
         <div className="flex w-full flex-col items-start gap-2">
           <div className="flex items-center gap-2">
             <Link to={`/users/${username}`}>
-              <h4 className="font-medium">{username}</h4>
+              <h4 className="font-medium">{name}</h4>
             </Link>
             <DotIcon className="size-5" />
             <span className="text-muted-foreground text-xs">

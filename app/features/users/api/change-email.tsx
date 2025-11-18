@@ -12,14 +12,16 @@
  * - Integration with Supabase Auth API for email updates
  * - Error handling for invalid inputs and API errors
  */
-
 import type { Route } from "./+types/change-email";
 
 import { data } from "react-router";
 import { z } from "zod";
 
-import { requireAuthentication, requireMethod } from "~/core/lib/guards.server";
 import makeServerClient from "~/core/lib/supa-client.server";
+import {
+  requireAuthentication,
+  requireMethod,
+} from "~/features/admin/guards.server";
 
 /**
  * Validation schema for email change form data
@@ -59,24 +61,24 @@ const schema = z.object({
 export async function action({ request }: Route.ActionArgs) {
   // Validate request method (only allow POST)
   requireMethod("POST")(request);
-  
+
   // Create a server-side Supabase client with the user's session
   const [client] = makeServerClient(request);
-  
+
   // Verify the user is authenticated
   await requireAuthentication(client);
-  
+
   // Extract and validate form data
   const formData = await request.formData();
   const { success, data: validData } = schema.safeParse(
     Object.fromEntries(formData),
   );
-  
+
   // Return error if email validation fails
   if (!success) {
     return data({ error: "Invalid email" }, { status: 400 });
   }
-  
+
   // Submit email change request to Supabase Auth API
   const { error } = await client.auth.updateUser({
     email: validData.email,

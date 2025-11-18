@@ -17,9 +17,12 @@ import type { Route } from "./+types/delete-account";
 
 import { data, redirect } from "react-router";
 
-import { requireAuthentication, requireMethod } from "~/core/lib/guards.server";
 import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
+import {
+  requireAuthentication,
+  requireMethod,
+} from "~/features/admin/guards.server";
 
 /**
  * Action handler for processing account deletion requests

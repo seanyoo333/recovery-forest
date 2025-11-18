@@ -44,7 +44,7 @@ import { FollowButton } from "~/features/users/components/follow-button";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 import { createReply, deleteReply } from "../mutations";
-import { getPostById, getReplies } from "../queries";
+import { getPostById, getPostCountByProfileId, getReplies } from "../queries";
 
 export const meta: Route.MetaFunction = ({ data }) => {
   const metaTags = [
@@ -91,6 +91,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const [client] = makeServerClient(request);
   const post = await getPostById(client, { postId: params.postId });
   const replies = await getReplies(client, { postId: params.postId });
+  const postCount = await getPostCountByProfileId(client, {
+    profileId: post.author_profile_id,
+  });
 
   // MD 파일인 경우 실제 파일 내용을 읽어옴
   let mdContent = "";
@@ -124,7 +127,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     }
   }
 
-  return { post, replies, mdContent };
+  return { post, replies, mdContent, postCount };
 };
 
 const formSchema = z.object({
@@ -340,7 +343,7 @@ export default function PostPage({
                     rows={5}
                   />
                   {isLoggedIn ? (
-                    <Button> Reply </Button>
+                    <Button className="font-bold"> 댓글 달기 </Button>
                   ) : (
                     <span
                       className={cn(
@@ -348,7 +351,7 @@ export default function PostPage({
                         "cursor-not-allowed",
                       )}
                     >
-                      Login to reply
+                      로그인하고 댓글 달기
                     </span>
                   )}
                 </div>
@@ -381,7 +384,7 @@ export default function PostPage({
 
         <aside className="space-y-5 rounded-lg border p-6 shadow-sm md:col-span-2">
           <div className="flex gap-5">
-            <Link to={`/users/${loaderData.post.author_name}`}>
+            <Link to={`/users/${loaderData.post.author_username}`}>
               <Avatar className="size-14">
                 <AvatarFallback>
                   {loaderData.post.author_name[0]}
@@ -393,7 +396,7 @@ export default function PostPage({
             </Link>
             <div className="flex flex-col items-start">
               <Link
-                to={`/users/${loaderData.post.author_name}`}
+                to={`/users/${loaderData.post.author_username}`}
                 className="hover:underline"
               >
                 <h4 className="text-lg font-medium">
@@ -407,17 +410,17 @@ export default function PostPage({
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <span>
-              🎂 Joined{" "}
+              🎂{" "}
               {DateTime.fromISO(loaderData.post.author_created_at, {
                 zone: "Asia/Seoul",
               }).toRelative()}{" "}
-              ago
+              가입
             </span>
-            <span> 🚀 Launched {loaderData.post.author_posts} products</span>
+            <span> 🚀 {loaderData.postCount}개의 글을 작성했습니다</span>
           </div>
-          {loaderData.post.author_name !== username ? (
+          {loaderData.post.author_username !== username ? (
             <FollowButton
-              username={loaderData.post.author_name}
+              username={loaderData.post.author_username}
               isFollowing={loaderData.post.author_is_following}
             />
           ) : null}

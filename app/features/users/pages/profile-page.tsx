@@ -73,7 +73,7 @@ export default function ProfilePage() {
           <p className="text-muted-foreground">
             Go to{" "}
             <Button variant={"link"} asChild className="p-0 text-base">
-              <Link to="/my/profilesettings">프로필 수정</Link>
+              <Link to="/my/settings">프로필 수정</Link>
             </Button>{" "}
             to add a bio to your profile.
           </p>

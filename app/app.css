@@ -141,31 +141,31 @@ body {
       opacity: 0.3;
     }
   }
-  --animate-background-position-spin:
-    background-position-spin 3000ms infinite alternate
-;
+  --animate-background-position-spin: background-position-spin 3000ms infinite
+    alternate;
   @keyframes background-position-spin {
-  0% {
-    background-position:
-    top center;
+    0% {
+      background-position: top center;
     }
-  100% {
-    background-position:
-    bottom center;
+    100% {
+      background-position: bottom center;
     }
   }
-  --animate-ripple:
-    ripple var(--duration,2s) ease calc(var(--i, 0)*.2s) infinite;
+  --animate-ripple: ripple var(--duration, 2s) ease calc(var(--i, 0) * 0.2s)
+    infinite;
   @keyframes ripple {
-  0%, 100% {
-    transform:
-    translate(-50%, -50%) scale(1);
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(1);
     }
-  50% {
-    transform:
-    translate(-50%, -50%) scale(0.9);
+    50% {
+      transform: translate(-50%, -50%) scale(0.9);
     }
-  }}
+  }
+
+  --neon-first-color: #fc4a1a;
+  --neon-second-color: #f7b733;
+}
 
 @layer base {
   * {
@@ -197,5 +197,160 @@ body {
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
+  }
+
+  /* Neon glow card effect */
+  .neon-card {
+    --border-size: 2px;
+    --border-radius: 0.75rem;
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: visible;
+    border: 2px solid transparent;
+  }
+
+  .neon-card::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--border-size));
+    border-radius: var(--border-radius);
+    padding: var(--border-size);
+    background: linear-gradient(
+      0deg,
+      var(--neon-first-color),
+      var(--neon-second-color)
+    );
+    background-size: 100% 200%;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: background-position-spin 3000ms infinite alternate;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .neon-card::after {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--border-size) - 4px);
+    border-radius: var(--border-radius);
+    background: linear-gradient(
+      0deg,
+      var(--neon-first-color),
+      var(--neon-second-color)
+    );
+    background-size: 100% 200%;
+    filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: background-position-spin 3000ms infinite alternate;
+    z-index: -2;
+    pointer-events: none;
+  }
+
+  .neon-card:hover {
+    border-color: transparent;
+    box-shadow: 0 0 20px rgba(247, 183, 51, 0.3);
+  }
+
+  .neon-card:hover::before {
+    opacity: 1;
+  }
+
+  .neon-card:hover::after {
+    opacity: 0.6;
+  }
+
+  .neon-card-active::before,
+  .neon-card-active::after {
+    opacity: 1 !important;
+  }
+
+  .neon-card-active {
+    border-color: transparent;
+    box-shadow: 0 0 20px rgba(247, 183, 51, 0.3);
+  }
+
+  .neon-card-active::after {
+    opacity: 0.8 !important;
+  }
+
+  .neon-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Rainbow gradient border effect for service cards */
+  .rainbow-card {
+    --border-size: 3px;
+    --border-radius: 0.75rem;
+    --spread: 80;
+    --start: 0deg;
+    --active: 0;
+    --glowingeffect-border-width: 3px;
+    --repeating-conic-gradient-times: 5;
+    position: relative;
+    transition: all 0.3s ease;
+    overflow: visible;
+  }
+
+  .rainbow-card::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: var(--border-radius);
+    opacity: var(--active);
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+
+  .rainbow-card::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: calc(-1 * var(--glowingeffect-border-width));
+    border-radius: var(--border-radius);
+    border: var(--glowingeffect-border-width) solid transparent;
+    background:
+      radial-gradient(circle, #dd7bbb 10%, #dd7bbb00 20%),
+      radial-gradient(circle at 40% 40%, #d79f1e 5%, #d79f1e00 15%),
+      radial-gradient(circle at 60% 60%, #5a922c 10%, #5a922c00 20%),
+      radial-gradient(circle at 40% 60%, #4c7894 10%, #4c789400 20%),
+      repeating-conic-gradient(
+        from 0deg at 50% 50%,
+        #dd7bbb 0%,
+        #d79f1e calc(25% / var(--repeating-conic-gradient-times)),
+        #5a922c calc(50% / var(--repeating-conic-gradient-times)),
+        #4c7894 calc(75% / var(--repeating-conic-gradient-times)),
+        #dd7bbb calc(100% / var(--repeating-conic-gradient-times))
+      );
+    background-attachment: fixed;
+    opacity: var(--active);
+    transition: opacity 0.3s ease;
+    -webkit-mask-clip: padding-box, border-box;
+    -webkit-mask-composite: intersect;
+    mask-clip: padding-box, border-box;
+    mask-composite: intersect;
+    mask-image:
+      linear-gradient(#0000, #0000),
+      conic-gradient(
+        from calc((0deg - var(--spread)) * 1deg),
+        #00000000 0deg,
+        #fff,
+        #00000000 calc(var(--spread) * 2deg)
+      );
+    z-index: -1;
+  }
+
+  .rainbow-card:hover {
+    --active: 1;
   }
 }

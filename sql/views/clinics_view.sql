@@ -1,5 +1,7 @@
 DROP VIEW IF EXISTS clinics_view;
-CREATE VIEW clinics_view AS
+CREATE OR REPLACE VIEW clinics_view
+with (security_invoker=on)
+AS
 SELECT
     c.clinic_id,
     c.clinic_boss,
@@ -27,3 +29,5 @@ SELECT
     (SELECT COUNT(*) FROM clinic_photos WHERE clinic_id = c.clinic_id) AS photo_count
 FROM clinics c
 LEFT JOIN clinic_photos cp_primary ON c.clinic_id = cp_primary.clinic_id AND cp_primary.is_primary = true;
+
+

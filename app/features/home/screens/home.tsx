@@ -14,9 +14,6 @@
 import type { Route } from "./+types/home";
 
 import { DateTime, Settings } from "luxon";
-import { bundleMDX } from "mdx-bundler";
-import { readdir } from "node:fs/promises";
-import path from "node:path";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -26,6 +23,7 @@ import { Button } from "~/core/components/ui/button";
 import { Ripple } from "~/core/components/ui/ripple";
 import i18next from "~/core/lib/i18next.server";
 import makeServerClient from "~/core/lib/supa-client.server";
+import { getBlogPostsMeta } from "~/features/blog/queries";
 import { ClinicCard } from "~/features/clinic/components/clinic-card";
 import { getClinics } from "~/features/clinic/queries";
 import { PostCard } from "~/features/community/components/post-card";
@@ -105,25 +103,18 @@ export async function loader({ request }: Route.LoaderArgs) {
     limit: 7,
   });
 
-  // 블로그 포스트 로드
-  const docsPath = path.join(process.cwd(), "app", "features", "blog", "docs");
-  const files = await readdir(docsPath);
-  const mdxFiles = files.filter((file) => file.endsWith(".mdx"));
+  // 블로그 포스트 로드 - 메타데이터만 DB에서 조회 (MDX 다운로드 없음)
+  const blogPostsMeta = await getBlogPostsMeta(client);
 
-  const blogPosts = await Promise.all(
-    mdxFiles.map(async (file) => {
-      const filePath = path.join(docsPath, file);
-      const { frontmatter } = await bundleMDX({ file: filePath });
-      return frontmatter;
-    }),
-  );
-
-  // 최신 순으로 정렬하고 7개만 가져오기
-  blogPosts.sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
-
-  const recentBlogPosts = blogPosts.slice(0, 8) as BlogPost[];
+  // Convert to BlogPost format and take first 8
+  const recentBlogPosts: BlogPost[] = blogPostsMeta.slice(0, 8).map((meta) => ({
+    title: meta.title,
+    description: meta.description,
+    date: meta.date,
+    category: meta.category,
+    author: meta.author,
+    slug: meta.slug,
+  }));
 
   const posts = await getPosts(client, {
     limit: 7,
@@ -226,7 +217,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 글을 확인해보세요.
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
-                <Link to="/blog"> Explore all blog posts &rarr;</Link>
+                <Link to="/blog-posts"> Explore all blog posts &rarr;</Link>
               </Button>
             </div>
             {loaderData.blogPosts.map((blogPost) => (

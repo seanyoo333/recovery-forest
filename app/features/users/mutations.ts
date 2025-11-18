@@ -143,7 +143,7 @@ export const sendMessage = async (
   if (data?.message_room_id) {
     console.log("[sendMessage] message_room_id exists:", data.message_room_id);
 
-    // 기존 숨겨진 룸을 다시 활성화 - 보낸 사람은 읽음, 받는 사람은 읽지 않음
+    // 기존 숨겨진 룸을 다시 활성화 - 보낸 사람은 읽음
     const { data: updateData, error: updateError } = await client
       .from("message_room_members")
       .update({

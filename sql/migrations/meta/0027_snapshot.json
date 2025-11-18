@@ -1,6 +1,6 @@
 {
   "id": "4a672a8f-2936-45bb-bb7b-e38198d633bd",
-  "prevId": "b9cb8d66-c2aa-4a67-a52a-a4749b99172f",
+  "prevId": "c0dc1e77-d3bb-5b78-c63b-b5858ca03a83",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -48,12 +48,8 @@
           "name": "events_profile_id_profiles_profile_id_fk",
           "tableFrom": "events",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -115,12 +111,8 @@
           "name": "bot_message_room_members_bot_message_room_id_bot_message_rooms_bot_message_room_id_fk",
           "tableFrom": "bot_message_room_members",
           "tableTo": "bot_message_rooms",
-          "columnsFrom": [
-            "bot_message_room_id"
-          ],
-          "columnsTo": [
-            "bot_message_room_id"
-          ],
+          "columnsFrom": ["bot_message_room_id"],
+          "columnsTo": ["bot_message_room_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -128,12 +120,8 @@
           "name": "bot_message_room_members_profile_id_profiles_profile_id_fk",
           "tableFrom": "bot_message_room_members",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -198,12 +186,8 @@
           "name": "bot_message_rooms_created_by_profiles_profile_id_fk",
           "tableFrom": "bot_message_rooms",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -274,12 +258,8 @@
           "name": "bot_messages_bot_message_room_id_bot_message_rooms_bot_message_room_id_fk",
           "tableFrom": "bot_messages",
           "tableTo": "bot_message_rooms",
-          "columnsFrom": [
-            "bot_message_room_id"
-          ],
-          "columnsTo": [
-            "bot_message_room_id"
-          ],
+          "columnsFrom": ["bot_message_room_id"],
+          "columnsTo": ["bot_message_room_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -388,12 +368,8 @@
           "name": "clinic_photos_clinic_id_clinics_clinic_id_fk",
           "tableFrom": "clinic_photos",
           "tableTo": "clinics",
-          "columnsFrom": [
-            "clinic_id"
-          ],
-          "columnsTo": [
-            "clinic_id"
-          ],
+          "columnsFrom": ["clinic_id"],
+          "columnsTo": ["clinic_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -595,12 +571,8 @@
           "name": "post_replies_post_id_posts_post_id_fk",
           "tableFrom": "post_replies",
           "tableTo": "posts",
-          "columnsFrom": [
-            "post_id"
-          ],
-          "columnsTo": [
-            "post_id"
-          ],
+          "columnsFrom": ["post_id"],
+          "columnsTo": ["post_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -608,12 +580,8 @@
           "name": "post_replies_parent_id_post_replies_post_reply_id_fk",
           "tableFrom": "post_replies",
           "tableTo": "post_replies",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "post_reply_id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["post_reply_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -621,12 +589,8 @@
           "name": "post_replies_profile_id_profiles_profile_id_fk",
           "tableFrom": "post_replies",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -674,12 +638,8 @@
           "name": "post_reply_upvotes_post_reply_id_post_replies_post_reply_id_fk",
           "tableFrom": "post_reply_upvotes",
           "tableTo": "post_replies",
-          "columnsFrom": [
-            "post_reply_id"
-          ],
-          "columnsTo": [
-            "post_reply_id"
-          ],
+          "columnsFrom": ["post_reply_id"],
+          "columnsTo": ["post_reply_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -687,12 +647,8 @@
           "name": "post_reply_upvotes_profile_id_profiles_profile_id_fk",
           "tableFrom": "post_reply_upvotes",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -700,10 +656,7 @@
       "compositePrimaryKeys": {
         "post_reply_upvotes_post_reply_id_profile_id_pk": {
           "name": "post_reply_upvotes_post_reply_id_profile_id_pk",
-          "columns": [
-            "post_reply_id",
-            "profile_id"
-          ]
+          "columns": ["post_reply_id", "profile_id"]
         }
       },
       "uniqueConstraints": {},
@@ -734,12 +687,8 @@
           "name": "post_upvotes_post_id_posts_post_id_fk",
           "tableFrom": "post_upvotes",
           "tableTo": "posts",
-          "columnsFrom": [
-            "post_id"
-          ],
-          "columnsTo": [
-            "post_id"
-          ],
+          "columnsFrom": ["post_id"],
+          "columnsTo": ["post_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -747,12 +696,8 @@
           "name": "post_upvotes_profile_id_profiles_profile_id_fk",
           "tableFrom": "post_upvotes",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -760,10 +705,7 @@
       "compositePrimaryKeys": {
         "post_upvotes_post_id_profile_id_pk": {
           "name": "post_upvotes_post_id_profile_id_pk",
-          "columns": [
-            "post_id",
-            "profile_id"
-          ]
+          "columns": ["post_id", "profile_id"]
         }
       },
       "uniqueConstraints": {},
@@ -851,12 +793,8 @@
           "name": "posts_topic_id_topics_topic_id_fk",
           "tableFrom": "posts",
           "tableTo": "topics",
-          "columnsFrom": [
-            "topic_id"
-          ],
-          "columnsTo": [
-            "topic_id"
-          ],
+          "columnsFrom": ["topic_id"],
+          "columnsTo": ["topic_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -864,12 +802,8 @@
           "name": "posts_profile_id_profiles_profile_id_fk",
           "tableFrom": "posts",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1044,12 +978,8 @@
           "name": "payments_profile_id_profiles_profile_id_fk",
           "tableFrom": "payments",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1061,9 +991,7 @@
           "name": "select-payment-policy",
           "as": "PERMISSIVE",
           "for": "SELECT",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "(select auth.uid()) = \"payments\".\"profile_id\""
         }
       },
@@ -1178,12 +1106,8 @@
           "name": "point_payments_profile_id_profiles_profile_id_fk",
           "tableFrom": "point_payments",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1195,9 +1119,7 @@
           "name": "select-payment-policy",
           "as": "PERMISSIVE",
           "for": "SELECT",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "(select auth.uid()) = \"point_payments\".\"profile_id\""
         }
       },
@@ -1304,12 +1226,8 @@
           "name": "product_upvotes_product_id_products_product_id_fk",
           "tableFrom": "product_upvotes",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "product_id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["product_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1317,12 +1235,8 @@
           "name": "product_upvotes_profile_id_profiles_profile_id_fk",
           "tableFrom": "product_upvotes",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1330,10 +1244,7 @@
       "compositePrimaryKeys": {
         "product_upvotes_product_id_profile_id_pk": {
           "name": "product_upvotes_product_id_profile_id_pk",
-          "columns": [
-            "product_id",
-            "profile_id"
-          ]
+          "columns": ["product_id", "profile_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1450,12 +1361,8 @@
           "name": "products_profile_id_profiles_profile_id_fk",
           "tableFrom": "products",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1463,12 +1370,8 @@
           "name": "products_category_id_categories_category_id_fk",
           "tableFrom": "products",
           "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "category_id"
-          ],
+          "columnsFrom": ["category_id"],
+          "columnsTo": ["category_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1476,12 +1379,8 @@
           "name": "products_to_profiles",
           "tableFrom": "products",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1558,12 +1457,8 @@
           "name": "reviews_product_id_products_product_id_fk",
           "tableFrom": "reviews",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "product_id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["product_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1571,12 +1466,8 @@
           "name": "reviews_profile_id_profiles_profile_id_fk",
           "tableFrom": "reviews",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1677,12 +1568,8 @@
           "name": "teams_team_leader_id_profiles_profile_id_fk",
           "tableFrom": "teams",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "team_leader_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["team_leader_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1779,12 +1666,8 @@
           "name": "admin_activity_logs_admin_id_profiles_profile_id_fk",
           "tableFrom": "admin_activity_logs",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1796,9 +1679,7 @@
           "name": "admin-logs-select-policy",
           "as": "RESTRICTIVE",
           "for": "SELECT",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "EXISTS (\n        SELECT 1 FROM admin_permissions\n        WHERE admin_id = (select auth.uid())\n        AND is_active = true\n      )"
         }
       },
@@ -1862,12 +1743,8 @@
           "name": "admin_permissions_admin_id_profiles_profile_id_fk",
           "tableFrom": "admin_permissions",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1875,12 +1752,8 @@
           "name": "admin_permissions_created_by_profiles_profile_id_fk",
           "tableFrom": "admin_permissions",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["profile_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1892,18 +1765,14 @@
           "name": "admin-permissions-select-policy",
           "as": "RESTRICTIVE",
           "for": "SELECT",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "EXISTS (\n        SELECT 1 FROM admin_permissions\n        WHERE admin_id = (select auth.uid())\n        AND admin_role = 'super_admin'\n        AND is_active = true\n      )"
         },
         "admin-permissions-manage-policy": {
           "name": "admin-permissions-manage-policy",
           "as": "RESTRICTIVE",
           "for": "ALL",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "EXISTS (\n        SELECT 1 FROM admin_permissions\n        WHERE admin_id = (select auth.uid())\n        AND admin_role = 'super_admin'\n        AND is_active = true\n      )"
         }
       },
@@ -1947,12 +1816,8 @@
           "name": "follows_follower_id_profiles_profile_id_fk",
           "tableFrom": "follows",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "follower_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["follower_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1960,12 +1825,8 @@
           "name": "follows_following_id_profiles_profile_id_fk",
           "tableFrom": "follows",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "following_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["following_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1973,10 +1834,7 @@
       "compositePrimaryKeys": {
         "follows_follower_id_following_id_pk": {
           "name": "follows_follower_id_following_id_pk",
-          "columns": [
-            "follower_id",
-            "following_id"
-          ]
+          "columns": ["follower_id", "following_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2028,12 +1886,8 @@
           "name": "message_room_members_message_room_id_message_rooms_message_room_id_fk",
           "tableFrom": "message_room_members",
           "tableTo": "message_rooms",
-          "columnsFrom": [
-            "message_room_id"
-          ],
-          "columnsTo": [
-            "message_room_id"
-          ],
+          "columnsFrom": ["message_room_id"],
+          "columnsTo": ["message_room_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2041,12 +1895,8 @@
           "name": "message_room_members_profile_id_profiles_profile_id_fk",
           "tableFrom": "message_room_members",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2054,10 +1904,7 @@
       "compositePrimaryKeys": {
         "message_room_members_message_room_id_profile_id_pk": {
           "name": "message_room_members_message_room_id_profile_id_pk",
-          "columns": [
-            "message_room_id",
-            "profile_id"
-          ]
+          "columns": ["message_room_id", "profile_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2162,12 +2009,8 @@
           "name": "messages_message_room_id_message_rooms_message_room_id_fk",
           "tableFrom": "messages",
           "tableTo": "message_rooms",
-          "columnsFrom": [
-            "message_room_id"
-          ],
-          "columnsTo": [
-            "message_room_id"
-          ],
+          "columnsFrom": ["message_room_id"],
+          "columnsTo": ["message_room_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2175,12 +2018,8 @@
           "name": "messages_sender_id_profiles_profile_id_fk",
           "tableFrom": "messages",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "sender_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["sender_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2264,12 +2103,8 @@
           "name": "notifications_source_id_profiles_profile_id_fk",
           "tableFrom": "notifications",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2277,12 +2112,8 @@
           "name": "notifications_team_id_teams_team_id_fk",
           "tableFrom": "notifications",
           "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "team_id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["team_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2290,12 +2121,8 @@
           "name": "notifications_post_id_posts_post_id_fk",
           "tableFrom": "notifications",
           "tableTo": "posts",
-          "columnsFrom": [
-            "post_id"
-          ],
-          "columnsTo": [
-            "post_id"
-          ],
+          "columnsFrom": ["post_id"],
+          "columnsTo": ["post_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2303,12 +2130,8 @@
           "name": "notifications_target_id_profiles_profile_id_fk",
           "tableFrom": "notifications",
           "tableTo": "profiles",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "profile_id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["profile_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2423,12 +2246,8 @@
           "tableFrom": "profiles",
           "tableTo": "users",
           "schemaTo": "auth",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2440,9 +2259,7 @@
           "name": "edit-profile-policy",
           "as": "PERMISSIVE",
           "for": "UPDATE",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "(select auth.uid()) = \"profiles\".\"profile_id\"",
           "withCheck": "(select auth.uid()) = \"profiles\".\"profile_id\""
         },
@@ -2450,18 +2267,14 @@
           "name": "delete-profile-policy",
           "as": "PERMISSIVE",
           "for": "DELETE",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "(select auth.uid()) = \"profiles\".\"profile_id\""
         },
         "select-profile-policy": {
           "name": "select-profile-policy",
           "as": "PERMISSIVE",
           "for": "SELECT",
-          "to": [
-            "authenticated"
-          ],
+          "to": ["authenticated"],
           "using": "(select auth.uid()) = \"profiles\".\"profile_id\""
         }
       },
@@ -2473,62 +2286,32 @@
     "public.event_type": {
       "name": "event_type",
       "schema": "public",
-      "values": [
-        "product_view",
-        "product_visit",
-        "profile_view"
-      ]
+      "values": ["product_view", "product_visit", "profile_view"]
     },
     "public.clinic_type": {
       "name": "clinic_type",
       "schema": "public",
-      "values": [
-        "university",
-        "functional",
-        "nursing",
-        "traditional"
-      ]
+      "values": ["university", "functional", "nursing", "traditional"]
     },
     "public.level": {
       "name": "level",
       "schema": "public",
-      "values": [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5"
-      ]
+      "values": ["1", "2", "3", "4", "5"]
     },
     "public.location": {
       "name": "location",
       "schema": "public",
-      "values": [
-        "seoul",
-        "gyeonggi",
-        "busan"
-      ]
+      "values": ["seoul", "gyeonggi", "busan"]
     },
     "public.photo_type": {
       "name": "photo_type",
       "schema": "public",
-      "values": [
-        "exterior",
-        "interior",
-        "equipment",
-        "staff",
-        "other"
-      ]
+      "values": ["exterior", "interior", "equipment", "staff", "other"]
     },
     "public.team_position": {
       "name": "team_position",
       "schema": "public",
-      "values": [
-        "doctor",
-        "nurse",
-        "nutritionist",
-        "foresttherapist"
-      ]
+      "values": ["doctor", "nurse", "nutritionist", "foresttherapist"]
     },
     "public.admin_role": {
       "name": "admin_role",
@@ -2544,11 +2327,7 @@
     "public.notification_type": {
       "name": "notification_type",
       "schema": "public",
-      "values": [
-        "follow",
-        "review",
-        "reply"
-      ]
+      "values": ["follow", "review", "reply"]
     },
     "public.user_role": {
       "name": "user_role",

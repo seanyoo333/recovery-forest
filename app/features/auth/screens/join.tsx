@@ -210,7 +210,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 name="name"
                 required
                 type="text"
-                placeholder="Nico"
+                placeholder="예시) 좋은습관"
               />
               {actionData &&
               "fieldErrors" in actionData &&

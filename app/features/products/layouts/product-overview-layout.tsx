@@ -57,6 +57,7 @@ export default function ProductOverviewLayout({
               <div className="flex text-yellow-400">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <StarIcon
+                    key={i}
                     className="size-4"
                     fill={
                       i < Math.floor(loaderData.product.average_rating)
@@ -67,7 +68,7 @@ export default function ProductOverviewLayout({
                 ))}
               </div>
               <span className="text-muted-foreground">
-                {loaderData.product.reviews} 리뷰
+                리뷰 {loaderData.product.reviews}개
               </span>
             </div>
           </div>

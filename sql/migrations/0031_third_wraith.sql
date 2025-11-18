@@ -1,0 +1,1 @@
+ALTER POLICY "notifications-select-policy" ON "notifications" TO public USING (true);

@@ -21,7 +21,7 @@ export const createPost = async (
   const { data: categoryData, error: categoryError } = await client
     .from("topics")
     .select("topic_id")
-    .eq("name", category)
+    .eq("slug", category)
     .single();
   if (categoryError) {
     throw categoryError;

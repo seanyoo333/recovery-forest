@@ -118,12 +118,14 @@ export const posts = pgTable(
       withCheck: sql`${authUid} = ${table.profile_id}`,
     }),
     // 작성자만 자신의 게시물을 수정할 수 있음
+    // 단, 트리거에 의한 upvotes 업데이트를 허용하기 위해 UPDATE 정책을 완화
+    // (products 테이블과 동일한 방식)
     pgPolicy("posts-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
-      withCheck: sql`${authUid} = ${table.profile_id}`,
+      using: sql`true`,
+      withCheck: sql`true`,
     }),
     // 작성자만 자신의 게시물을 삭제할 수 있음
     pgPolicy("posts-delete-policy", {
@@ -159,6 +161,14 @@ export const postUpvotes = pgTable(
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    // 인증된 사용자만 자신의 업보트를 수정할 수 있음
+    pgPolicy("post-upvotes-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
       withCheck: sql`${authUid} = ${table.profile_id}`,
     }),
     // 인증된 사용자만 자신의 업보트를 삭제할 수 있음

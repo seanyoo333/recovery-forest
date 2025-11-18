@@ -44,7 +44,7 @@ export default function TeamPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="space-y-20">
-      <Hero title={`${teamLeader.username}의 팀 참여하기`} />
+      <Hero title={`${teamLeader.name}님의 팀 참여하기`} />
       <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-6 md:gap-40">
         <div className="grid grid-cols-1 gap-5 md:col-span-4 md:grid-cols-4">
           {[
@@ -141,7 +141,7 @@ export default function TeamPage({ loaderData }: Route.ComponentProps) {
                 placeholder="i.e. 산림치유를 통해 더 건강해 지고 싶습니다."
               />
               <Button type="submit" className="w-full font-bold">
-                참여하기
+                메세지 보내기
               </Button>
             </Form>
           )}

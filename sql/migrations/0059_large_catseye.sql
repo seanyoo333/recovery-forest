@@ -1,0 +1,1 @@
+ALTER POLICY "post-upvotes-insert-policy" ON "post_upvotes" TO authenticated WITH CHECK ((select auth.uid()) = "post_upvotes"."profile_id");

@@ -1,23 +1,22 @@
 /**
  * Contact Form Page with CAPTCHA Integration
  *
- * This module implements a contact form with dual CAPTCHA protection using both
- * HCaptcha and Turnstile (Cloudflare). It demonstrates how to integrate multiple
- * CAPTCHA providers for enhanced protection against automated submissions.
+ * This module implements a contact form with Turnstile CAPTCHA protection.
+ * Turnstile is Cloudflare's privacy-focused CAPTCHA alternative that provides
+ * bot protection without requiring user interaction in most cases.
  *
  * The form includes:
  * - Basic contact information fields (name, email, message)
  * - Server-side validation using Zod schemas
- * - CAPTCHA verification with both HCaptcha and Turnstile
+ * - CAPTCHA verification with Turnstile
  * - Email sending via Resend API
  * - Form state management and user feedback
  *
- * This implementation serves as a demonstration of how to implement robust
- * form protection and validation in a production application.
+ * This implementation demonstrates how to implement robust form protection
+ * and validation in a production application.
  */
 import type { Route } from "./+types/contact-us";
 
-import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useEffect, useRef, useState } from "react";
 import { Form, data } from "react-router";
 import Turnstile, { useTurnstile } from "react-turnstile";
@@ -91,57 +90,12 @@ async function isTurnstileTokenValid(token: string) {
 }
 
 /**
- * Validates an HCaptcha token with HCaptcha's API
- *
- * This function sends the token received from the client-side HCaptcha widget
- * to HCaptcha's verification endpoint to confirm that the user successfully
- * completed the CAPTCHA challenge.
- *
- * The verification process:
- * 1. Sends the token and secret key to HCaptcha's verification endpoint
- * 2. Parses the JSON response to determine if the token is valid
- * 3. Returns a boolean indicating success or failure
- * 4. Handles errors gracefully, logging them and returning false
- *
- * @param token - The token received from the client-side HCaptcha widget
- * @returns Promise resolving to a boolean indicating if the token is valid
- */
-async function isHcaptchaTokenValid(token: string) {
-  try {
-    // HCaptcha's verification endpoint
-    const url = "https://api.hcaptcha.com/siteverify";
-
-    // Send verification request to HCaptcha
-    // Note: HCaptcha requires form-urlencoded format unlike Turnstile
-    const result = await fetch(url, {
-      body: new URLSearchParams({
-        secret: process.env.HCAPTCHA_SECRET_KEY!,
-        response: token,
-      }),
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-
-    // Parse response and return success status
-    const outcome = await result.json();
-    return outcome.success;
-  } catch (error) {
-    // Log error and return false on failure
-    console.error(error);
-    return false;
-  }
-}
-
-/**
  * Validation schema for contact form submissions
  *
  * This schema defines the required fields and validation rules for the contact form:
  * - name: Required, must be at least 1 character
  * - email: Required, must be a valid email format
  * - message: Required, must be at least 1 character
- * - hcaptcha: Required, must contain a valid HCaptcha token
  * - turnstile: Required, must contain a valid Turnstile token
  *
  * The schema is used with Zod's safeParse method to validate form submissions
@@ -151,7 +105,6 @@ const schema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   message: z.string().min(1),
-  hcaptcha: z.string().min(1),
   turnstile: z.string().min(1),
 });
 
@@ -160,13 +113,13 @@ const schema = z.object({
  *
  * This function processes form submissions from the contact page. It follows these steps:
  * 1. Extracts and validates form data using the Zod schema
- * 2. Verifies both CAPTCHA tokens with their respective services
+ * 2. Verifies the Turnstile CAPTCHA token with Cloudflare's API
  * 3. Sends an email to the admin with the contact information
  * 4. Returns appropriate success or error responses
  *
  * Security considerations:
  * - Validates all form fields to prevent invalid data
- * - Verifies CAPTCHA tokens to prevent spam and automated submissions
+ * - Verifies CAPTCHA token to prevent spam and automated submissions
  * - Uses server-side validation to prevent client-side bypass
  * - Handles errors gracefully with appropriate status codes
  *
@@ -188,23 +141,17 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   // Extract validated data
-  const { name, email, message, hcaptcha, turnstile } = result.data;
+  const { name, email, message, turnstile } = result.data;
 
-  // Verify both CAPTCHA tokens in parallel
-  const [validTurnstile, validHcaptcha] = await Promise.all([
-    isTurnstileTokenValid(turnstile),
-    isHcaptchaTokenValid(hcaptcha),
-  ]);
+  // Verify Turnstile CAPTCHA token
+  const validTurnstile = await isTurnstileTokenValid(turnstile);
 
-  // Return error if either CAPTCHA verification fails
-  if (!validTurnstile || !validHcaptcha) {
+  // Return error if CAPTCHA verification fails
+  if (!validTurnstile) {
     return data(
       {
         errors: {
-          hcaptcha: !validHcaptcha ? ["Invalid captcha, please try again"] : [],
-          turnstile: !validTurnstile
-            ? ["Invalid captcha, please try again"]
-            : [],
+          turnstile: ["Invalid captcha, please try again"],
         },
         success: false,
       },
@@ -238,80 +185,149 @@ export async function action({ request }: Route.ActionArgs) {
 
 /**
  * Contact Us Form Component
- * 
- * This component renders a contact form with dual CAPTCHA protection.
+ *
+ * This component renders a contact form with Turnstile CAPTCHA protection.
  * It manages form state, CAPTCHA tokens, and provides user feedback
  * based on the form submission results.
- * 
+ *
  * @param actionData - Data returned from the action function after form submission
  */
 export default function ContactUs({ actionData }: Route.ComponentProps) {
-  // State for storing CAPTCHA tokens from both providers
-  const [hcaptchaToken, setHcaptchaToken] = useState<string>("");
+  // State for storing CAPTCHA token
   const [turnstileToken, setTurnstileToken] = useState<string>("");
-  
-  // State to control when to render CAPTCHA widgets (prevents SSR issues)
-  const [renderCaptchas, setRenderCaptchas] = useState<boolean>(false);
-  
-  // References to interact with CAPTCHA widgets and form
-  const hcaptchaRef = useRef<HCaptcha>(null); // Reference to HCaptcha widget for resetting
+
+  // State to control when to render CAPTCHA widget (prevents SSR issues)
+  const [renderCaptcha, setRenderCaptcha] = useState<boolean>(false);
+
+  // References to interact with CAPTCHA widget and form
   const turnstile = useTurnstile(); // Hook for Turnstile widget interactions
   const formRef = useRef<HTMLFormElement>(null); // Reference to the form element
-  
+  const isMountedRef = useRef<boolean>(true); // Track if component is mounted
+
+  // Get sitekey from environment variables
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+
+  // Check if sitekey is valid
+  const hasValidSiteKey = Boolean(
+    turnstileSiteKey && turnstileSiteKey.trim() !== "",
+  );
+
+  // Debug: Log sitekey status (only in development)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log("=== Turnstile Debug Info ===");
+      console.log("Site Key exists:", !!turnstileSiteKey);
+      console.log(
+        "Site Key value:",
+        turnstileSiteKey
+          ? `${turnstileSiteKey.substring(0, 10)}...`
+          : "undefined",
+      );
+      console.log("Has valid site key:", hasValidSiteKey);
+      console.log("Render captcha:", renderCaptcha);
+      console.log("Is mounted:", isMountedRef.current);
+      console.log("Turnstile token:", turnstileToken ? "exists" : "empty");
+      console.log("===========================");
+    }
+  }, [turnstileSiteKey, hasValidSiteKey, renderCaptcha, turnstileToken]);
+
   /**
    * Effect for handling form submission results
-   * 
+   *
    * This effect runs whenever actionData changes (after form submission).
    * It handles:
-   * 1. Resetting both CAPTCHA widgets
-   * 2. Clearing CAPTCHA tokens
+   * 1. Resetting the CAPTCHA widget
+   * 2. Clearing CAPTCHA token
    * 3. Showing success or error messages
    * 4. Resetting the form on successful submission
    */
   useEffect(() => {
-    if (!actionData) return;
-    
-    // Reset both CAPTCHA widgets and their tokens
-    turnstile.reset();
-    hcaptchaRef.current?.resetCaptcha();
-    setHcaptchaToken("");
-    setTurnstileToken("");
-    
+    if (!actionData || !isMountedRef.current) return;
+
+    // Reset CAPTCHA widget and token safely
+    try {
+      if (turnstile && typeof turnstile.reset === "function") {
+        turnstile.reset();
+      }
+    } catch (error) {
+      // Ignore errors if Turnstile is not available
+      console.debug("Turnstile reset error:", error);
+    }
+
+    if (isMountedRef.current) {
+      setTurnstileToken("");
+    }
+
     // Handle successful submission
-    if (actionData?.success) {
+    if (actionData?.success && isMountedRef.current) {
       // Show success message
       toast.success("Email sent successfully");
-      
+
       // Reset form and remove focus from inputs
-      formRef.current?.reset();
-      formRef.current?.querySelectorAll("input").forEach((input) => {
-        input.blur();
-      });
-    } 
+      if (formRef.current) {
+        formRef.current.reset();
+        formRef.current.querySelectorAll("input").forEach((input) => {
+          input.blur();
+        });
+      }
+    }
     // Handle error in submission
-    else if ("error" in actionData && actionData.error) {
+    else if (
+      "error" in actionData &&
+      actionData.error &&
+      isMountedRef.current
+    ) {
       toast.error(actionData.error.message);
     }
-  }, [actionData]);
-  
+  }, [actionData, turnstile]);
+
   /**
-   * Effect for delayed rendering of CAPTCHA widgets
-   * 
+   * Effect for cleaning up CAPTCHA widget on unmount
+   *
+   * This effect runs when the component unmounts and ensures
+   * that the CAPTCHA widget is properly cleaned up to prevent
+   * errors when navigating away from the page.
+   */
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      // Mark component as unmounted first to prevent any callbacks
+      isMountedRef.current = false;
+
+      // Prevent CAPTCHA widget from rendering during unmount
+      setRenderCaptcha(false);
+
+      // Cleanup function: reset token when component unmounts
+      setTurnstileToken("");
+    };
+  }, []);
+
+  /**
+   * Effect for delayed rendering of CAPTCHA widget
+   *
    * This effect runs once on component mount and enables CAPTCHA rendering.
    * The delayed rendering prevents hydration mismatches and other SSR issues
    * that can occur with third-party CAPTCHA widgets.
    */
   useEffect(() => {
-    setRenderCaptchas(true);
+    if (isMountedRef.current) {
+      setRenderCaptcha(true);
+    }
+
+    return () => {
+      // Ensure CAPTCHA widget is not rendered during unmount
+      setRenderCaptcha(false);
+    };
   }, []);
   /**
-   * Render the contact form with dual CAPTCHA protection
-   * 
+   * Render the contact form with Turnstile CAPTCHA protection
+   *
    * The component renders:
    * 1. A header section with title and description
    * 2. A form with name, email, and message fields
-   * 3. Two CAPTCHA widgets (HCaptcha and Turnstile)
-   * 4. A submit button that is disabled until both CAPTCHAs are verified
+   * 3. A Turnstile CAPTCHA widget
+   * 4. A submit button that is disabled until the CAPTCHA is verified
    * 5. Error messages for field validation and CAPTCHA verification
    */
   return (
@@ -319,10 +335,10 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
       {/* Header section */}
       <div>
         <h1 className="text-center text-3xl font-semibold tracking-tight md:text-5xl">
-          Contact Us
+          문의하기
         </h1>
         <p className="text-muted-foreground mt-2 text-center font-medium md:text-lg">
-          This is a page to demo HCaptcha and Turnstile captchas.
+          문의하신 내용을 바탕으로 최대한 빠르게 답변드리겠습니다.
         </p>
       </div>
 
@@ -342,7 +358,7 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
             name="name"
             required
             type="text"
-            placeholder="Enter your name"
+            placeholder="이름을 입력해주세요."
           />
           {/* Display name field validation errors if any */}
           {actionData &&
@@ -362,7 +378,7 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
             name="email"
             required
             type="email"
-            placeholder="Enter your email"
+            placeholder="이메일을 입력해주세요."
           />
           {/* Display email field validation errors if any */}
           {actionData &&
@@ -381,7 +397,7 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
             id="message"
             name="message"
             required
-            placeholder="Enter your message"
+            placeholder="문의하실 내용을 입력해주세요."
             className="h-32 resize-none"
           />
           {/* Display message field validation errors if any */}
@@ -392,41 +408,57 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
           ) : null}
         </div>
 
-        {/* Hidden fields for CAPTCHA tokens */}
-        <input type="hidden" name="hcaptcha" value={hcaptchaToken} required />
+        {/* Hidden field for CAPTCHA token */}
         <input type="hidden" name="turnstile" value={turnstileToken} required />
 
-        {/* CAPTCHA widgets - only rendered after initial mount to prevent SSR issues */}
-        {renderCaptchas ? (
-          <div className="flex flex-col items-center justify-between gap-5 md:flex-row md:gap-0">
-            {/* HCaptcha widget */}
-            <div>
-              <HCaptcha
-                sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY}
-                onVerify={(token) => {
-                  setHcaptchaToken(token);
-                }}
-                ref={hcaptchaRef}
-              />
-              {/* Display HCaptcha verification errors if any */}
-              {actionData &&
-              "errors" in actionData &&
-              actionData.errors?.hcaptcha ? (
-                <FormErrors
-                  key="hcaptcha"
-                  errors={actionData.errors.hcaptcha}
-                />
-              ) : null}
-            </div>
-
+        {/* CAPTCHA widget - only rendered after initial mount to prevent SSR issues */}
+        {renderCaptcha && isMountedRef.current && hasValidSiteKey ? (
+          <div className="flex flex-col items-center justify-center">
             {/* Turnstile widget */}
             <div>
-              <Turnstile
-                sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                onVerify={(token) => {
-                  setTurnstileToken(token);
-                }}
-              />
+              {isMountedRef.current &&
+                turnstileSiteKey &&
+                turnstileSiteKey.trim() !== "" && (
+                  <Turnstile
+                    key="turnstile-widget"
+                    sitekey={turnstileSiteKey}
+                    onVerify={(token) => {
+                      if (import.meta.env.DEV) {
+                        console.log(
+                          "✅ Turnstile verified! Token received:",
+                          token.substring(0, 20) + "...",
+                        );
+                      }
+                      if (isMountedRef.current) {
+                        setTurnstileToken(token);
+                      }
+                    }}
+                    onError={(error) => {
+                      // Log errors for debugging
+                      if (!isMountedRef.current) return;
+                      console.error("❌ Turnstile error:", error);
+                      // Show user-friendly error message in development
+                      if (import.meta.env.DEV) {
+                        toast.error(
+                          `Turnstile error: ${error.message || "Unknown error"}`,
+                        );
+                      }
+                    }}
+                    onExpire={() => {
+                      if (import.meta.env.DEV) {
+                        console.log("⚠️ Turnstile token expired");
+                      }
+                      if (isMountedRef.current) {
+                        setTurnstileToken("");
+                      }
+                    }}
+                    onLoad={() => {
+                      if (import.meta.env.DEV) {
+                        console.log("✅ Turnstile widget loaded successfully");
+                      }
+                    }}
+                  />
+                )}
               {/* Display Turnstile verification errors if any */}
               {actionData &&
               "errors" in actionData &&
@@ -440,20 +472,12 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
           </div>
         ) : null}
 
-        {/* Informational note about the dual CAPTCHA implementation */}
-        <span className="text-center text-sm text-amber-500">
-          Note: This is a demo, you will not render two captchas at the same
-          time.
-          <br />
-          You will have to choose between HCaptcha and Turnstile.
-        </span>
-
-        {/* Submit button - disabled until both CAPTCHAs are verified */}
+        {/* Submit button - disabled until CAPTCHA is verified */}
         <FormButton
           type="submit"
-          className="w-full"
-          disabled={!hcaptchaToken || !turnstileToken}
-          label="Send"
+          className="w-full font-bold"
+          disabled={!turnstileToken}
+          label="보내기"
         />
       </Form>
     </div>

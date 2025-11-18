@@ -1,5 +1,6 @@
-DROP VIEW IF EXISTS community_post_detail;
-CREATE VIEW community_post_detail AS
+CREATE or REPLACE VIEW community_post_detail
+with (security_invoker=on)
+AS
 SELECT
     posts.post_id,
     posts.title,
@@ -17,9 +18,12 @@ SELECT
     profiles.role as author_role,
     profiles.created_at as author_created_at,
     (SELECT COUNT(*) FROM products WHERE products.profile_id = profiles.profile_id) as products,
-    (SELECT EXISTS (SELECT 1 FROM public.post_upvotes WHERE post_upvotes.post_id = posts.post_id AND post_upvotes.profile_id = auth.uid())) AS is_upvoted
+    (SELECT EXISTS (SELECT 1 FROM public.post_upvotes WHERE post_upvotes.post_id = posts.post_id AND post_upvotes.profile_id = auth.uid())) AS is_upvoted,
+    (SELECT EXISTS (SELECT 1 FROM public.follows WHERE follows.follower_id = auth.uid() AND follows.following_id = posts.profile_id)) AS author_is_following,
+    posts.profile_id as author_profile_id
 FROM posts
 INNER JOIN topics USING (topic_id)
 LEFT JOIN post_replies USING (post_id)
 INNER JOIN profiles ON (profiles.profile_id = posts.profile_id)
 GROUP BY posts.post_id, posts.title, posts.content, posts.upvotes, posts.created_at, posts.is_markdown, topics.topic_id, topics.name, topics.slug, profiles.name, profiles.username, profiles.avatar, profiles.role, profiles.created_at, profiles.profile_id;
+
