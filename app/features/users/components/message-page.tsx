@@ -22,8 +22,8 @@ import {
 } from "~/core/components/ui/card";
 import { Textarea } from "~/core/components/ui/textarea";
 import makeServerClient from "~/core/lib/supa-client.server";
-import { browserClient, makeSSRClient } from "~/supa-client";
-import type { Database } from "~/supa-client";
+import type { Database } from "~/core/lib/supa-client.server";
+import { supabase } from "~/core/lib/supabase.client";
 
 import {
   getLoggedInUserId,
@@ -86,7 +86,7 @@ export default function MessagePage({
     }
   }, [actionData]);
   useEffect(() => {
-    const changes = browserClient
+    const changes = supabase
       .channel(`room:${userId}-${loaderData.participant?.profile?.profile_id}`)
       .on(
         "postgres_changes",

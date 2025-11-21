@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import FormButton from "~/core/components/form-button";
 import FormErrors from "~/core/components/form-error";
+import SelectPair from "~/core/components/select-pair";
 import {
   Alert,
   AlertDescription,
@@ -70,6 +71,12 @@ const joinSchema = z
   .object({
     name: z.string().min(1, { message: "Name is required" }),
     username: z.string().min(1, { message: "Username is required" }),
+    role: z.enum(
+      ["healthy", "patient", "caregiver", "doctor", "health_exp", "other"],
+      {
+        message: "역할을 선택해주세요.",
+      },
+    ),
     email: z.string().email({ message: "Invalid email address" }),
     password: z
       .string()
@@ -142,6 +149,7 @@ export async function action({ request }: Route.ActionArgs) {
         name: validData.name,
         username: validData.username,
         display_name: validData.name,
+        role: validData.role,
         marketing_consent: validData.marketing,
       },
     },
@@ -189,10 +197,10 @@ export default function Join({ actionData }: Route.ComponentProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col items-center">
           <CardTitle className="text-2xl font-semibold" role="heading">
-            Create an account
+            계정 생성
           </CardTitle>
           <CardDescription className="text-base">
-            Enter your details to create an account
+            계정 생성을 위해 상세 정보를 입력해주세요.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -203,7 +211,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
           >
             <div className="flex flex-col items-start space-y-2">
               <Label htmlFor="name" className="flex flex-col items-start gap-1">
-                Name
+                닉네임
               </Label>
               <Input
                 id="name"
@@ -223,14 +231,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 htmlFor="username"
                 className="flex flex-col items-start gap-1"
               >
-                Username
+                아이디
               </Label>
               <Input
                 id="username"
                 name="username"
                 required
                 type="text"
-                placeholder="Goodhabit"
+                placeholder="예시) goodhabit"
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -239,18 +247,40 @@ export default function Join({ actionData }: Route.ComponentProps) {
               ) : null}
             </div>
             <div className="flex flex-col items-start space-y-2">
+              <SelectPair
+                label="역할"
+                description="자신을 표현하는 역할을 선택해주세요."
+                name="role"
+                required
+                placeholder="역할을 선택해주세요."
+                options={[
+                  { label: "비 암경험자", value: "healthy" },
+                  { label: "암경험자", value: "patient" },
+                  { label: "보호자", value: "caregiver" },
+                  { label: "의사", value: "doctor" },
+                  { label: "건강 전문가", value: "health_exp" },
+                  { label: "기타", value: "other" },
+                ]}
+              />
+              {actionData &&
+              "fieldErrors" in actionData &&
+              actionData.fieldErrors?.role ? (
+                <FormErrors errors={actionData.fieldErrors.role} />
+              ) : null}
+            </div>
+            <div className="flex flex-col items-start space-y-2">
               <Label
                 htmlFor="email"
                 className="flex flex-col items-start gap-1"
               >
-                Email
+                이메일
               </Label>
               <Input
                 id="email"
                 name="email"
                 required
                 type="email"
-                placeholder="nico@supaplate.com"
+                placeholder="예시) sean@evidence-base.com"
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -263,9 +293,9 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 htmlFor="password"
                 className="flex flex-col items-start gap-1"
               >
-                Password
+                비밀번호
                 <small className="text-muted-foreground">
-                  Must be at least 8 characters.
+                  최소 8자 이상이어야 합니다.
                 </small>
               </Label>
               <Input
@@ -273,7 +303,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 name="password"
                 required
                 type="password"
-                placeholder="Enter your password"
+                placeholder="예시) password123"
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -286,14 +316,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 htmlFor="confirmPassword"
                 className="flex flex-col items-start gap-1"
               >
-                Confirm password
+                비밀번호 확인
               </Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
                 required
                 type="password"
-                placeholder="Confirm your password"
+                placeholder="예시) password123"
               />
               {actionData &&
               "fieldErrors" in actionData &&
@@ -301,7 +331,7 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 <FormErrors errors={actionData.fieldErrors.confirmPassword} />
               ) : null}
             </div>
-            <FormButton label="Create account" className="w-full" />
+            <FormButton label="계정 생성 하기" className="w-full" />
             {actionData && "error" in actionData && actionData.error ? (
               <FormErrors errors={[actionData.error]} />
             ) : null}
@@ -309,28 +339,29 @@ export default function Join({ actionData }: Route.ComponentProps) {
             <div className="flex items-center gap-2">
               <Checkbox id="marketing" name="marketing" />
               <Label htmlFor="marketing" className="text-muted-foreground">
-                Sign up for marketing emails
+                마케팅 및 정보성 뉴스레터 수신 동의
               </Label>
             </div>
             <div className="flex items-center gap-2">
               <Checkbox id="terms" name="terms" checked />
               <Label htmlFor="terms" className="text-muted-foreground">
                 <span>
-                  I have read and agree to the{" "}
+                  서비스 이용약관 및 개인정보 처리방침을 확인하였으며, 이에
+                  동의합니다.{" "}
                   <Link
                     to="/legal/terms-of-service"
                     viewTransition
                     className="text-muted-foreground text-underline hover:text-foreground underline transition-colors"
                   >
-                    Terms of Service
+                    서비스 이용약관
                   </Link>{" "}
-                  and{" "}
+                  및{" "}
                   <Link
                     to="/legal/privacy-policy"
                     viewTransition
                     className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
                   >
-                    Privacy Policy
+                    개인정보 처리방침
                   </Link>
                 </span>
               </Label>
@@ -341,10 +372,9 @@ export default function Join({ actionData }: Route.ComponentProps) {
                   className="size-4"
                   color="oklch(0.627 0.194 149.214)"
                 />
-                <AlertTitle>Account created!</AlertTitle>
+                <AlertTitle>계정 생성 완료!</AlertTitle>
                 <AlertDescription className="text-green-700 dark:text-green-600">
-                  Before you can sign in, please verify your email. You can
-                  close this tab.
+                  이메일 인증 후 로그인 가능합니다. 이 탭을 닫을 수 있습니다.
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -354,14 +384,14 @@ export default function Join({ actionData }: Route.ComponentProps) {
       </Card>
       <div className="flex flex-col items-center justify-center text-sm">
         <p className="text-muted-foreground">
-          Already have an account?{" "}
+          이미 계정이 있으신가요?{" "}
           <Link
             to="/login"
             viewTransition
             data-testid="form-signin-link"
             className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
           >
-            Sign in
+            로그인
           </Link>
         </p>
       </div>

@@ -76,7 +76,7 @@ export default function ProfileLayout({
             </h1>
             {isLoggedIn && username === params.username ? (
               <Button variant="outline" asChild>
-                <Link to="/my/settings">프로필 수정</Link>
+                <Link to="/my/profile/settings">프로필 수정</Link>
               </Button>
             ) : null}
             {isLoggedIn && username !== params.username ? (

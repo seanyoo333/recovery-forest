@@ -1,7 +1,7 @@
 import type { Route } from "./+types/settings-page";
 
 import { Avatar } from "@radix-ui/react-avatar";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Form } from "react-router";
 import { z } from "zod";
 
@@ -100,6 +100,7 @@ export default function SettingsPage({
   actionData,
 }: Route.ComponentProps) {
   const [avatar, setAvatar] = useState<string | null>(loaderData.user.avatar);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const file = event.target.files[0];
@@ -161,13 +162,13 @@ export default function SettingsPage({
               </Alert>
             ) : null}
             <InputPair
-              label="소개"
-              description="자기소개를 입력해주세요."
+              label="삶의 정체성"
+              description="자신을 표현하는 가장 중요한 정체성을 소개해 주세요."
               required
               defaultValue={loaderData.user.headline ?? ""}
               id="headline"
               name="headline"
-              placeholder="i.e. Founder of wemake"
+              placeholder="예시) 치유하는 사업가 / Healing Entrepreneur"
               textArea
             />
             {actionData?.formErrors && "headline" in actionData?.formErrors ? (
@@ -179,13 +180,13 @@ export default function SettingsPage({
               </Alert>
             ) : null}
             <InputPair
-              label="치료 경험"
-              description="자신의 치료 노하우를 공유해 주세요."
+              label="회복의 여정"
+              description="자신의 치유 과정 중 가장 도움이 되었다고 생각하는 경험 세 가지를 공유해 주세요."
               required
               id="bio"
               defaultValue={loaderData.user.bio ?? ""}
               name="bio"
-              placeholder="i.e. I'm a developer who loves to build products."
+              placeholder="예시) 산 근처로 이사온 것, 금주, 암 대사치료"
               textArea
             />
             {actionData?.formErrors && "bio" in actionData?.formErrors ? (
@@ -210,7 +211,7 @@ export default function SettingsPage({
               자신을 표현하는 아바타 이미지를 선택해주세요.
             </small>
           </Label>
-          <div className="space-y-5">
+          <div className="flex flex-col items-center space-y-5">
             <div className="size-40 overflow-hidden rounded-full shadow-xl">
               {avatar ? (
                 <img src={avatar} className="h-full w-full object-cover" />
@@ -223,29 +224,39 @@ export default function SettingsPage({
               )}
             </div>
             <Input
+              ref={fileInputRef}
               type="file"
-              className="w-1/2"
+              className="hidden"
               onChange={onChange}
               required
               name="avatar"
+              accept="image/png,image/jpeg"
             />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-1/2"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              파일 선택
+            </Button>
             {actionData?.avatarSuccess ? (
-              <Alert>
+              <Alert className="w-full">
                 <AlertTitle>Success</AlertTitle>
                 <AlertDescription>
-                  아바타가 성공적으로 업데이트되었습니다.
+                  아바타가 성공적으로 업데이트 되었습니다.
                 </AlertDescription>
               </Alert>
             ) : null}
             {actionData?.formErrors && "avatar" in actionData?.formErrors ? (
-              <Alert>
+              <Alert className="w-full">
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>
                   {actionData.formErrors.avatar.join(", ")}
                 </AlertDescription>
               </Alert>
             ) : null}
-            <div className="flex flex-col text-xs">
+            <div className="flex flex-col items-center text-xs">
               <span className="text-muted-foreground">
                 권장 크기: 128x128px
               </span>

@@ -41,7 +41,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
     },
     profile_id: user?.id || null,
   });
-  return null;
+  return {};
 };
 
 export default function ProfilePage() {
@@ -52,30 +52,31 @@ export default function ProfilePage() {
   return (
     <div className="flex max-w-screen-md flex-col space-y-10">
       <div className="space-y-2">
-        <h4 className="text-lg font-bold">Headline</h4>
+        <h4 className="text-lg font-bold">삶의 정체성</h4>
         {headline ? (
           <p className="text-muted-foreground">{headline}</p>
         ) : (
           <p className="text-muted-foreground">
-            Go to{" "}
+            {" "}
             <Button variant={"link"} asChild className="p-0 text-base">
-              <Link to="/my/profilesettings">settings</Link>
+              <Link to="/my/profile/settings">프로필 수정</Link>
             </Button>{" "}
-            to add a headline to your profile.
+            에서 자신을 표현하는 가장 중요한 정체성을 소개해 주세요.
           </p>
         )}
       </div>
       <div className="space-y-2">
-        <h4 className="text-lg font-bold">Bio</h4>
+        <h4 className="text-lg font-bold">회복의 여정</h4>
         {bio ? (
           <p className="text-muted-foreground">{bio}</p>
         ) : (
           <p className="text-muted-foreground">
-            Go to{" "}
+            {" "}
             <Button variant={"link"} asChild className="p-0 text-base">
-              <Link to="/my/settings">프로필 수정</Link>
+              <Link to="/my/profile/settings">프로필 수정</Link>
             </Button>{" "}
-            to add a bio to your profile.
+            에서 자신의 치유 과정 중 가장 도움이 되었다고 생각하는 경험 세
+            가지를 공유해 주세요.
           </p>
         )}
       </div>

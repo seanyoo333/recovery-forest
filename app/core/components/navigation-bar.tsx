@@ -240,7 +240,7 @@ function UserMenu({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link to="/my/settings">
+            <Link to="/my/account">
               <SettingsIcon className="mr-2 size-4" />
               설정
             </Link>
@@ -282,7 +282,7 @@ function AuthButtons() {
       <Button variant="ghost" asChild>
         <SheetClose asChild>
           <Link to="/login" viewTransition>
-            Sign in
+            로그인
           </Link>
         </SheetClose>
       </Button>
@@ -291,7 +291,7 @@ function AuthButtons() {
       <Button variant="default" asChild>
         <SheetClose asChild>
           <Link to="/join" viewTransition>
-            Sign up
+            회원가입
           </Link>
         </SheetClose>
       </Button>

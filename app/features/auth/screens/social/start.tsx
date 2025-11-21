@@ -25,7 +25,7 @@ import makeServerClient from "~/core/lib/supa-client.server";
  * Add more providers as you enable them in your Supabase dashboard
  */
 const paramsSchema = z.object({
-  provider: z.enum(["github", "kakao"]),
+  provider: z.enum(["github", "kakao", "google"]),
 });
 
 /**
@@ -45,7 +45,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   // Validate the provider parameter
   const { error, success, data: parsedParams } = paramsSchema.safeParse(params);
   if (!success) {
-    return data({ error: "Invalid provider" }, { status: 400 });
+    return redirect("/auth/login");
   }
 
   // Create Supabase client and get response headers for auth cookies

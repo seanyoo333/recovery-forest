@@ -86,7 +86,7 @@ export default function SidebarUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <Sparkles />
                 Upgrade to Pro
               </DropdownMenuItem>
@@ -98,23 +98,25 @@ export default function SidebarUser({
                   <UserCircle2Icon />
                   Account
                 </Link>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem asChild>
-                <Link to="/dashboard/payments">
+                <Link to="/my/messages">
                   <CreditCard />
-                  Payments
+                  메세지
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
+              <DropdownMenuItem asChild>
+                <Link to="/my/notifications">
+                  <Bell />
+                  알림
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/logout">
                 <LogOut />
-                Log out
+                로그아웃
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>

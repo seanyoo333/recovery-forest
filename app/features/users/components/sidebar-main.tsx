@@ -63,7 +63,7 @@ export default function SidebarMain({
         </SidebarMenuItem>
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
-            <Link to="/my/settings">
+            <Link to="/my/profile/settings">
               <User />
               <span>프로필</span>
             </Link>
@@ -71,7 +71,7 @@ export default function SidebarMain({
         </SidebarMenuItem>
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
-            <Link to="/account/edit">
+            <Link to="/my/account">
               <Settings2Icon />
               <span>설정</span>
             </Link>

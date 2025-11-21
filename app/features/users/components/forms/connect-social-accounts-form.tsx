@@ -35,9 +35,9 @@ export default function ConnectSocialAccountsForm({
   return (
     <Card className="w-full max-w-screen-md">
       <CardHeader>
-        <CardTitle>Connect social accounts</CardTitle>
+        <CardTitle>소셜 계정 연결</CardTitle>
         <CardDescription>
-          Add or remove additional authentication methods to your account.
+          계정에 추가 인증 방법을 연결하거나 제거합니다.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">

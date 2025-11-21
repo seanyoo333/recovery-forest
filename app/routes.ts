@@ -279,9 +279,15 @@ export default [
             "features/users/api/hide-message-room-page.tsx",
           ),
         ]),
+        ...prefix("/profile", [
+          route("/", "features/users/api/my/profile/my-profile-page.tsx"),
+          route(
+            "/settings",
+            "features/users/api/my/settings/settings-page.tsx",
+          ),
+        ]),
 
-        route("/profile", "features/users/api/my/profile/my-profile-page.tsx"),
-        route("/settings", "features/users/api/my/settings/settings-page.tsx"),
+        route("/account", "features/users/pages/account.tsx"),
         route("/notifications", "features/users/screens/notifications.tsx"),
         route(
           "/notifications/:notificationId/see",
@@ -309,7 +315,6 @@ export default [
           "features/blog/pages/admin-blog-page.tsx",
         ),
       ]),
-      route("/account/edit", "features/users/screens/account.tsx"),
     ]),
   ]),
 

@@ -83,14 +83,19 @@ export type Database = MergeDeep<
             SupabaseDatabase["public"]["Views"]["community_post_detail"]["Row"]
           >;
         };
-        gpt_ideas_view: {
-          Row: SetNonNullable<
-            SupabaseDatabase["public"]["Views"]["gpt_ideas_view"]["Row"]
-          >;
-        };
         profiles_view: {
           Row: SetNonNullable<
             SupabaseDatabase["public"]["Views"]["profiles_view"]["Row"]
+          >;
+        };
+        clinics_view: {
+          Row: SetNonNullable<
+            SupabaseDatabase["public"]["Views"]["clinics_view"]["Row"]
+          >;
+        };
+        bot_messages_view: {
+          Row: SetNonNullable<
+            SupabaseDatabase["public"]["Views"]["bot_messages_view"]["Row"]
           >;
         };
       };
