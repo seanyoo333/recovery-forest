@@ -466,18 +466,30 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               </p>
             </div>
 
-            {/* Miricanvas Hero Image 자리 */}
-            <div className="mb-8 flex justify-center">
-              <img
-                src="/images/landing-hero-evidence-base.jpg"
-                alt="암 이후 생활관리를 돕는 근거 기반 플랫폼 히어로 이미지"
-                className="h-auto w-full max-w-4xl rounded-xl object-cover shadow-xl"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
+            {/* Hero Image */}
+            <BlurFade delay={0.2} duration={0.6} inView>
+              <div className="mb-10 flex justify-center">
+                <div className="border-primary/20 relative w-full max-w-5xl overflow-hidden rounded-2xl border-2 shadow-2xl">
+                  <img
+                    src="/images/landing/landing hero1.png"
+                    alt="암 이후 생활관리를 돕는 근거 기반 플랫폼 히어로 이미지"
+                    className="h-auto w-full object-cover"
+                    loading="eager"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.src = "/images/landing/landing hero2.png";
+                      target.onerror = () => {
+                        target.src = "/images/landing/landing hero3.png";
+                        target.onerror = () => {
+                          target.style.display = "none";
+                        };
+                      };
+                    }}
+                  />
+                  <div className="from-background/20 absolute inset-0 bg-gradient-to-t via-transparent to-transparent" />
+                </div>
+              </div>
+            </BlurFade>
 
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button
@@ -1151,39 +1163,158 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Background / Team */}
-      <section className="bg-muted/50 py-20">
+      {/* Founder Story Section */}
+      <section id="founder-story" className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl">
-            <BlurFade delay={0.2} duration={0.6} inView>
-              <div className="mb-8 text-center">
-                <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">왜 이 서비스를 만들게 되었나요?</h2>
-                <p className="text-muted-foreground text-sm md:text-base">
-                  “우리 가족에게 정말 도움이 되는 선택을 하고 있는 걸까?” 암 경험자의 가족으로서 직접 겪은 질문에서
-                  Evidence Base는 시작되었습니다.
+          <div className="mx-auto max-w-5xl space-y-10">
+            {/* 헤더 영역 */}
+            <BlurFade delay={0.1} duration={0.6} inView>
+              <div className="mb-4 flex flex-col items-center gap-3 text-center">
+                <span className="border-primary/20 bg-primary/10 text-primary inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide uppercase">
+                  창업자의 이야기
+                </span>
+                <h2 className="text-3xl font-bold tracking-tight text-balance md:text-4xl">
+                  왜 이 서비스를 만들게 되었나요?
+                </h2>
+                <p className="text-muted-foreground mt-3 max-w-2xl text-sm md:text-base">
+                  아내가 자궁경부암에서 폐전이가 되어 4기 암 환자가 된 후,
+                  <br />
+                  "어떻게 해야 아내의 건강관리에 정말 도움이 되는 선택을 할 수 있을까?" 라는 질문에서 Evidence Base는
+                  시작되었습니다.
                 </p>
+                <div className="-mt-1 flex justify-center">
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href="https://blog.naver.com/ymgilman/221562095197?trackingCode=blog_bloghome_searchlist"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      블로그에서 시작 이야기 읽기
+                    </a>
+                  </Button>
+                </div>
               </div>
             </BlurFade>
 
-            <BlurFade delay={0.3} duration={0.6} inView>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-muted-foreground space-y-4 text-sm leading-relaxed md:text-base">
-                    <p>
-                      건강 정보는 넘쳐나지만, 암과 관련된 내용은 특히 어렵고 무겁게 느껴집니다. 치료 중이거나 치료를
-                      마친 사람에게는 작은 선택도 심리적으로 크게 다가옵니다.
-                    </p>
-                    <p>
-                      Evidence Base는 “정답”을 주려는 플랫폼이 아닙니다. 대신, 검증된 자료와 현장의 경험을 기반으로
-                      &quot;어떤 질문을 던져야 할지&quot;를 함께 정리하는 동반자가 되고자 합니다.
-                    </p>
-                    <p>
-                      우리는 사용자가 자신의 몸과 삶에 대해 주체적인 결정을 내릴 수 있도록, 정보·경험·전문가 관점을
-                      연결해 주는 역할을 합니다. 단, 최종적인 의료적 판단은 언제나 담당 의료진의 몫임을 분명히 합니다.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* 본문 + 타임라인 2단 구성 */}
+            <BlurFade delay={0.2} duration={0.6} inView>
+              <div className="grid gap-8 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                {/* 왼쪽: 감정/스토리 카드 */}
+                <Card className="border-primary/10 bg-background/80 shadow-lg backdrop-blur-sm">
+                  <CardContent className="pt-8">
+                    <div className="text-muted-foreground space-y-6 text-sm leading-relaxed md:text-base">
+                      {/* 인용 박스 – 감정 포인트 강조 */}
+                      <div className="border-primary/20 bg-primary/5 relative rounded-xl border p-5">
+                        <p className="text-foreground text-center text-sm font-bold md:text-base">
+                          '더 건강하게 살수 있도록 돕자'라는 비전을 위해 만들어진 플랫폼입니다.
+                        </p>
+                      </div>
+                      <br />
+
+                      <p>
+                        건강 정보는 넘쳐나지만, 암과 관련된 내용은 특히 어렵고 무겁게 느껴집니다. 치료 중이거나 치료를
+                        마친 사람에게는 작은 선택도 심리적으로 크게 다가옵니다. 저희도 정보의 홍수 속에 선택 마비가 올
+                        정도로 힘들었지만, 어려움을 잘 극복해서 감사하게도 지금 건강한 일상을 살고 있습니다.
+                      </p>
+                      <p>
+                        다양한 방법 중 특히 통합의학적(Integrative Medicine) 정보, 산림치유, 자조모임 환우 커뮤니티가 큰
+                        도움이 되었다고 생각합니다. 많은 암 경험자가 최선의 선택을 위한 높은 정보 등급의 큐레이션 된
+                        건강 정보, 전문가의 도움을 받는 통합의학적 지식의 실행, 의지할 수 있는 자조모임 커뮤니티를
+                        원하지만, 신뢰할 만한 곳은 찾기 힘듭니다.
+                      </p>
+                      <p>
+                        Evidence Base는 “정답”을 주는 플랫폼이 아닙니다. 대신, 검증된 자료, AI 데이터 분석 기술, 직접
+                        경험한 치유 방법을 기반으로 &quot;어떤 질문을 던져야 할지&quot;를 함께 정리하는 동반자가 되고자
+                        합니다. 표준 치료 이후, 아내가 건강한 삶을 살 수 있도록 돕기 위해 해외의 유명 통합의학 서적들을
+                        번역 및 출판, 국내 건강 강의 및 산림치유 활동, 건강에 도움을 주는 보조제의 제조 및 유통 등과
+                        같은 일을 하며 “어떻게 암 이후, 건강한 삶을 살 수 있을까?”라는 질문을 해가며 끊임없이 배우고
+                        적용해 보았습니다.
+                      </p>
+                      <p>
+                        우리는 사용자가 자신의 몸과 삶에 대해 주체적인 결정을 내릴 수 있도록, 정보·경험·전문가 관점을
+                        연결해 주는 역할을 합니다. 단, 최종적인 의료적 판단은 언제나 담당 의료진의 몫임을 분명히 합니다.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 오른쪽: 연대기/팩트 카드 (따뜻한 색 포인트) */}
+                <Card className="border-amber-100 bg-amber-50/90 shadow-md dark:border-amber-900/40 dark:bg-amber-950/20">
+                  <CardContent className="pt-6">
+                    <div className="space-y-5 text-sm text-amber-950 md:text-base dark:text-amber-50/90">
+                      <h3 className="text-foreground text-center text-base font-semibold">
+                        한 가족의 기록에서 시작된 여정
+                      </h3>
+                      <div className="space-y-4">
+                        {/* 타임라인 아이템 1 */}
+                        <Card className="neon-card cursor-pointer">
+                          <CardContent className="pt-4">
+                            <div className="flex gap-3">
+                              <div className="from-primary mt-1 h-10 w-1 rounded-full bg-gradient-to-b to-emerald-400" />
+                              <div>
+                                <p className="text-primary text-xs font-semibold tracking-wide uppercase">2019년</p>
+                                <p className="text-foreground font-medium">네이버 블로그에 기록을 남기다</p>
+                                <p className="mt-1 text-xs md:text-sm">
+                                  아내의 재발과 전이를 겪으며, 해외 논문과 통합의학 자료를 번역·정리해 블로그에 공유하기
+                                  시작했습니다.
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* 타임라인 아이템 2 */}
+                        <Card className="neon-card cursor-pointer">
+                          <CardContent className="pt-4">
+                            <div className="flex gap-3">
+                              <div className="to-primary/60 mt-1 h-10 w-1 rounded-full bg-gradient-to-b from-emerald-400" />
+                              <div>
+                                <p className="text-xs font-semibold tracking-wide text-emerald-700 uppercase dark:text-emerald-300">
+                                  2019–2024년
+                                </p>
+                                <p className="text-foreground font-medium">숲, 강의, 보조제를 통해 배운 것들</p>
+                                <p className="mt-1 text-xs md:text-sm">
+                                  산림치유 활동, 환우 자조모임, 건강 강의, 보조제 유통을 통해 실제 암 경험자와
+                                  보호자에게 도움이 되었던 것들을 꾸준히 쌓아 왔습니다.
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* 타임라인 아이템 3 */}
+                        <Card className="neon-card cursor-pointer">
+                          <CardContent className="pt-4">
+                            <div className="flex gap-3">
+                              <div className="from-primary/70 mt-1 h-10 w-1 rounded-full bg-gradient-to-b to-amber-400" />
+                              <div>
+                                <p className="text-xs font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-300">
+                                  지금
+                                </p>
+                                <p className="text-foreground font-medium">Evidence Base 플랫폼으로 확장</p>
+                                <p className="mt-1 text-xs md:text-sm">
+                                  이제는 저희 가족만을 위한 정리가 아니라, 비슷한 길을 걷는 암 경험자·보호자들이
+                                  &quot;근거 있는 질문&quot;을 준비하고, 조금 덜 외롭도록 돕는 플랫폼으로 확장하고자
+                                  합니다.
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* 마무리 메시지 박스 */}
+                      <div className="mt-4 rounded-lg border border-white/60 bg-white/70 p-3 text-xs shadow-sm backdrop-blur-sm md:text-sm dark:border-amber-800/60 dark:bg-amber-950/50">
+                        <p className="text-foreground font-medium">
+                          이 서비스는 &quot;사업 아이템&quot;이 아니라, 한 가족의 투병과 회복에서 시작된 고민의
+                          연장선입니다.
+                        </p>
+                        <p className="mt-1">그래서 더 조심스럽게, 더 근거 있게, 더 진심으로 만들고 있습니다.</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </BlurFade>
           </div>
         </div>
