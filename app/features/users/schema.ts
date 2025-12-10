@@ -19,6 +19,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { authUid, authUsers, authenticatedRole } from "drizzle-orm/supabase";
@@ -42,14 +43,7 @@ import { team } from "../teams/schema";
 // import { authUsers } from "drizzle-orm/supabase";
 
 // 사용자 역할 (실제 데이터베이스 구조와 일치)
-export const userRoles = pgEnum("user_role", [
-  "healthy",
-  "patient",
-  "caregiver",
-  "doctor",
-  "health_exp",
-  "other",
-]);
+export const userRoles = pgEnum("user_role", ["healthy", "patient", "caregiver", "doctor", "health_exp", "other"]);
 
 // 관리자 권한 (시스템에서만 설정 가능)
 export const adminRoles = pgEnum("admin_role", [
@@ -250,18 +244,12 @@ export const follows = pgTable(
   ],
 );
 
-export const notificationType = pgEnum("notification_type", [
-  "follow",
-  "review",
-  "reply",
-]);
+export const notificationType = pgEnum("notification_type", ["follow", "review", "reply"]);
 
 export const notifications = pgTable(
   "notifications",
   {
-    notification_id: bigint({ mode: "number" })
-      .primaryKey()
-      .generatedAlwaysAsIdentity(),
+    notification_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     source_id: uuid().references(() => profiles.profile_id, {
       onDelete: "cascade",
     }),
@@ -318,9 +306,7 @@ export const notifications = pgTable(
 export const messageRooms = pgTable(
   "message_rooms",
   {
-    message_room_id: bigint({ mode: "number" })
-      .primaryKey()
-      .generatedAlwaysAsIdentity(),
+    message_room_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     created_at: timestamp()
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
@@ -372,12 +358,9 @@ export const messageRooms = pgTable(
 export const messageRoomMembers = pgTable(
   "message_room_members",
   {
-    message_room_id: bigint({ mode: "number" }).references(
-      () => messageRooms.message_room_id,
-      {
-        onDelete: "cascade",
-      },
-    ),
+    message_room_id: bigint({ mode: "number" }).references(() => messageRooms.message_room_id, {
+      onDelete: "cascade",
+    }),
     profile_id: uuid().references(() => profiles.profile_id, {
       onDelete: "cascade",
     }),
@@ -429,9 +412,7 @@ export const messageRoomMembers = pgTable(
 export const messages = pgTable(
   "messages",
   {
-    message_id: bigint({ mode: "number" })
-      .primaryKey()
-      .generatedAlwaysAsIdentity(),
+    message_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     message_room_id: bigint({ mode: "number" })
       .references(() => messageRooms.message_room_id, {
         onDelete: "cascade",
@@ -490,16 +471,9 @@ export const messages = pgTable(
  * to patients undergoing treatment or monitoring.
  */
 
-export const patientTreatmentStatusEnum = pgEnum("patient_treatment_status", [
-  "ongoing",
-  "completed",
-  "follow_up",
-]);
+export const patientTreatmentStatusEnum = pgEnum("patient_treatment_status", ["ongoing", "completed", "follow_up"]);
 
-export const medicationStatusEnum = pgEnum("patient_medication_status", [
-  "none",
-  "active",
-]);
+export const medicationStatusEnum = pgEnum("patient_medication_status", ["none", "active"]);
 
 export const patientHealthProfiles = pgTable(
   "patient_health_profiles",
@@ -558,15 +532,22 @@ export const patientHealthProfiles = pgTable(
 export const bloodTestTypes = pgTable(
   "blood_test_types",
   {
-    test_id: bigint({ mode: "number" })
-      .primaryKey()
-      .generatedAlwaysAsIdentity(),
+    test_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     standard_name: text().notNull(),
     variations: jsonb().$type<Record<string, unknown>>().default({}),
     unit: text().notNull(),
     reference_min: doublePrecision(),
     reference_max: doublePrecision(),
     clinical_significance: text(),
+    descriptions: jsonb()
+      .$type<{
+        description?: string;
+        significance?: {
+          up?: string[];
+          down?: string[];
+        };
+      }>()
+      .default({}),
     ...timestamps,
   },
   (table) => [
@@ -586,6 +567,58 @@ export const bloodTestTypes = pgTable(
 );
 
 /**
+ * Blood Test Images
+ *
+ * Stores blood test image metadata to avoid duplication.
+ * Each unique image (identified by SHA-256 hash) is stored once.
+ */
+
+export const bloodTestImages = pgTable(
+  "blood_test_images",
+  {
+    image_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    patient_id: uuid()
+      .references(() => patientHealthProfiles.patient_id, {
+        onDelete: "cascade",
+      })
+      .notNull(),
+    image_hash: text().notNull(), // SHA-256 해시로 중복 이미지 방지 (유니크)
+    image_url: text().notNull(),
+    test_date: date().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    // 유니크 제약: 같은 해시는 한 번만 저장
+    uniqueIndex("blood_test_images_hash_unique").on(table.image_hash),
+    pgPolicy("blood-test-images-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("blood-test-images-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("blood-test-images-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+      withCheck: sql`${authUid} = ${table.patient_id}`,
+    }),
+    pgPolicy("blood-test-images-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.patient_id}`,
+    }),
+  ],
+);
+
+/**
  * Laboratory Results
  *
  * Stores the actual lab measurements per patient and test type.
@@ -594,9 +627,7 @@ export const bloodTestTypes = pgTable(
 export const bloodTestResults = pgTable(
   "blood_test_results",
   {
-    result_id: bigint({ mode: "number" })
-      .primaryKey()
-      .generatedAlwaysAsIdentity(),
+    result_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     patient_id: uuid()
       .references(() => patientHealthProfiles.patient_id, {
         onDelete: "cascade",
@@ -607,10 +638,12 @@ export const bloodTestResults = pgTable(
         onDelete: "restrict",
       })
       .notNull(),
+    image_id: bigint({ mode: "number" }).references(() => bloodTestImages.image_id, {
+      onDelete: "set null",
+    }),
     result_value: doublePrecision().notNull(),
     confidence: doublePrecision(),
     result_unit: text(),
-    image_url: text(),
     test_date: date().notNull(),
     notes: text(),
     ...timestamps,

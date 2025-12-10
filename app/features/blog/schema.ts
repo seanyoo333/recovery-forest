@@ -4,12 +4,15 @@
  * Defines the blog_posts_meta table and associated RLS policies using
  * the same Drizzle pattern as other feature schemas.
  */
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+
 import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
   pgPolicy,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -33,8 +36,7 @@ export const blogPostsMeta = pgTable(
     category: text().notNull(),
     author: text().notNull(),
     date: timestamp().notNull(),
-    featured_image_url: text(),
-    mdx_file_path: text().notNull(),
+    upvotes: bigint({ mode: "number" }).default(0),
     naver_blog_url: text(),
     naver_post_id: text(),
     imported_at: timestamp(),
@@ -99,6 +101,53 @@ export const blogPostsMeta = pgTable(
         AND admin_role IN ('super_admin', 'content_admin')
         AND is_active = true
       )`,
+    }),
+    // Allow upvotes to be updated (via trigger)
+    pgPolicy("blog-posts-meta-update-upvotes-policy", {
+      for: "update",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+      withCheck: sql`true`,
+    }),
+  ],
+);
+
+export const blogPostUpvotes = pgTable(
+  "blog_post_upvotes",
+  {
+    post_id: bigint({ mode: "number" }).references(
+      () => blogPostsMeta.post_id,
+      {
+        onDelete: "cascade",
+      },
+    ),
+    profile_id: uuid().references(() => profiles.profile_id, {
+      onDelete: "cascade",
+    }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.post_id, table.profile_id] }),
+    // All users can read upvote information
+    pgPolicy("blog-post-upvotes-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    // Authenticated users can create upvotes
+    pgPolicy("blog-post-upvotes-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    // Authenticated users can delete their own upvotes
+    pgPolicy("blog-post-upvotes-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
     }),
   ],
 );

@@ -58,7 +58,7 @@ const data = {
           url: "/my/dashboard/health/consent",
         },
         {
-          title: "Evidence Base AI 분석 결과",
+          title: "EV AI 혈액검사 분석",
           url: "/my/dashboard/health/analysis",
         },
       ],
@@ -69,15 +69,15 @@ const data = {
       icon: UsersIcon,
       items: [
         {
-          title: "Contacts",
+          title: "근거자료 북마크",
           url: "#",
         },
         {
-          title: "Companies",
+          title: "근거자료 기반 질문하기",
           url: "#",
         },
         {
-          title: "Deals",
+          title: "EV AI 근거자료 검색",
           url: "#",
         },
       ],
@@ -88,19 +88,15 @@ const data = {
       icon: LineChartIcon,
       items: [
         {
-          title: "Pipeline",
+          title: "관련제품 카트",
           url: "#",
         },
         {
-          title: "Opportunities",
+          title: "관련제품 검색",
           url: "#",
         },
         {
-          title: "Quotes",
-          url: "#",
-        },
-        {
-          title: "Invoices",
+          title: "EV AI 제품 추천",
           url: "#",
         },
       ],
@@ -185,9 +181,7 @@ export default function DashboardSidebar({
         {/* <SidebarProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <div className="text-muted-foreground px-3 py-4 text-xs">
-          Evidence Base © {new Date().getFullYear()}
-        </div>
+        <div className="text-muted-foreground px-3 py-4 text-xs">Evidence Base © {new Date().getFullYear()}</div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

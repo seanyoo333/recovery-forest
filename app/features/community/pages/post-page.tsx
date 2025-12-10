@@ -20,12 +20,8 @@ import {
   TypographyList,
   TypographyOrderedList,
   TypographyP,
-} from "~/core/components/mdx-typography";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "~/core/components/ui/avatar";
+} from "~/core/components/mdx-typography1";
+import { Avatar, AvatarFallback, AvatarImage } from "~/core/components/ui/avatar";
 import { Badge } from "~/core/components/ui/badge";
 import {
   Breadcrumb,
@@ -98,16 +94,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   // MD 파일인 경우 실제 파일 내용을 읽어옴
   let mdContent = "";
   if (post.is_markdown) {
-    const docsPath = path.join(
-      process.cwd(),
-      "app",
-      "features",
-      "community",
-      "docs",
-    );
-    const files = await import("node:fs/promises").then((fs) =>
-      fs.readdir(docsPath),
-    );
+    const docsPath = path.join(process.cwd(), "app", "features", "community", "docs");
+    const files = await import("node:fs/promises").then((fs) => fs.readdir(docsPath));
 
     // frontmatter의 제목으로 파일 찾기
     for (const file of files) {
@@ -148,9 +136,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   const intent = formData.get("intent");
 
   if (intent === "delete") {
-    const { success, error, data } = deleteSchema.safeParse(
-      Object.fromEntries(formData),
-    );
+    const { success, error, data } = deleteSchema.safeParse(Object.fromEntries(formData));
     if (!success) {
       return {
         formErrors: error?.flatten().fieldErrors,
@@ -164,9 +150,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   }
 
   // 기존 댓글 작성 로직
-  const { success, error, data } = formSchema.safeParse(
-    Object.fromEntries(formData),
-  );
+  const { success, error, data } = formSchema.safeParse(Object.fromEntries(formData));
   if (!success) {
     return {
       formErrors: error?.flatten().fieldErrors,
@@ -184,10 +168,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   };
 };
 
-export default function PostPage({
-  loaderData,
-  actionData,
-}: Route.ComponentProps) {
+export default function PostPage({ loaderData, actionData }: Route.ComponentProps) {
   const fetcher = useFetcher();
   const { isLoggedIn, name, username, avatar } = useOutletContext<{
     isLoggedIn: boolean;
@@ -204,33 +185,15 @@ export default function PostPage({
 
   // 마크다운 렌더링을 위한 컴포넌트 매핑
   const markdownComponents = {
-    h1: ({ children, ...props }: any) => (
-      <TypographyH1 children={children} props={props} />
-    ),
-    h2: ({ children, ...props }: any) => (
-      <TypographyH2 children={children} props={props} />
-    ),
-    h3: ({ children, ...props }: any) => (
-      <TypographyH3 children={children} props={props} />
-    ),
-    h4: ({ children, ...props }: any) => (
-      <TypographyH4 children={children} props={props} />
-    ),
-    p: ({ children, ...props }: any) => (
-      <TypographyP children={children} props={props} />
-    ),
-    blockquote: ({ children, ...props }: any) => (
-      <TypographyBlockquote children={children} props={props} />
-    ),
-    ul: ({ children, ...props }: any) => (
-      <TypographyList children={children} props={props} />
-    ),
-    ol: ({ children, ...props }: any) => (
-      <TypographyOrderedList children={children} props={props} />
-    ),
-    code: ({ children, ...props }: any) => (
-      <TypographyInlineCode children={children} props={props} />
-    ),
+    h1: ({ children, ...props }: any) => <TypographyH1 children={children} props={props} />,
+    h2: ({ children, ...props }: any) => <TypographyH2 children={children} props={props} />,
+    h3: ({ children, ...props }: any) => <TypographyH3 children={children} props={props} />,
+    h4: ({ children, ...props }: any) => <TypographyH4 children={children} props={props} />,
+    p: ({ children, ...props }: any) => <TypographyP children={children} props={props} />,
+    blockquote: ({ children, ...props }: any) => <TypographyBlockquote children={children} props={props} />,
+    ul: ({ children, ...props }: any) => <TypographyList children={children} props={props} />,
+    ol: ({ children, ...props }: any) => <TypographyOrderedList children={children} props={props} />,
+    code: ({ children, ...props }: any) => <TypographyInlineCode children={children} props={props} />,
   };
 
   // MD 파일인지 확인
@@ -248,17 +211,13 @@ export default function PostPage({
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/community?topic=${loaderData.post.topic_slug}`}>
-                {loaderData.post.topic_name}
-              </Link>
+              <Link to={`/community?topic=${loaderData.post.topic_slug}`}>{loaderData.post.topic_name}</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={`/community/${loaderData.post.post_id}`}>
-                {loaderData.post.title}
-              </Link>
+              <Link to={`/community/${loaderData.post.post_id}`}>{loaderData.post.title}</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -276,9 +235,7 @@ export default function PostPage({
                 variant="outline"
                 className={cn(
                   "flex h-14 w-full flex-col md:w-fit",
-                  loaderData.post.is_upvoted
-                    ? "border-primary text-primary"
-                    : "",
+                  loaderData.post.is_upvoted ? "border-primary text-primary" : "",
                 )}
               >
                 <ChevronUpIcon className="size-4 shrink-0" />
@@ -288,23 +245,15 @@ export default function PostPage({
             <div className="w-full space-y-10 md:space-y-20">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-3xl font-bold">
-                    {loaderData.post.title}
-                  </h2>
+                  <h2 className="text-3xl font-bold">{loaderData.post.title}</h2>
                   {isMDFile && <Badge variant="secondary">MD 파일</Badge>}
                 </div>
                 <div className="text-muted-foreground flex items-center gap-2.5 text-sm">
-                  <Link
-                    to={`/users/${loaderData.post.author_username}`}
-                    className="hover:underline"
-                  >
+                  <Link to={`/users/${loaderData.post.author_username}`} className="hover:underline">
                     {loaderData.post.author_name}
                   </Link>
                   <DotIcon className="size-5" />
-                  <span>
-                    {" "}
-                    {DateTime.fromISO(loaderData.post.created_at).toRelative()}
-                  </span>
+                  <span> {DateTime.fromISO(loaderData.post.created_at).toRelative()}</span>
                   <DotIcon className="size-5" />
                   <span> {loaderData.post.replies} 댓글</span>
                 </div>
@@ -318,39 +267,23 @@ export default function PostPage({
                       </ReactMarkdown>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap">
-                      {loaderData.post.content}
-                    </p>
+                    <p className="whitespace-pre-wrap">{loaderData.post.content}</p>
                   )}
                 </div>
               </div>
 
               {/* 댓글 기능 */}
-              <Form
-                ref={formRef}
-                className="flex w-full items-start gap-5 md:w-3/4"
-                method="post"
-              >
+              <Form ref={formRef} className="flex w-full items-start gap-5 md:w-3/4" method="post">
                 <Avatar className="size-14">
                   <AvatarFallback>{name?.[0]}</AvatarFallback>
                   <AvatarImage src={avatar} />
                 </Avatar>
                 <div className="flex w-full flex-col items-end gap-5">
-                  <Textarea
-                    name="reply"
-                    placeholder="Write a reply"
-                    className="w-full resize-none"
-                    rows={5}
-                  />
+                  <Textarea name="reply" placeholder="Write a reply" className="w-full resize-none" rows={5} />
                   {isLoggedIn ? (
                     <Button className="font-bold"> 댓글 달기 </Button>
                   ) : (
-                    <span
-                      className={cn(
-                        buttonVariants({ variant: "secondary" }),
-                        "cursor-not-allowed",
-                      )}
-                    >
+                    <span className={cn(buttonVariants({ variant: "secondary" }), "cursor-not-allowed")}>
                       로그인하고 댓글 달기
                     </span>
                   )}
@@ -358,9 +291,7 @@ export default function PostPage({
               </Form>
 
               <div className="space-y-10">
-                <h4 className="font-semibold">
-                  {loaderData.post.replies} 개의 댓글
-                </h4>
+                <h4 className="font-semibold">{loaderData.post.replies} 개의 댓글</h4>
                 <div className="flex flex-col gap-5">
                   {loaderData.replies.map((reply) => (
                     <Reply
@@ -386,22 +317,13 @@ export default function PostPage({
           <div className="flex gap-5">
             <Link to={`/users/${loaderData.post.author_username}`}>
               <Avatar className="size-14">
-                <AvatarFallback>
-                  {loaderData.post.author_name[0]}
-                </AvatarFallback>
-                {loaderData.post.author_avatar ? (
-                  <AvatarImage src={loaderData.post.author_avatar} />
-                ) : null}
+                <AvatarFallback>{loaderData.post.author_name[0]}</AvatarFallback>
+                {loaderData.post.author_avatar ? <AvatarImage src={loaderData.post.author_avatar} /> : null}
               </Avatar>
             </Link>
             <div className="flex flex-col items-start">
-              <Link
-                to={`/users/${loaderData.post.author_username}`}
-                className="hover:underline"
-              >
-                <h4 className="text-lg font-medium">
-                  {loaderData.post.author_name}
-                </h4>
+              <Link to={`/users/${loaderData.post.author_username}`} className="hover:underline">
+                <h4 className="text-lg font-medium">{loaderData.post.author_name}</h4>
               </Link>
               <Badge variant="secondary" className="capitalize">
                 {loaderData.post.author_role}

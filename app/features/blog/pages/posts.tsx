@@ -2,89 +2,162 @@
  * Blog Posts Screen
  *
  * This component displays a list of blog posts from MDX files in the docs directory.
- * It uses mdx-bundler to extract frontmatter from MDX files and renders a grid of
- * blog post cards with images, titles, descriptions, and metadata.
+ * It combines local MDX files with Supabase metadata for dynamic features like views, likes, etc.
  *
  * The blog implementation demonstrates:
- * 1. MDX content handling with frontmatter extraction
- * 2. File system operations for reading blog content
- * 3. Responsive grid layout for different screen sizes
- * 4. View transitions for smooth navigation between pages
+ * 1. MDX content handling with frontmatter extraction from local files
+ * 2. Supabase metadata integration for dynamic features
+ * 3. File system operations for reading blog content
+ * 4. Responsive grid layout for different screen sizes
+ * 5. View transitions for smooth navigation between pages
  */
 import type { Route } from "./+types/posts";
 
-import { Form, Link, data, redirect, useSearchParams } from "react-router";
-import { z } from "zod";
+import { ChevronUpIcon } from "lucide-react";
+import { bundleMDX } from "mdx-bundler";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { Form, Link, useFetcher, useSearchParams } from "react-router";
+import { redirect } from "react-router";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
 import { Input } from "~/core/components/ui/input";
 import makeServerClient from "~/core/lib/supa-client.server";
+import { cn } from "~/core/lib/utils";
 import { BlogPagination } from "~/features/blog/components/blog-pagination";
 import { getBlogPostsMeta } from "~/features/blog/queries";
 
 /**
  * Meta function for the blog posts page
- *
- * Sets the page title using the application name from environment variables
- * and adds a meta description for SEO purposes
  */
 export const meta: Route.MetaFunction = () => {
   return [
     { title: `좋은습관 블로그 | ${import.meta.env.VITE_APP_NAME}` },
-    { name: "description", content: "회복의 여정, 함께 해요!" },
+    { name: "description", content: "근거기반의 통합의학 정보를 공유합니다." },
   ];
 };
 
 /**
- * Interface defining the structure of MDX frontmatter
- *
- * Each MDX blog post file must include these metadata fields in its frontmatter:
- * - title: The title of the blog post
- * - description: A brief summary of the post content
- * - date: Publication date (used for sorting)
- * - category: The post category for filtering/grouping
- * - author: The name of the post author
- * - slug: URL-friendly identifier for the post
+ * Interface defining the structure of blog post data
  */
-interface Frontmatter {
+interface BlogPost {
   title: string;
   description: string;
   date: string;
   category: string;
   author: string;
   slug: string;
-  featured_image_url: string | null;
-  updated_at: string;
+  upvotes?: number;
+  is_upvoted?: boolean;
+  post_id?: number;
+}
+
+const POSTS_PER_PAGE = 10;
+
+/**
+ * Blog Post Card Component with Optimistic Upvote
+ */
+function BlogPostCard({ frontmatter }: { frontmatter: BlogPost }) {
+  const fetcher = useFetcher();
+
+  // Optimistic updates for upvote
+  const optimisticUpvotes =
+    fetcher.state === "idle"
+      ? frontmatter.upvotes || 0
+      : frontmatter.is_upvoted
+        ? (frontmatter.upvotes || 0) - 1
+        : (frontmatter.upvotes || 0) + 1;
+  const optimisticIsUpvoted =
+    fetcher.state === "idle"
+      ? frontmatter.is_upvoted || false
+      : !frontmatter.is_upvoted;
+
+  const handleUpvoteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!frontmatter.post_id) return;
+    fetcher.submit(null, {
+      method: "POST",
+      action: `/api/blog/${frontmatter.post_id}/upvote`,
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Link
+        to={`/blog/${frontmatter.slug}`}
+        className="flex flex-col gap-4"
+        viewTransition
+      >
+        {/* Post featured image */}
+        <div className="relative">
+          <img
+            src={`/blog/${frontmatter.slug}.jpg`}
+            alt={frontmatter.title}
+            className="aspect-[4/3] w-full rounded-lg object-cover object-center shadow-md transition-shadow hover:shadow-lg"
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.style.display = "none";
+              const placeholder = img
+                .closest("div")
+                ?.querySelector(".bg-muted") as HTMLElement;
+              if (placeholder) {
+                placeholder.style.display = "flex";
+              }
+            }}
+          />
+          {/* Placeholder */}
+          <div className="bg-muted absolute inset-0 hidden aspect-[4/3] w-full items-center justify-center rounded-lg">
+            <span className="text-muted-foreground text-sm">이미지 없음</span>
+          </div>
+        </div>
+      </Link>
+
+      {/* Category badge and Upvote button */}
+      <div className="flex items-center justify-between">
+        <Badge variant="secondary" className="text-sm">
+          {frontmatter.category}
+        </Badge>
+        {frontmatter.post_id && (
+          <Button
+            onClick={handleUpvoteClick}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "w-fit",
+              optimisticIsUpvoted && "border-primary text-primary",
+            )}
+          >
+            <ChevronUpIcon className="size-4" />
+            <span>{optimisticUpvotes}</span>
+          </Button>
+        )}
+      </div>
+
+      <Link
+        to={`/blog/${frontmatter.slug}`}
+        className="flex flex-col gap-4"
+        viewTransition
+      >
+        <div>
+          <h2 className="text-lg font-bold md:text-2xl">{frontmatter.title}</h2>
+          <p className="text-muted-foreground text-pretty md:text-lg">
+            {frontmatter.description}
+          </p>
+          <span className="text-muted-foreground mt-2 block text-sm">
+            By {frontmatter.author} on{" "}
+            {new Date(frontmatter.date).toLocaleDateString("ko-KR")}
+          </span>
+        </div>
+      </Link>
+    </div>
+  );
 }
 
 /**
- * Constants for pagination
- */
-const POSTS_PER_PAGE = 12;
-
-/**
- * Search params schema for validation
- */
-const searchParamsSchema = z.object({
-  page: z.coerce.number().optional().default(1),
-  query: z.string().optional().default(""),
-  category: z.string().optional(),
-});
-
-/**
  * Loader function for the blog posts page
- *
- * This function queries the blog_posts_meta table to get metadata for all published posts.
- * It does not download MDX files, making it much faster for listing pages.
- *
- * 1. Queries the database for published blog post metadata
- * 2. Applies search and category filters
- * 3. Implements pagination
- * 4. Returns the paginated frontmatter data to be used by the component
- *
- * @param request - The incoming HTTP request with search parameters
- * @returns Object containing paginated blog post frontmatter data, total pages, and filters
  */
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -97,102 +170,126 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw redirect("/login");
   }
 
-  // Parse and validate search parameters
+  // Parse search parameters
   const url = new URL(request.url);
-  const { success, data: parsedData } = searchParamsSchema.safeParse(
-    Object.fromEntries(url.searchParams),
-  );
+  const query = url.searchParams.get("query") || "";
+  const category = url.searchParams.get("category") || "";
+  const page = Number(url.searchParams.get("page")) || 1;
+  const sorting =
+    (url.searchParams.get("sorting") as "newest" | "popular") || "newest";
 
-  if (!success) {
-    throw data(
-      {
-        error_code: "Invalid search params",
-        message: "Invalid search params",
-      },
-      {
-        status: 400,
-      },
-    );
+  // Get the path to the docs directory containing MDX files
+  const docsPath = path.join(process.cwd(), "app", "features", "blog", "docs");
+
+  // Read all files in the docs directory
+  const files = await readdir(docsPath);
+  const mdxFiles = files.filter((file) => file.endsWith(".mdx"));
+
+  // Get blog posts metadata from Supabase (optional - if available)
+  let blogPostsMeta: Awaited<ReturnType<typeof getBlogPostsMeta>> = [];
+  try {
+    blogPostsMeta = await getBlogPostsMeta(client, user.id, sorting);
+  } catch (error) {
+    // If Supabase query fails, continue without metadata
+    console.warn("Failed to fetch blog posts metadata:", error);
   }
 
-  // Get blog posts metadata from database (no MDX download needed)
-  const blogPostsMeta = await getBlogPostsMeta(client);
+  // Create a map of slug to metadata for quick lookup
+  const metaMap = new Map(blogPostsMeta.map((meta) => [meta.slug, meta]));
 
-  // Convert to Frontmatter format for compatibility
-  const frontmatters: Frontmatter[] = blogPostsMeta.map((meta) => ({
-    title: meta.title,
-    description: meta.description,
-    date: meta.date,
-    category: meta.category,
-    author: meta.author,
-    slug: meta.slug,
-    featured_image_url: meta.featured_image_url,
-    updated_at: meta.updated_at,
-  }));
+  // Extract frontmatter from each MDX file and merge with Supabase metadata
+  const blogPosts: BlogPost[] = await Promise.all(
+    mdxFiles.map(async (file) => {
+      const filePath = path.join(docsPath, file);
+      const { frontmatter } = await bundleMDX({ file: filePath });
+      const slug = (frontmatter.slug as string) || file.replace(/\.mdx$/, "");
+
+      // Get metadata from Supabase if available
+      const meta = metaMap.get(slug);
+
+      // Merge frontmatter with Supabase metadata (prefer Supabase for dynamic fields)
+      return {
+        title: (meta?.title || frontmatter.title) as string,
+        description: (meta?.description || frontmatter.description) as string,
+        date: (meta?.date || frontmatter.date) as string,
+        category: (meta?.category || frontmatter.category) as string,
+        author: (meta?.author || frontmatter.author) as string,
+        slug,
+        upvotes: meta?.upvotes || 0,
+        is_upvoted: meta?.is_upvoted || false,
+        post_id: meta?.post_id,
+      };
+    }),
+  );
+
+  // Filter by published posts if Supabase metadata exists, otherwise show all
+  const publishedPosts =
+    blogPostsMeta.length > 0
+      ? blogPosts.filter((post) => metaMap.has(post.slug))
+      : blogPosts;
 
   // Apply search filter
-  let filteredPosts = frontmatters;
-  if (parsedData.query) {
-    const query = parsedData.query.toLowerCase();
+  let filteredPosts = publishedPosts;
+  if (query) {
+    const queryLower = query.toLowerCase();
     filteredPosts = filteredPosts.filter(
       (post) =>
-        post.title.toLowerCase().includes(query) ||
-        post.description.toLowerCase().includes(query) ||
-        post.category.toLowerCase().includes(query),
+        post.title.toLowerCase().includes(queryLower) ||
+        post.description.toLowerCase().includes(queryLower) ||
+        post.category.toLowerCase().includes(queryLower),
     );
   }
 
   // Apply category filter
-  if (parsedData.category) {
-    filteredPosts = filteredPosts.filter(
-      (post) => post.category === parsedData.category,
-    );
+  if (category) {
+    filteredPosts = filteredPosts.filter((post) => post.category === category);
+  }
+
+  // Sort posts based on sorting parameter
+  if (sorting === "popular") {
+    filteredPosts.sort((a, b) => {
+      const upvotesA = a.upvotes || 0;
+      const upvotesB = b.upvotes || 0;
+      if (upvotesB !== upvotesA) {
+        return upvotesB - upvotesA;
+      }
+      // If upvotes are equal, sort by date
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  } else {
+    // Sort by date, newest first
+    filteredPosts.sort((a, b) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
   }
 
   // Calculate pagination
   const totalPosts = filteredPosts.length;
   const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
-  const currentPage = Math.max(1, Math.min(parsedData.page, totalPages || 1));
+  const currentPage = Math.max(1, Math.min(page, totalPages || 1));
   const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
   const endIndex = startIndex + POSTS_PER_PAGE;
   const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
 
-  // Return the paginated frontmatter data
+  // Get all unique categories
+  const allCategories = [
+    ...new Set(publishedPosts.map((post) => post.category)),
+  ] as string[];
+
   return {
     frontmatters: paginatedPosts,
     totalPages,
     currentPage,
     totalPosts,
-    query: parsedData.query,
-    category: parsedData.category,
-    allCategories: [
-      ...new Set(frontmatters.map((post) => post.category)),
-    ] as string[],
+    query,
+    category,
+    sorting,
+    allCategories,
   };
 }
 
 /**
  * Blog Posts Component
- *
- * This component renders the blog posts page with a header, search, filters, and a grid of blog post cards.
- * Each card displays:
- * - Featured image (matching the post slug)
- * - Category badge
- * - Post title
- * - Post description
- * - Author and date information
- *
- * The component uses responsive design with different layouts for mobile and desktop:
- * - Single column on mobile devices
- * - Three-column grid on desktop devices
- *
- * It also implements:
- * - Search functionality for filtering posts by title, description, or category
- * - Category filtering
- * - Pagination for better performance with many posts
- * - View transitions for smooth navigation between the posts list and individual post pages
- *
- * @param loaderData - Data from the loader containing paginated blog post frontmatter
  */
 export default function Posts({
   loaderData: {
@@ -202,6 +299,7 @@ export default function Posts({
     totalPosts,
     query,
     category,
+    sorting,
     allCategories,
   },
 }: Route.ComponentProps) {
@@ -209,13 +307,13 @@ export default function Posts({
 
   return (
     <div className="flex flex-col gap-16">
-      {/* Page header with title and subtitle */}
+      {/* Page header */}
       <header className="flex flex-col items-center">
         <h1 className="text-center text-3xl font-semibold tracking-tight md:text-5xl">
           좋은습관 블로그
         </h1>
         <p className="text-muted-foreground mt-2 text-center font-medium md:text-lg">
-          회복의 여정, 함께 해요!
+          근거기반의 통합의학 정보를 공유합니다.
         </p>
       </header>
 
@@ -228,6 +326,7 @@ export default function Posts({
           className="flex-1"
         />
         {category && <input type="hidden" name="category" value={category} />}
+        {sorting && <input type="hidden" name="sorting" value={sorting} />}
         <Button type="submit">검색</Button>
         {(query || category) && (
           <Button
@@ -245,8 +344,50 @@ export default function Posts({
         )}
       </Form>
 
-      {/* 카테고리 필터 */}
+      {/* Sorting options */}
       <div className="flex flex-wrap justify-center gap-2">
+        <Button
+          variant={sorting === "newest" ? "default" : "outline"}
+          size="sm"
+          asChild
+        >
+          <Link
+            to={
+              query || category
+                ? `?${new URLSearchParams({
+                    ...(query && { query }),
+                    ...(category && { category }),
+                    sorting: "newest",
+                  }).toString()}`
+                : "?sorting=newest"
+            }
+          >
+            최신순
+          </Link>
+        </Button>
+        <Button
+          variant={sorting === "popular" ? "default" : "outline"}
+          size="sm"
+          asChild
+        >
+          <Link
+            to={
+              query || category
+                ? `?${new URLSearchParams({
+                    ...(query && { query }),
+                    ...(category && { category }),
+                    sorting: "popular",
+                  }).toString()}`
+                : "?sorting=popular"
+            }
+          >
+            인기순
+          </Link>
+        </Button>
+      </div>
+
+      {/* Category filter */}
+      <div className="-mt-8 flex flex-wrap justify-center gap-2">
         <Button variant={!category ? "default" : "outline"} size="sm" asChild>
           <Link to={query ? `?query=${query}` : "?"}>전체</Link>
         </Button>
@@ -275,69 +416,12 @@ export default function Posts({
         </p>
       )}
 
-      {/* Responsive grid of blog post cards */}
+      {/* Blog post cards */}
       {frontmatters.length > 0 ? (
         <>
           <div className="grid grid-cols-1 gap-16 md:grid-cols-3 md:gap-8">
             {frontmatters.map((frontmatter) => (
-              <Link
-                to={`/blog-posts/${frontmatter.slug}`}
-                key={frontmatter.slug}
-                className="flex flex-col gap-4"
-                viewTransition // Enable smooth transitions between pages
-              >
-                {/* Post featured image */}
-                {frontmatter.featured_image_url ? (
-                  <img
-                    src={`${frontmatter.featured_image_url}?v=${new Date(frontmatter.updated_at).getTime()}`}
-                    alt={frontmatter.title}
-                    className="aspect-[4/3] w-full rounded-lg object-cover object-center shadow-md transition-shadow hover:shadow-lg"
-                    onError={(e) => {
-                      // Hide image if it fails to load and show placeholder
-                      const img = e.currentTarget;
-                      img.style.display = "none";
-                      // Create placeholder div if it doesn't exist
-                      if (
-                        !img.nextElementSibling?.classList.contains("bg-muted")
-                      ) {
-                        const placeholder = document.createElement("div");
-                        placeholder.className =
-                          "bg-muted flex aspect-[4/3] w-full items-center justify-center rounded-lg";
-                        placeholder.innerHTML =
-                          '<span class="text-muted-foreground text-sm">이미지 없음</span>';
-                        img.parentElement?.appendChild(placeholder);
-                      }
-                    }}
-                  />
-                ) : null}
-                {!frontmatter.featured_image_url && (
-                  <div className="bg-muted flex aspect-[4/3] w-full items-center justify-center rounded-lg">
-                    <span className="text-muted-foreground text-sm">
-                      이미지 없음
-                    </span>
-                  </div>
-                )}
-
-                {/* Category badge */}
-                <Badge variant="secondary" className="text-sm">
-                  {frontmatter.category}
-                </Badge>
-                <div>
-                  {/* Post title */}
-                  <h2 className="text-lg font-bold md:text-2xl">
-                    {frontmatter.title}
-                  </h2>
-                  {/* Post description */}
-                  <p className="text-muted-foreground text-pretty md:text-lg">
-                    {frontmatter.description}
-                  </p>
-                  {/* Author and date information */}
-                  <span className="text-muted-foreground mt-2 block text-sm">
-                    By {frontmatter.author} on{" "}
-                    {new Date(frontmatter.date).toLocaleDateString("ko-KR")}
-                  </span>
-                </div>
-              </Link>
+              <BlogPostCard key={frontmatter.slug} frontmatter={frontmatter} />
             ))}
           </div>
 

@@ -10,54 +10,122 @@ export interface BlogPostMeta {
   category: string;
   author: string;
   date: string;
-  featured_image_url: string | null;
-  updated_at: string;
+  upvotes: number;
+  created_at: string;
+  is_upvoted?: boolean;
 }
 
 /**
  * Get all published blog posts metadata
  *
  * This function queries the blog_posts_meta table to get metadata for all published posts.
- * It does not download MDX files, making it much faster for listing pages.
+ * It includes upvote information if userId is provided.
  *
  * @param client - Supabase client instance
- * @returns Array of blog post metadata, sorted by date (newest first)
+ * @param userId - Optional user ID to check if posts are upvoted
+ * @param sorting - Sort by "newest" or "popular" (default: "newest")
+ * @returns Array of blog post metadata
  */
 export async function getBlogPostsMeta(
   client: SupabaseClient<Database>,
+  userId?: string,
+  sorting: "newest" | "popular" = "newest",
 ): Promise<BlogPostMeta[]> {
-  const { data, error } = await client
+  let query = client
     .from("blog_posts_meta")
     .select(
-      "post_id, slug, title, description, category, author, date, featured_image_url, updated_at",
+      "post_id, slug, title, description, category, author, date, created_at",
     )
-    .eq("is_published", true)
-    .order("date", { ascending: false });
+    .eq("is_published", true);
+
+  // Apply sorting
+  if (sorting === "newest") {
+    query = query.order("created_at", { ascending: false });
+  } else if (sorting === "popular") {
+    // For popular sorting, we'll need to sort by upvotes
+    // Since upvotes might not be in the select, we'll handle it after fetching
+    query = query.order("created_at", { ascending: false });
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`블로그 포스트 조회 실패: ${error.message}`);
   }
 
-  return data || [];
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  // Get upvotes count and status for each post
+  const postIds = data.map((post) => post.post_id);
+
+  // Get upvote counts
+  const { data: upvoteCounts } = await (client as any)
+    .from("blog_post_upvotes")
+    .select("post_id")
+    .in("post_id", postIds);
+
+  // Count upvotes per post
+  const upvoteCountMap = new Map<number, number>();
+  upvoteCounts?.forEach((uv: any) => {
+    upvoteCountMap.set(uv.post_id, (upvoteCountMap.get(uv.post_id) || 0) + 1);
+  });
+
+  // Get upvote status for each post if userId is provided
+  let upvotedPostIds = new Set<number>();
+  if (userId) {
+    const { data: userUpvotes } = await (client as any)
+      .from("blog_post_upvotes")
+      .select("post_id")
+      .in("post_id", postIds)
+      .eq("profile_id", userId);
+
+    upvotedPostIds = new Set(userUpvotes?.map((u: any) => u.post_id) || []);
+  }
+
+  // Map data with upvotes and sorting
+  let result = data.map((post: any) => ({
+    ...post,
+    upvotes: upvoteCountMap.get(post.post_id) || 0,
+    is_upvoted: upvotedPostIds.has(post.post_id),
+  })) as BlogPostMeta[];
+
+  // Apply popular sorting if needed
+  if (sorting === "popular") {
+    result.sort((a, b) => {
+      if (b.upvotes !== a.upvotes) {
+        return b.upvotes - a.upvotes;
+      }
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    });
+  }
+
+  return result;
 }
 
 /**
  * Get blog post metadata by slug
  *
  * This function queries the blog_posts_meta table to get metadata for a specific post.
+ * It includes upvote information if userId is provided.
  *
  * @param client - Supabase client instance
  * @param slug - The slug of the blog post
+ * @param userId - Optional user ID to check if post is upvoted
  * @returns Blog post metadata or null if not found
  */
 export async function getBlogPostMetaBySlug(
   client: SupabaseClient<Database>,
   slug: string,
+  userId?: string,
 ): Promise<BlogPostMeta | null> {
   const { data, error } = await client
     .from("blog_posts_meta")
     .select(
-      "post_id, slug, title, description, category, author, date, featured_image_url, updated_at",
+      "post_id, slug, title, description, category, author, date, created_at",
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -71,7 +139,32 @@ export async function getBlogPostMetaBySlug(
     throw new Error(`블로그 포스트 조회 실패: ${error.message}`);
   }
 
-  return data;
+  if (!data) {
+    return null;
+  }
+
+  // Get upvote count
+  const { count: upvoteCount } = await (client as any)
+    .from("blog_post_upvotes")
+    .select("*", { count: "exact", head: true })
+    .eq("post_id", (data as any).post_id);
+
+  // Check if user has upvoted this post
+  let is_upvoted = false;
+  if (userId) {
+    const { count } = await (client as any)
+      .from("blog_post_upvotes")
+      .select("*", { count: "exact", head: true })
+      .eq("post_id", (data as any).post_id)
+      .eq("profile_id", userId);
+    is_upvoted = (count || 0) > 0;
+  }
+
+  return {
+    ...data,
+    upvotes: upvoteCount || 0,
+    is_upvoted,
+  } as BlogPostMeta;
 }
 
 /**
@@ -94,7 +187,6 @@ export async function createBlogPostMeta(
     category: string;
     author: string;
     date: string;
-    featured_image_url?: string | null;
     profile_id: string;
     is_published?: boolean;
   },
@@ -109,17 +201,15 @@ export async function createBlogPostMeta(
         category: meta.category,
         author: meta.author,
         date: meta.date,
-        featured_image_url: meta.featured_image_url || null,
         profile_id: meta.profile_id,
         is_published: meta.is_published ?? true,
-        mdx_file_path: `${meta.slug}.mdx`, // Storage 경로
       },
       {
         onConflict: "slug",
       },
     )
     .select(
-      "post_id, slug, title, description, category, author, date, featured_image_url, updated_at",
+      "post_id, slug, title, description, category, author, date, created_at",
     )
     .single();
 
@@ -129,7 +219,21 @@ export async function createBlogPostMeta(
     );
   }
 
-  return data;
+  if (!data) {
+    throw new Error("블로그 포스트 메타데이터를 가져올 수 없습니다.");
+  }
+
+  // Get upvote count
+  const { count: upvoteCount } = await (client as any)
+    .from("blog_post_upvotes")
+    .select("*", { count: "exact", head: true })
+    .eq("post_id", (data as any).post_id);
+
+  return {
+    ...(data as any),
+    upvotes: upvoteCount || 0,
+    is_upvoted: false,
+  } as BlogPostMeta;
 }
 
 /**
@@ -151,7 +255,6 @@ export async function updateBlogPostMeta(
     category?: string;
     author?: string;
     date?: string;
-    featured_image_url?: string | null;
     is_published?: boolean;
   },
 ): Promise<BlogPostMeta> {
@@ -163,16 +266,13 @@ export async function updateBlogPostMeta(
       ...(meta.category && { category: meta.category }),
       ...(meta.author && { author: meta.author }),
       ...(meta.date && { date: meta.date }),
-      ...(meta.featured_image_url !== undefined && {
-        featured_image_url: meta.featured_image_url,
-      }),
       ...(meta.is_published !== undefined && {
         is_published: meta.is_published,
       }),
     })
     .eq("slug", slug)
     .select(
-      "post_id, slug, title, description, category, author, date, featured_image_url, updated_at",
+      "post_id, slug, title, description, category, author, date, created_at",
     )
     .single();
 
@@ -180,5 +280,19 @@ export async function updateBlogPostMeta(
     throw new Error(`블로그 포스트 메타데이터 업데이트 실패: ${error.message}`);
   }
 
-  return data;
+  if (!data) {
+    throw new Error("블로그 포스트 메타데이터를 가져올 수 없습니다.");
+  }
+
+  // Get upvote count
+  const { count: upvoteCount } = await (client as any)
+    .from("blog_post_upvotes")
+    .select("*", { count: "exact", head: true })
+    .eq("post_id", (data as any).post_id);
+
+  return {
+    ...(data as any),
+    upvotes: upvoteCount || 0,
+    is_upvoted: false,
+  } as BlogPostMeta;
 }

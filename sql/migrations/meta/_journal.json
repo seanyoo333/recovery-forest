@@ -456,6 +456,34 @@
       "when": 1763112867559,
       "tag": "0064_rapid_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1764129712451,
+      "tag": "0065_daffy_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1764134249788,
+      "tag": "0066_special_triton",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1765169957234,
+      "tag": "0067_shiny_scorpion",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1765268168188,
+      "tag": "0068_long_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

@@ -15,14 +15,9 @@ import {
   TypographyList,
   TypographyOrderedList,
   TypographyP,
-} from "~/core/components/mdx-typography";
+} from "~/core/components/mdx-typography1";
 import { Button } from "~/core/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/core/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/core/components/ui/card";
 import { Checkbox } from "~/core/components/ui/checkbox";
 
 export const meta: Route.MetaFunction = () => {
@@ -30,14 +25,7 @@ export const meta: Route.MetaFunction = () => {
 };
 
 export async function loader() {
-  const filePath = path.join(
-    process.cwd(),
-    "app",
-    "features",
-    "legal",
-    "docs",
-    "medical-consent.mdx",
-  );
+  const filePath = path.join(process.cwd(), "app", "features", "legal", "docs", "medical-consent.mdx");
 
   try {
     const { code, frontmatter } = await bundleMDX({
@@ -65,14 +53,11 @@ export const action = async ({ request }: Route.ActionArgs) => {
   return redirect("/my/dashboard/health/submit?consent=success");
 };
 
-export default function MedicalConsent({
-  loaderData: { frontmatter, code },
-  actionData,
-}: Route.ComponentProps) {
+export default function MedicalConsent({ loaderData: { frontmatter, code }, actionData }: Route.ComponentProps) {
   const MDXContent = getMDXComponent(code);
 
   return (
-    <div className="mx-auto w-full max-w-screen-xl space-y-6 px-5 py-10 md:px-10 md:py-20">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">의료정보 제공 동의서</h1>
         <Button variant="outline" asChild>
@@ -86,10 +71,7 @@ export default function MedicalConsent({
         </CardHeader>
         <CardContent>
           <div className="text-muted-foreground space-y-4 text-sm">
-            <p>
-              혈액검사 결과를 입력하기 전에 의료정보 제공에 대한 동의가
-              필요합니다.
-            </p>
+            <p>혈액검사 결과를 입력하기 전에 의료정보 제공에 대한 동의가 필요합니다.</p>
             <p>아래 동의서를 자세히 읽고 동의 여부를 선택해주세요.</p>
           </div>
         </CardContent>
@@ -125,14 +107,11 @@ export default function MedicalConsent({
                 htmlFor="consent"
                 className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                위 의료정보 제공 동의서의 내용을 충분히 이해하고, 의료정보 수집,
-                이용 및 제공에 동의합니다.
+                위 의료정보 제공 동의서의 내용을 충분히 이해하고, 의료정보 수집, 이용 및 제공에 동의합니다.
               </label>
             </div>
 
-            {actionData && "error" in actionData && (
-              <div className="text-sm text-red-500">{actionData.error}</div>
-            )}
+            {actionData && "error" in actionData && <div className="text-sm text-red-500">{actionData.error}</div>}
 
             <div className="flex justify-end gap-4">
               <Button type="button" variant="outline" asChild>

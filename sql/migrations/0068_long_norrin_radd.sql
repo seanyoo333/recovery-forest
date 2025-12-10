@@ -1,0 +1,1 @@
+ALTER TABLE "blood_test_types" ADD COLUMN "descriptions" jsonb DEFAULT '{}'::jsonb;

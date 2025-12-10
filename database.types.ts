@@ -70,6 +70,43 @@ export type Database = {
           },
         ]
       }
+      blog_post_upvotes: {
+        Row: {
+          post_id: number
+          profile_id: string
+        }
+        Insert: {
+          post_id: number
+          profile_id: string
+        }
+        Update: {
+          post_id?: number
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_post_upvotes_post_id_blog_posts_meta_post_id_fk"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts_meta"
+            referencedColumns: ["post_id"]
+          },
+          {
+            foreignKeyName: "blog_post_upvotes_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "blog_post_upvotes_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       blog_posts_meta: {
         Row: {
           author: string
@@ -79,11 +116,9 @@ export type Database = {
           date: string
           description: string
           email_sent: boolean | null
-          featured_image_url: string | null
           imported_at: string | null
           is_curated: boolean | null
           is_published: boolean | null
-          mdx_file_path: string
           naver_blog_url: string | null
           naver_post_id: string | null
           post_id: number
@@ -92,6 +127,7 @@ export type Database = {
           slug: string
           title: string
           updated_at: string
+          upvotes: number | null
         }
         Insert: {
           author: string
@@ -101,11 +137,9 @@ export type Database = {
           date: string
           description: string
           email_sent?: boolean | null
-          featured_image_url?: string | null
           imported_at?: string | null
           is_curated?: boolean | null
           is_published?: boolean | null
-          mdx_file_path: string
           naver_blog_url?: string | null
           naver_post_id?: string | null
           post_id?: never
@@ -114,6 +148,7 @@ export type Database = {
           slug: string
           title: string
           updated_at?: string
+          upvotes?: number | null
         }
         Update: {
           author?: string
@@ -123,11 +158,9 @@ export type Database = {
           date?: string
           description?: string
           email_sent?: boolean | null
-          featured_image_url?: string | null
           imported_at?: string | null
           is_curated?: boolean | null
           is_published?: boolean | null
-          mdx_file_path?: string
           naver_blog_url?: string | null
           naver_post_id?: string | null
           post_id?: never
@@ -136,6 +169,7 @@ export type Database = {
           slug?: string
           title?: string
           updated_at?: string
+          upvotes?: number | null
         }
         Relationships: [
           {
@@ -154,11 +188,49 @@ export type Database = {
           },
         ]
       }
+      blood_test_images: {
+        Row: {
+          created_at: string
+          image_hash: string
+          image_id: number
+          image_url: string
+          patient_id: string
+          test_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          image_hash: string
+          image_id?: never
+          image_url: string
+          patient_id: string
+          test_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          image_hash?: string
+          image_id?: never
+          image_url?: string
+          patient_id?: string
+          test_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_test_images_patient_id_patient_health_profiles_patient_id"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_health_profiles"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       blood_test_results: {
         Row: {
           confidence: number | null
           created_at: string
-          image_url: string | null
+          image_id: number | null
           notes: string | null
           patient_id: string
           result_id: number
@@ -171,7 +243,7 @@ export type Database = {
         Insert: {
           confidence?: number | null
           created_at?: string
-          image_url?: string | null
+          image_id?: number | null
           notes?: string | null
           patient_id: string
           result_id?: never
@@ -184,7 +256,7 @@ export type Database = {
         Update: {
           confidence?: number | null
           created_at?: string
-          image_url?: string | null
+          image_id?: number | null
           notes?: string | null
           patient_id?: string
           result_id?: never
@@ -195,6 +267,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "blood_test_results_image_id_blood_test_images_image_id_fk"
+            columns: ["image_id"]
+            isOneToOne: false
+            referencedRelation: "blood_test_images"
+            referencedColumns: ["image_id"]
+          },
           {
             foreignKeyName: "blood_test_results_patient_id_patient_health_profiles_patient_i"
             columns: ["patient_id"]
@@ -215,6 +294,7 @@ export type Database = {
         Row: {
           clinical_significance: string | null
           created_at: string
+          descriptions: Json | null
           reference_max: number | null
           reference_min: number | null
           standard_name: string
@@ -226,6 +306,7 @@ export type Database = {
         Insert: {
           clinical_significance?: string | null
           created_at?: string
+          descriptions?: Json | null
           reference_max?: number | null
           reference_min?: number | null
           standard_name: string
@@ -237,6 +318,7 @@ export type Database = {
         Update: {
           clinical_significance?: string | null
           created_at?: string
+          descriptions?: Json | null
           reference_max?: number | null
           reference_min?: number | null
           standard_name?: string

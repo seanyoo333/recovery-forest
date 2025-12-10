@@ -42,10 +42,9 @@ export default [
     ]),
 
     ...prefix("/cron", [route("/mailer", "features/cron/api/mailer.tsx")]),
-    ...prefix("/blog-posts", [
+    ...prefix("/blog", [
       route("/og", "features/blog/api/og.tsx"),
-      route("/upload", "features/blog/api/upload-blog.tsx"),
-      route("/upload-image", "features/blog/api/upload-blog-image.tsx"),
+      route("/:postId/upvote", "features/blog/api/upvote.tsx"),
     ]),
     ...prefix("/clinic", [
       route("/upload-photo", "features/clinic/api/upload-photo.tsx"),
@@ -321,7 +320,7 @@ export default [
   ...prefix("/legal", [route("/:slug", "features/legal/screens/policy.tsx")]),
 
   layout("features/blog/layouts/blog.layout.tsx", [
-    ...prefix("/blog-posts", [
+    ...prefix("/blog", [
       index("features/blog/pages/posts.tsx"),
       route("/:slug", "features/blog/pages/post.tsx"),
     ]),

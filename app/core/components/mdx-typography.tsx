@@ -1,39 +1,25 @@
+import * as React from "react";
+
 /**
- * MDX Typography Components
- *
- * A collection of typography components designed specifically for MDX content.
- * These components provide consistent styling for MDX blog posts and documentation,
- * following the application's design system.
- *
- * Each component wraps a standard HTML element with appropriate styling classes
- * and passes through any additional props. This allows MDX content to maintain
- * consistent styling while still being customizable when needed.
- *
- * Used throughout the application for:
- * - Blog posts
- * - Documentation pages
- * - Content-rich pages with structured typography
+ * 간단한 className 머지 유틸
  */
+function cx(...classes: Array<string | undefined | null | false>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 /**
  * H1 Typography Component
- * 
- * Renders a top-level heading with appropriate styling for MDX content.
- * 
- * @param children - The content to be rendered within the heading
- * @param props - Additional HTML attributes to be passed to the heading element
- * @returns A styled h1 element
+ *
+ * MDX 내부 최상위 제목용 (본문 기준이라 너무 크지 않게 조정)
  */
-export function TypographyH1({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLHeadingElement>;
-}) {
+export function TypographyH1({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h1
-      className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl"
+      className={cx(
+        // 기존보다 살짝 줄이고 줄 간격 여유 있게
+        "scroll-m-20 text-2xl leading-relaxed font-semibold tracking-tight md:text-3xl md:leading-snug",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -43,24 +29,16 @@ export function TypographyH1({
 
 /**
  * H2 Typography Component
- * 
- * Renders a second-level heading with appropriate styling for MDX content.
- * Includes a bottom border and special styling for the first H2 in a section.
- * 
- * @param children - The content to be rendered within the heading
- * @param props - Additional HTML attributes to be passed to the heading element
- * @returns A styled h2 element
+ *
+ * 섹션 제목용
  */
-export function TypographyH2({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLHeadingElement>;
-}) {
+export function TypographyH2({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className="mt-10 scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0"
+      className={cx(
+        "mt-10 scroll-m-20 border-b pb-2 text-xl leading-relaxed font-semibold tracking-tight first:mt-0 md:text-2xl",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -70,24 +48,13 @@ export function TypographyH2({
 
 /**
  * H3 Typography Component
- * 
- * Renders a third-level heading with appropriate styling for MDX content.
- * Used for subsections within H2 sections.
- * 
- * @param children - The content to be rendered within the heading
- * @param props - Additional HTML attributes to be passed to the heading element
- * @returns A styled h3 element
+ *
+ * 하위 섹션 제목용
  */
-export function TypographyH3({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLHeadingElement>;
-}) {
+export function TypographyH3({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className="mt-8 scroll-m-20 text-2xl font-semibold tracking-tight"
+      className={cx("mt-8 scroll-m-20 text-lg leading-relaxed font-semibold tracking-tight md:text-xl", className)}
       {...props}
     >
       {children}
@@ -97,26 +64,12 @@ export function TypographyH3({
 
 /**
  * H4 Typography Component
- * 
- * Renders a fourth-level heading with appropriate styling for MDX content.
- * Used for detailed subsections within H3 sections.
- * 
- * @param children - The content to be rendered within the heading
- * @param props - Additional HTML attributes to be passed to the heading element
- * @returns A styled h4 element
+ *
+ * 더 세부적인 소제목용
  */
-export function TypographyH4({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLHeadingElement>;
-}) {
+export function TypographyH4({ children, className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h4
-      className="mt-6 scroll-m-20 text-xl font-semibold tracking-tight"
-      {...props}
-    >
+    <h4 className={cx("mt-6 scroll-m-20 text-base font-semibold tracking-tight md:text-lg", className)} {...props}>
       {children}
     </h4>
   );
@@ -124,23 +77,19 @@ export function TypographyH4({
 
 /**
  * Paragraph Typography Component
- * 
- * Renders a paragraph with appropriate styling for MDX content.
- * Includes special spacing for non-first paragraphs to create proper content rhythm.
- * 
- * @param children - The content to be rendered within the paragraph
- * @param props - Additional HTML attributes to be passed to the paragraph element
- * @returns A styled p element
+ *
+ * 기본 문단 스타일
  */
-export function TypographyP({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLParagraphElement>;
-}) {
+export function TypographyP({ children, className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className="leading-7 [&:not(:first-child)]:mt-6" {...props}>
+    <p
+      className={cx(
+        // 기본 문단 간격 & 읽기 편한 줄 간격
+        "text-foreground mt-4 text-[15px] leading-relaxed md:text-base",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </p>
   );
@@ -148,23 +97,15 @@ export function TypographyP({
 
 /**
  * Blockquote Typography Component
- * 
- * Renders a blockquote with appropriate styling for MDX content.
- * Includes a left border and italic styling to distinguish quoted content.
- * 
- * @param children - The content to be rendered within the blockquote
- * @param props - Additional HTML attributes to be passed to the blockquote element
- * @returns A styled blockquote element
+ *
+ * 인용문 스타일
  */
-export function TypographyBlockquote({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLQuoteElement>;
-}) {
+export function TypographyBlockquote({ children, className, ...props }: React.HTMLAttributes<HTMLQuoteElement>) {
   return (
-    <blockquote className="mt-6 border-l-2 pl-6 italic" {...props}>
+    <blockquote
+      className={cx("text-muted-foreground mt-6 border-l-2 pl-5 text-sm italic md:text-base", className)}
+      {...props}
+    >
       {children}
     </blockquote>
   );
@@ -172,23 +113,12 @@ export function TypographyBlockquote({
 
 /**
  * Unordered List Typography Component
- * 
- * Renders an unordered list with appropriate styling for MDX content.
- * Includes disc-style bullets and proper spacing between list items.
- * 
- * @param children - The content to be rendered within the list
- * @param props - Additional HTML attributes to be passed to the ul element
- * @returns A styled unordered list element
+ *
+ * - 리스트용
  */
-export function TypographyList({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLUListElement>;
-}) {
+export function TypographyList({ children, className, ...props }: React.HTMLAttributes<HTMLUListElement>) {
   return (
-    <ul className="my-6 ml-6 list-disc [&>li]:mt-2" {...props}>
+    <ul className={cx("my-4 ml-5 list-disc space-y-1.5 [&>li]:leading-relaxed", className)} {...props}>
       {children}
     </ul>
   );
@@ -196,23 +126,12 @@ export function TypographyList({
 
 /**
  * Ordered List Typography Component
- * 
- * Renders an ordered list with appropriate styling for MDX content.
- * Includes decimal numbering and proper spacing between list items.
- * 
- * @param children - The content to be rendered within the list
- * @param props - Additional HTML attributes to be passed to the ol element
- * @returns A styled ordered list element
+ *
+ * 1. 2. 리스트용
  */
-export function TypographyOrderedList({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLUListElement>;
-}) {
+export function TypographyOrderedList({ children, className, ...props }: React.HTMLAttributes<HTMLOListElement>) {
   return (
-    <ol className="my-6 ml-6 list-decimal [&>li]:mt-2" {...props}>
+    <ol className={cx("my-4 ml-5 list-decimal space-y-1.5 [&>li]:leading-relaxed", className)} {...props}>
       {children}
     </ol>
   );
@@ -220,24 +139,16 @@ export function TypographyOrderedList({
 
 /**
  * Inline Code Typography Component
- * 
- * Renders inline code with appropriate styling for MDX content.
- * Includes background color, rounded corners, and monospace font to distinguish code snippets.
- * 
- * @param children - The content to be rendered within the code element
- * @param props - Additional HTML attributes to be passed to the code element
- * @returns A styled inline code element
+ *
+ * 문장 중간 코드 표시용
  */
-export function TypographyInlineCode({
-  children,
-  props,
-}: {
-  children: React.ReactNode;
-  props: React.HTMLAttributes<HTMLSpanElement>;
-}) {
+export function TypographyInlineCode({ children, className, ...props }: React.HTMLAttributes<HTMLElement>) {
   return (
     <code
-      className="bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold"
+      className={cx(
+        "bg-muted relative rounded px-[0.3rem] py-[0.2rem] font-mono text-xs font-semibold md:text-sm",
+        className,
+      )}
       {...props}
     >
       {children}

@@ -49,6 +49,9 @@ interface TestimonialGalleryItem {
 
 /**
  * Target Audience Card Component
+ *
+ * This component renders a clickable card that shows yellow glow effect
+ * when clicked and displays usage examples below.
  */
 function TargetAudienceCard({
   item,
@@ -190,12 +193,12 @@ function TestimonialGalleryDialog({
 export const meta: Route.MetaFunction = () => {
   return [
     {
-      title: "Evidence Base - 암 경험자와 보호자를 위한 근거 기반 생활관리 정보 플랫폼",
+      title: "Evidence Base - 암 방지 근거로 삶을 설계하는 통합의학 건강관리 플랫폼",
     },
     {
       name: "description",
       content:
-        "암 경험자와 보호자를 위해 논문·가이드라인·임상 자료를 이해하기 쉽게 정리하고, 건강기능식품·산림치유·생활습관 정보를 제공하는 통합형 생활관리 플랫폼입니다. 질병의 진단·치료·예방 목적이 아니며, 의료행위를 대체하지 않습니다.",
+        "암 경험자와 보호자를 위해 논문·가이드라인·임상 경험을 바탕으로 건강보조제, 산림치유, 생활습관 솔루션을 제공하는 통합의학 플랫폼입니다.",
     },
   ];
 };
@@ -231,59 +234,64 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
   const [selectedAudienceIndex, setSelectedAudienceIndex] = useState<number | null>(null);
   const navigate = useNavigate();
 
-  const primaryCtaLabel = loaderData.isAuthenticated ? "홈으로 이동" : "무료가입 후, 암 이후 생활관리 가이드 받아보기";
+  const primaryCtaLabel = loaderData.isAuthenticated
+    ? "홈으로 이동"
+    : "무료 회원가입 후 '암 방지 근거 리포트' 받아보기";
 
-  const secondaryCtaLabel = "암 이후, 생활관리 추천 패키지 살펴보기";
+  const secondaryCtaLabel = "암 방지 근거 스타터 패키지 살펴보기";
 
   const testimonialData: TestimonialItem[] = [
     {
       name: "김○○님",
       content:
-        "AI 분석 기능을 통해 제 건강 데이터를 한눈에 볼 수 있어서, 주치의와 상담할 때 질문을 정리하는 데 큰 도움이 되었습니다.",
+        "AI 분석 기능이 정말 유용했습니다. 혈액검사 결과를 바탕으로 개인 맞춤형 건강 관리 계획을 받을 수 있어서 만족합니다.",
       rating: 5,
       source: "네이버 쇼핑몰",
       category: "제품 후기",
-      detail: "구매 제품: MCS 초고용량 커큐민 (일반적인 건강관리 목적)",
+      detail: "구매 제품: MCS 초고용량 커큐민",
       link: "https://smartstore.naver.com",
     },
     {
       name: "이○○님",
-      content: "전문가가 정리해 준 자료 덕분에 어떤 보충제를 선택할지 스스로 판단하는 기준이 생겼습니다.",
+      content:
+        "전문가 추천 제품을 통해 효과를 확인할 수 있었고, 커뮤니티에서 비슷한 상황의 분들과 정보를 공유할 수 있어 도움이 됩니다.",
       rating: 5,
       source: "네이버 쇼핑몰",
       category: "제품 후기",
-      detail: "구매 제품: 통합 건강 보조제 패키지 (생활습관 관리 지원)",
+      detail: "구매 제품: 통합 건강 보조제 패키지",
     },
     {
       name: "박○○님",
-      content: "산림치유 프로그램에서 몸을 움직이고, 자연 속에서 쉬는 시간만으로도 마음이 많이 가벼워졌습니다.",
+      content:
+        "산림치유 프로그램을 통해 스트레스가 많이 완화되었고, 정기적으로 참여하면서 건강이 개선되는 것을 느꼈습니다.",
       source: "네이버 폼",
       category: "산림치유 후기",
-      detail: "참여 프로그램: 치유 워크숍 4주차 (스트레스 완화 · 일상 회복 지원)",
+      detail: "참여 프로그램: 치유 워크숍 4주차",
     },
     {
       name: "최○○님",
       content:
-        "검증된 자료를 기반으로 정리된 정보라서, 인터넷 검색에 시간을 덜 쓰게 되고 생활관리에 집중할 수 있었어요.",
+        "증거 기반 정보만 제공되어 신뢰할 수 있고, 제품 리뷰 시스템을 통해 실제 효과를 확인한 후 구매할 수 있어 좋습니다.",
       rating: 5,
       source: "네이버 쇼핑몰",
       category: "제품 후기",
-      detail: "구매 제품: 프리미엄 면역 케어 세트 (일반 면역·영양 관리용)",
+      detail: "구매 제품: 프리미엄 면역 케어 세트",
     },
     {
       name: "정○○님",
-      content: "건강 정보를 한 곳에서 관리하면서, 어떤 부분을 더 챙겨야 할지 감이 잡혔습니다.",
+      content: "모든 건강 정보를 한 곳에서 관리할 수 있어 편리하고, AI 추천 기능이 정말 정확해서 만족합니다.",
       rating: 5,
       source: "네이버 쇼핑몰",
       category: "제품 후기",
-      detail: "구매 서비스: AI 생활관리 리포트 구독 (교육·참고용)",
+      detail: "구매 서비스: AI 건강 리포트 구독",
     },
     {
       name: "강○○님",
-      content: "산림치유와 생활습관 코칭을 함께 받으니, 저 자신을 돌보는 시간을 의도적으로 만들게 되었어요.",
+      content:
+        "건강 추적 기능으로 시간에 따른 변화를 확인할 수 있어 동기부여가 되고, 전문가 네트워크를 통해 신뢰할 수 있는 정보를 얻을 수 있습니다.",
       source: "네이버 폼",
       category: "산림치유 후기",
-      detail: "참여 서비스: 생활습관 코칭 프로그램 (정신적·정서적 회복 지원)",
+      detail: "참여 서비스: 데이터 기반 코칭 프로그램",
     },
   ];
 
@@ -295,15 +303,15 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
     product: [
       {
         src: `${testimonialBucketBaseUrl}/product/product-review-01.png`,
-        caption: "건강기능식품 구매 인증 캡처 (개인 경험은 사람마다 다를 수 있습니다)",
+        caption: "MCS 초고용량 커큐민 구매 인증 캡처",
       },
       {
         src: `${testimonialBucketBaseUrl}/product/product-review-02.png`,
-        caption: "생활관리 리포트에 대한 후기 (의료정보가 아닌 참고용 자료)",
+        caption: "AI 건강 분석 리포트 후기",
       },
       {
         src: `${testimonialBucketBaseUrl}/product/product-review-03.png`,
-        caption: "전문가가 정리한 정보에 대한 신뢰 후기",
+        caption: "전문가 추천 제품 사용 후기",
       },
       {
         src: `${testimonialBucketBaseUrl}/product/product-review-04.png`,
@@ -315,7 +323,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
     program: [
       {
         src: `${testimonialBucketBaseUrl}/program/forest-review-01.png`,
-        caption: "산림치유 프로그램 참여 인증 (정신적·정서적 회복 지원)",
+        caption: "산림치유 세션 참여 인증",
       },
       {
         src: `${testimonialBucketBaseUrl}/program/forest-review-02.png`,
@@ -323,7 +331,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
       },
       {
         src: `${testimonialBucketBaseUrl}/program/forest-review-03.png`,
-        caption: "생활습관·정서 관리에 대한 긍정적 경험",
+        caption: "데이터 기반 코칭 프로그램 후기",
       },
     ],
   };
@@ -331,57 +339,57 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
   const audienceData: TargetAudienceItem[] = [
     {
       title: "암 예방 관심자",
-      description: "암 관련 연구·가이드라인을 바탕으로 건강한 생활습관을 만들고 싶은 분",
+      description: "과학적 근거를 바탕으로 암 예방을 위한 건강 관리를 하고 싶은 분",
       usageExample: {
         title: "암 예방 관심자를 위한 서비스 이용 방법",
         steps: [
-          "근거 기반 블로그를 통해 암과 생활습관에 대한 최신 연구 흐름을 확인하세요.",
-          "AI 생활관리 분석 기능으로 현재 생활패턴과 건강상태를 점검해 보세요.",
-          "일반적인 건강 관리에 도움을 줄 수 있는 건강기능식품 정보를 참고해 보세요.",
-          "커뮤니티에서 다른 예방 관심자들과 경험과 고민을 나누어 보세요.",
-          "정기적으로 건강 지표와 생활습관을 기록하며 변화를 추적해 보세요.",
+          "증거 기반 블로그를 통해 암 예방에 관한 최신 정보를 확인하세요.",
+          "AI 건강 분석 기능으로 현재 건강 상태를 평가받으세요.",
+          "검증된 건강 보조제를 통해 예방에 도움이 되는 제품을 찾아보세요.",
+          "커뮤니티에서 다른 예방 관심자들과 정보를 공유하세요.",
+          "정기적으로 건강 지표를 추적하여 변화를 모니터링하세요.",
         ],
       },
     },
     {
       title: "암 경험자",
-      description: "치료 이후의 생활을 체계적으로 관리하고 싶은 암 경험자",
+      description: "지속적인 건강 관리가 필요한 암 경험자",
       usageExample: {
         title: "암 경험자를 위한 서비스 이용 방법",
         steps: [
-          "혈액검사 결과 등을 정리해 업로드하고, 생활관리 관점에서 AI 분석 요약을 받아보세요.",
-          "일반적인 건강 관리에 참고할 수 있는 보충제·영양 정보들을 비교해 보세요.",
-          "산림치유 프로그램에 참여해 쉼·움직임·정서 회복의 시간을 가져보세요.",
-          "커뮤니티에서 비슷한 경험을 가진 분들과 일상 관리 팁을 공유해 보세요.",
-          "대시보드를 통해 수면·에너지·기분 등의 변화를 기록하고 돌아보세요.",
+          "혈액검사 결과를 업로드하여 AI 분석을 받으세요.",
+          "전문가 추천 제품을 통해 회복과 재발 방지에 도움이 되는 제품을 확인하세요.",
+          "산림치유 프로그램에 참여하여 정신적·신체적 회복을 도모하세요.",
+          "커뮤니티에서 다른 경험자들과 경험을 공유하고 위로를 받으세요.",
+          "건강 대시보드를 통해 지속적으로 건강 상태를 관리하세요.",
         ],
       },
     },
     {
       title: "암 경험자 보호자",
-      description: "암 경험자의 일상 관리를 더 잘 돕고 싶은 보호자",
+      description: "암 경험자를 위한 통합의학적 건강 관리를 도와주고 싶은 분",
       usageExample: {
         title: "암 경험자 보호자를 위한 서비스 이용 방법",
         steps: [
-          "플랫폼의 통합의학·생활관리 정보를 통해 전반적인 개념을 이해해 보세요.",
-          "전문가 네트워크가 정리한 자료를 참고해, 주치의에게 물어볼 질문을 정리해 보세요.",
-          "일반적인 건강관리용 건강기능식품 정보와 주의사항을 함께 확인하세요.",
-          "산림치유 프로그램 예약·일정을 함께 관리하며 동행의 시간을 만들어 보세요.",
-          "함께 건강 데이터를 기록하며, 지나친 불안보다는 균형 잡힌 생활을 목표로 해 보세요.",
+          "플랫폼의 통합의학 정보를 학습하여 올바른 건강 관리를 도와주세요.",
+          "전문가 네트워크를 통해 신뢰할 수 있는 정보를 확인하세요.",
+          "검증된 제품 정보를 통해 안전한 제품을 선택하도록 도와주세요.",
+          "산림치유 프로그램 예약 및 관리 기능을 활용하세요.",
+          "건강 데이터를 함께 관리하여 지속적인 모니터링을 지원하세요.",
         ],
       },
     },
     {
       title: "자발적 학습자",
-      description: "연구·근거를 기반으로 건강 관리를 공부하고 싶은 분",
+      description: "자발적 학습을 통해 건강 관리를 하고 싶은 분",
       usageExample: {
         title: "자발적 학습자를 위한 서비스 이용 방법",
         steps: [
-          "근거 기반 블로그를 통해 논문 내용을 더 이해하기 쉽게 요약한 글을 읽어 보세요.",
-          "커뮤니티 토론에 참여해 다양한 관점과 실제 경험을 들어보세요.",
-          "AI 챗봇을 통해 궁금한 개념·용어를 질문하고, 이해를 넓혀 보세요.",
-          "제품·프로그램 소개 페이지에서 참고 문헌·출처를 같이 확인해 보세요.",
-          "직접 실천해 본 생활습관 변화를 기록하고, 어떤 점이 나에게 맞았는지 돌아보세요.",
+          "증거 기반 블로그를 통해 최신 건강 정보를 학습하세요.",
+          "커뮤니티 토론에 참여하여 다양한 관점을 배우세요.",
+          "AI 챗봇을 통해 궁금한 건강 정보를 질문하고 답변을 받으세요.",
+          "제품 리뷰와 전문가 평가를 통해 제품에 대한 지식을 쌓으세요.",
+          "건강 추적 기능으로 학습한 내용을 실천하고 효과를 확인하세요.",
         ],
       },
     },
@@ -390,87 +398,96 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
   const problemItems = [
     {
       title: "정보가 너무 많아 혼란스러운 분",
-      description: "유튜브·카페·SNS마다 말이 달라서, 무엇을 기준으로 삼아야 할지 막막하신가요?",
-      detail:
-        "Evidence Base는 논문·가이드라인·임상 자료를 바탕으로, 암과 관련된 생활습관·영양·정신건강 정보를 ‘참고용’으로 정리해 드립니다.",
+      description: "유튜브·카페·지인 조언이 모두 달라서, 무엇을 믿어야 할지 모르겠나요?",
+      detail: "Evidence Base는 논문·가이드라인·임상 경험을 바탕으로 신뢰할 수 있는 정보를 선별합니다.",
     },
     {
-      title: "암 이후 생활관리가 막막한 암 경험자",
-      description: "치료는 끝났지만, 일상에서 무엇을 우선순위로 관리해야 할지 고민되시나요?",
-      detail: "치료가 아닌 ‘생활관리’ 관점에서, 질문거리와 체크포인트를 정리할 수 있도록 도와드립니다.",
+      title: "재발이 가장 두려운 암 경험자",
+      description: "치료는 끝났지만, 재발 걱정 때문에 생활습관과 보조제 선택에 항상 불안하신가요?",
+      detail: "‘암 방지 근거’를 바탕으로 생활습관·보조제·산림치유를 함께 설계해 드립니다.",
     },
     {
-      title: "보호자로서 어떻게 도울지 고민되는 분",
-      description: "도와주고 싶은 마음은 크지만, 어디까지 관여해야 할지 어렵게 느껴지시나요?",
-      detail: "보호자를 위한 가이드와 프로그램 소개를 통해, 존중을 기반으로 한 동행 방식을 함께 고민합니다.",
+      title: "보호자로서 도와주고 싶지만 막막한 분",
+      description: "무엇을 해주면 도움이 될지, 어디까지 도와야 할지 고민되시나요?",
+      detail: "보호자를 위한 가이드와 프로그램 안내를 통해, 함께 건강 여정을 설계할 수 있습니다.",
     },
   ];
 
   const faqItems = [
     {
-      question: "현재 항암·표적치료·호르몬치료 중인데, 건강기능식품을 함께 써도 되나요?",
+      question: "현재 항암·표적치료·호르몬치료 중인데, 건강 보조제를 함께 써도 되나요?",
       answer:
-        "Evidence Base는 통합의학·기능의학 영역에서 논의되는 연구·자료를 정리해 드리지만, 개별 제품의 병용 여부나 용량 조정은 반드시 담당 의료진과 상의 후 결정하셔야 합니다. 플랫폼의 정보는 상담 전 질문을 정리하는 ‘참고용 자료’이며, 치료 변경·중단의 근거로 사용될 수 없습니다.",
+        "Evidence Base는 통합의학적 관점에서 ‘암 방지 근거’를 정리해 드리지만, 개별 약·보조제의 병용 여부는 반드시 주치의와 상의 후 결정하셔야 합니다. 플랫폼에서는 논문·가이드라인·사례를 제공하여, 의료진과의 대화를 준비하는 데 도움을 드립니다.",
     },
     {
-      question: "Evidence Base에서 의사 처방이나 진단을 대신해 주나요?",
+      question: "의사 처방이나 진단을 대신해 주나요?",
       answer:
-        "아니요. 본 서비스는 질병의 진단·치료·예방을 위한 의료행위가 아니며, 어떠한 처방도 대신하지 않습니다. 사용자가 스스로 정보를 이해하고, 의료진과의 상담에 참고할 수 있도록 돕는 ‘생활관리·교육’ 플랫폼입니다.",
+        "아니요. 본 서비스는 질병의 진단·치료·예방을 위한 의료행위가 아니며, 어떠한 처방도 대신하지 않습니다. 사용자가 스스로 정보를 이해하고, 의료진과의 상담에 참고할 수 있도록 돕는 것을 목표로 합니다.",
     },
     {
-      question: "‘암 방지 근거’는 어떤 의미로 쓰이나요?",
+      question: "‘암 방지 근거’는 어떤 자료를 말하나요?",
       answer:
-        "여기에서 사용하는 ‘암 방지 근거’란, 암과 관련된 생활습관·영양·운동·정신건강 등의 영역에서 연구·가이드라인·임상 자료에서 논의되는 내용을 ‘정보·교육’ 관점에서 정리한 것을 의미합니다. 개별 사용자에게 실제로 암 예방 또는 재발률 감소 효과를 보장한다는 의미가 아니며, 모든 내용은 의료진 상담과 함께 해석되어야 합니다.",
+        "peer-reviewed 논문, 국제·국내 가이드라인, 통합의학·기능의학 관련 임상 자료, 실제 현장에서의 경험 데이터를 기반으로 정리한 근거를 말합니다. 각 콘텐츠에는 가능한 한 출처와 참고 자료를 명시합니다.",
     },
     {
-      question: "산림치유 프로그램은 치료 효과가 있나요?",
+      question: "산림치유 프로그램은 어떤 분께 적합한가요?",
       answer:
-        "산림치유 프로그램은 자연 환경을 활용해 스트레스 완화, 휴식, 정서적 회복을 돕기 위한 ‘생활습관·웰빙 프로그램’입니다. 의학적 치료 효과를 보장하지 않으며, 질병의 진단·치료·예방을 위한 것이 아닙니다. 특정 질환이나 증상이 있는 경우, 참가 전 반드시 담당 의료진과 상담을 권장드립니다.",
+        "암 경험자, 보호자, 암 예방 관심자를 포함해 스트레스·불안이 높거나 회복이 필요한 분들께 적합합니다. 다만 특정 질환이나 증상이 있는 경우, 참가 전 담당 의료진과 상담을 권장드립니다.",
     },
     {
-      question: "내 건강 데이터와 개인정보는 어떻게 보호되나요?",
+      question: "내 건강 데이터와 개인정보는 안전하게 보호되나요?",
       answer:
-        "플랫폼은 국내·국제 보안 기준을 참고하여 데이터를 안전하게 저장하고, 필요한 최소한의 정보만 수집하려고 노력합니다. 민감한 정보는 동의하신 범위 내에서만 활용되며, 언제든지 수정·삭제를 요청하실 수 있습니다. 자세한 내용은 개인정보처리방침을 참고해 주세요.",
+        "플랫폼은 국내·국제 보안 기준을 참고하여 데이터를 안전하게 저장하고, 최소한의 정보만 수집합니다. 민감한 정보는 동의하신 범위 내에서만 활용되며, 언제든지 수정·삭제를 요청하실 수 있습니다.",
     },
   ];
 
   return (
     <div className="w-full">
-      {/* Hero Section */}
+      {/* Hero Section - Main Service Introduction */}
       <section className="relative flex min-h-[640px] w-full flex-col items-center justify-center gap-6 overflow-hidden px-4 py-20">
         <div className="container mx-auto">
           <BlurFade delay={0.1} duration={0.6} inView>
             <div className="mb-4 flex justify-center">
               <Badge variant="secondary" className="text-xs font-semibold">
-                암 경험자와 보호자를 위한 근거 기반 생활관리 플랫폼
+                암 경험자를 위한 증거 기반 통합의학 플랫폼
               </Badge>
             </div>
+            <div className="text-muted-foreground mb-4 text-center text-xs">
+              <span className="rounded-full border px-3 py-1 text-[11px] font-medium">
+                암 방지 근거로 삶을 설계하다
+              </span>
+            </div>
             <div className="mb-8 text-center">
-              <h1 className="mb-6 text-4xl leading-tight font-extrabold tracking-tight md:text-6xl lg:text-7xl">
-                암 이후의 삶을 위한
+              <h1 className="mb-6 text-4xl font-extrabold tracking-tight md:text-6xl lg:text-7xl">
+                암 경험자를 위한
                 <br />
                 <span className="from-primary to-primary/70 bg-gradient-to-r bg-clip-text text-transparent">
-                  증거 기반 생활습관
+                  &apos;암 방지 근거&apos; 기반 건강 관리
                 </span>
               </h1>
               <p className="text-muted-foreground mx-auto mb-6 max-w-2xl text-lg md:text-xl">
-                인터넷 정보에 휘둘리지 않고,
+                유튜브·카페 정보에 휘둘리지 않고,
                 <br />
-                논문·가이드라인·임상 경험을 바탕으로 정리된 자료를 통해
+                논문과 가이드라인, 실제 임상 경험을 바탕으로
                 <br />
-                나와 가족의 일상을 더 건강하게 관리할 수 있도록 돕습니다.
+                건강 보조제·산림치유·생활습관을 함께 설계해 드립니다.
               </p>
               <p className="text-muted-foreground mx-auto mb-8 max-w-2xl text-sm md:text-base">
-                ⚠️Evidence Base는 암 치료를 대신하지 않습니다. 다만, 암 이후의 긴 시간을 어떻게 살 것인지에 대해
-                생활습관·영양·정신건강·치유 프로그램 정보를 한 곳에 모아 드립니다.
+                암 경험자와 보호자가 재발 걱정은 줄이고, 일상을 더 오래 건강하게 누릴 수 있도록
+                <br />
+                Evidence Base가 통합의학적 건강관리를 도와드립니다.
               </p>
             </div>
 
-            {/* Miricanvas Hero Image 자리 */}
+            {/* Hero Image (Miricanvas Hero Banner) */}
             <div className="mb-8 flex justify-center">
+              {/* 
+                TODO: 미리캔버스로 제작한 히어로 배너 이미지로 교체하세요.
+                예: 암 경험자·보호자·숲·데이터(그래프)가 조화된 느낌의 메인 비주얼
+              */}
               <img
                 src="/images/landing-hero-evidence-base.jpg"
-                alt="암 이후 생활관리를 돕는 근거 기반 플랫폼 히어로 이미지"
+                alt="암 방지 근거 기반 통합의학 건강관리 플랫폼 히어로 이미지"
                 className="h-auto w-full max-w-4xl rounded-xl object-cover shadow-xl"
                 loading="lazy"
                 onError={(e) => {
@@ -504,8 +521,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </div>
 
             <p className="text-muted-foreground mx-auto mt-4 max-w-md text-center text-xs">
-              * 제공되는 모든 정보·제품·프로그램은 질병의 진단·치료·예방을 위한 것이 아니며, 의료행위를 대체하지
-              않습니다.
+              * 가입만 해도, 암 방지 관점에서 꼭 체크해야 할 생활습관·보충제· 산림치유 체크리스트를 보내드립니다.
             </p>
           </BlurFade>
         </div>
@@ -519,7 +535,8 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             <div className="mb-10 text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">이런 고민, 하고 계신가요?</h2>
               <p className="text-muted-foreground mx-auto max-w-2xl text-sm md:text-base">
-                암과 함께, 그리고 암 이후의 시간을 살아가는 분들이 가장 자주 나누는 고민들을 정리했습니다.
+                암 치료는 끝났지만, 정보는 넘쳐나고 마음은 더 불안해지는 시기. Evidence Base는 바로 이 지점에서
+                출발했습니다.
               </p>
             </div>
           </BlurFade>
@@ -541,13 +558,13 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Main Service Benefits */}
+      {/* Main Service Benefits Section */}
       <section className="container mx-auto px-4 py-20">
         <BlurFade delay={0.2} duration={0.6} inView>
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base를 통해 얻을 수 있는 것</h2>
+            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base를 선택해야 하는 이유</h2>
             <p className="text-muted-foreground mx-auto max-w-2xl">
-              암 관련 연구·근거를 바탕으로, 생활 속에서 실천할 수 있는 방향성을 찾도록 돕습니다.
+              암 방지 근거를 중심으로, 생활습관·보충제·산림치유를 하나의 그림으로 연결합니다.
             </p>
           </div>
         </BlurFade>
@@ -557,9 +574,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             <Card className="neon-card cursor-pointer">
               <CardHeader>
                 <div className="mb-2 text-3xl">🔬</div>
-                <CardTitle>근거 기반 정리</CardTitle>
+                <CardTitle>증거 기반 접근</CardTitle>
                 <CardDescription>
-                  논문·가이드라인·임상 자료를 기반으로, 암 이후 생활과 관련된 정보를 이해하기 쉽게 정리합니다.
+                  유튜브·카페 정보가 아닌, 논문·가이드라인·임상 경험을 바탕으로 정리된 암 방지 근거만 제공합니다.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -571,7 +588,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 <div className="mb-2 text-3xl">👥</div>
                 <CardTitle>전문가 네트워크</CardTitle>
                 <CardDescription>
-                  통합의학·기능의학·산림치유 전문가가 참고할 만한 자료와 관점을 함께 제공합니다.
+                  통합의학·기능의학·산림치유 등 다양한 전문가의 검토를 거쳐 신뢰도를 높였습니다.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -581,9 +598,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             <Card className="neon-card cursor-pointer">
               <CardHeader>
                 <div className="mb-2 text-3xl">📊</div>
-                <CardTitle>생활관리 관점 분석</CardTitle>
+                <CardTitle>개인화된 분석</CardTitle>
                 <CardDescription>
-                  건강 데이터와 생활습관 정보를 바탕으로, 어떤 부분을 더 살펴볼지 ‘체크포인트’를 제안합니다.
+                  혈액검사·생활습관 데이터를 바탕으로, 나에게 맞는 위험 신호와 관리 전략을 제안합니다.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -593,10 +610,8 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             <Card className="neon-card cursor-pointer">
               <CardHeader>
                 <div className="mb-2 text-3xl">🌲</div>
-                <CardTitle>산림치유 정보</CardTitle>
-                <CardDescription>
-                  자연 속에서 쉬고, 움직이고, 호흡을 정리하는 산림치유 프로그램 정보를 제공합니다. (치료 목적 아님)
-                </CardDescription>
+                <CardTitle>산림치유 통합</CardTitle>
+                <CardDescription>자연 기반 치유 프로그램으로, 스트레스·우울·수면 문제를 함께 다룹니다.</CardDescription>
               </CardHeader>
             </Card>
           </BlurFade>
@@ -605,10 +620,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             <Card className="neon-card cursor-pointer">
               <CardHeader>
                 <div className="mb-2 text-3xl">💊</div>
-                <CardTitle>일반 건강관리용 보조제 정보</CardTitle>
+                <CardTitle>검증된 건강 보조제</CardTitle>
                 <CardDescription>
-                  일반적인 건강관리·영양보충에 사용할 수 있는 건강기능식품에 대한 정보를 제공합니다. (암 치료·예방 목적
-                  아님)
+                  암 경험자에게 특히 민감한 성분·용량·상호작용을 고려하여 보충제를 선별합니다.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -620,7 +634,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 <div className="mb-2 text-3xl">🔄</div>
                 <CardTitle>지속적인 업데이트</CardTitle>
                 <CardDescription>
-                  새로운 연구·자료가 나오면 요약·정리하여, 최신 흐름을 따라갈 수 있도록 돕습니다.
+                  최신 연구 결과와 임상 경험을 반영해, 암 방지 근거를 끊임없이 갱신합니다.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -628,16 +642,14 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Usage Guide */}
+      {/* Service Usage Guide Section */}
       <section className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                Evidence Base, 이렇게 활용해 보세요
-              </h2>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base, 이렇게 사용하세요</h2>
               <p className="text-muted-foreground mx-auto max-w-2xl">
-                복잡한 결정을 대신 내려주지는 않지만, 스스로 더 나은 질문을 던지고 선택을 정리하는 데 도움이 됩니다.
+                간단한 4단계로, 암 방지 관점의 건강 관리 루틴을 설계하실 수 있습니다.
               </p>
             </div>
           </BlurFade>
@@ -649,9 +661,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                   1
                 </div>
                 <h3 className="mb-2 text-xl font-semibold">회원가입</h3>
-                <p className="text-muted-foreground text-sm">
-                  간단한 정보 입력으로 무료 회원가입 후, 나에게 맞는 콘텐츠를 받아보세요.
-                </p>
+                <p className="text-muted-foreground text-sm">간단한 정보 입력으로 무료 회원가입을 완료하세요.</p>
               </div>
             </BlurFade>
 
@@ -660,9 +670,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                   2
                 </div>
-                <h3 className="mb-2 text-xl font-semibold">건강·생활 프로필 등록</h3>
+                <h3 className="mb-2 text-xl font-semibold">건강 프로필 등록</h3>
                 <p className="text-muted-foreground text-sm">
-                  암 경험 여부, 치료 이력, 생활습관 등을 정리해 두면, 정보·콘텐츠를 보는 기준이 생깁니다.
+                  암 경험 여부, 치료 이력, 기본 건강 정보를 업데이트해 주세요.
                 </p>
               </div>
             </BlurFade>
@@ -672,9 +682,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                   3
                 </div>
-                <h3 className="mb-2 text-xl font-semibold">근거 기반 콘텐츠 탐색</h3>
+                <h3 className="mb-2 text-xl font-semibold">암 방지 근거 탐색</h3>
                 <p className="text-muted-foreground text-sm">
-                  블로그·리포트·제품·프로그램 페이지에서, 연구·근거와 함께 정리된 정보를 확인해 보세요.
+                  블로그·AI 분석·전문가 콘텐츠를 통해, 나에게 맞는 암 방지 근거를 찾아보세요.
                 </p>
               </div>
             </BlurFade>
@@ -684,9 +694,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                   4
                 </div>
-                <h3 className="mb-2 text-xl font-semibold">실천 & 상담 준비</h3>
+                <h3 className="mb-2 text-xl font-semibold">실천 & 추적</h3>
                 <p className="text-muted-foreground text-sm">
-                  실천 가능한 부분부터 하나씩 적용해 보고, 의료진 상담 시 질문·우려사항을 정리하는 데 참고해 보세요.
+                  선정된 건강 보조제·산림치유·생활습관을 실천하고, 대시보드로 변화를 추적하세요.
                 </p>
               </div>
             </BlurFade>
@@ -694,13 +704,13 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Target Audience */}
+      {/* Target Audience Section */}
       <section className="container mx-auto px-4 py-20">
         <BlurFade delay={0.2} duration={0.6} inView>
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">이런 분들께 특히 도움이 됩니다</h2>
             <p className="text-muted-foreground mx-auto max-w-2xl">
-              암 예방 관심자, 암 경험자, 보호자, 자발적 학습자까지 — 각자에게 맞는 활용 예시를 준비했습니다.
+              암 예방 관심자, 암 경험자, 보호자, 자발적 학습자까지 — 각자에게 맞는 이용 가이드를 제공합니다.
             </p>
           </div>
         </BlurFade>
@@ -743,24 +753,30 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         )}
       </section>
 
-      {/* Service Overview + Miricanvas infographic 자리 */}
+      {/* Service Overview Sections */}
       <section className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mb-10 text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">암 이후 생활관리를 위한 세 가지 축</h2>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+                암 방지 근거를 중심으로, 세 가지 축을 연결합니다
+              </h2>
               <p className="text-muted-foreground mx-auto max-w-2xl">
-                정보 플랫폼 · 건강기능식품 · 산림치유 프로그램을 하나의 여정으로 조합할 수 있도록 정리했습니다.
+                플랫폼 · 건강 보조제 · 산림치유 — 서로 떨어져 있던 요소들을 하나의 여정으로 묶어 드립니다.
               </p>
             </div>
           </BlurFade>
 
-          {/* Miricanvas 3축 인포그래픽 자리 */}
+          {/* 3축 솔루션 인포그래픽 이미지 섹션 (Miricanvas) */}
           <BlurFade delay={0.25} duration={0.6} inView>
             <div className="mx-auto mb-10 max-w-3xl">
+              {/* 
+                TODO: 미리캔버스로 '3축 솔루션 인포그래픽' 제작 후 교체
+                예: 중앙에 '암 방지 근거', 세 갈래로 플랫폼/제품/산림치유 흐름도
+              */}
               <img
                 src="/images/landing-solutions-infographic.jpg"
-                alt="정보 플랫폼 · 건강기능식품 · 산림치유 3축 인포그래픽"
+                alt="플랫폼 · 제품 · 산림치유 3축 솔루션 인포그래픽"
                 className="h-auto w-full rounded-xl border object-cover shadow-md"
                 loading="lazy"
                 onError={(e) => {
@@ -778,24 +794,24 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                   <Badge variant="secondary" className="mb-2 w-fit">
                     서비스 개요 1
                   </Badge>
-                  <CardTitle className="text-2xl md:text-3xl">통합 생활관리 정보 플랫폼</CardTitle>
+                  <CardTitle className="text-2xl md:text-3xl">통합 건강 관리 플랫폼</CardTitle>
                   <CardDescription className="text-base">
-                    건강 데이터와 생활습관을 정리하고, 암 관련 근거를 함께 살펴볼 수 있는 개인 대시보드
+                    암 경험자의 건강 데이터를 한 곳에 모으고, 암 방지 관점으로 해석하는 대시보드
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="text-muted-foreground space-y-3 text-sm md:text-base">
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>혈액검사·생활습관·증상 기록을 한 화면에서 정리</span>
+                      <span>혈액검사·생활습관·증상 기록을 한 화면에서 관리</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>생활관리 관점에서 주목할 수 있는 지표들을 요약·시각화 (의료해석이 아닌 참고용)</span>
+                      <span>AI 기반 개인 맞춤형 암 방지 근거 리포트 제공</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>의료진 상담 전 질문 리스트 정리에 활용 가능</span>
+                      <span>전문가와의 상담 준비를 돕는 질문 리스트 정리</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
@@ -815,28 +831,28 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                   <Badge variant="secondary" className="mb-2 w-fit">
                     서비스 개요 2
                   </Badge>
-                  <CardTitle className="text-2xl md:text-3xl">일반적인 건강관리용 건강기능식품 큐레이션</CardTitle>
+                  <CardTitle className="text-2xl md:text-3xl">검증된 건강 보조제 큐레이션</CardTitle>
                   <CardDescription className="text-base">
-                    암 치료가 아닌, 일상적인 건강관리·영양보충 관점에서 참고할 수 있는 건강기능식품 정보를 제공합니다.
+                    암 경험자의 민감한 상황을 고려해, 과학적 근거와 안전성을 함께 보는 보충제 추천 서비스
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="text-muted-foreground space-y-3 text-sm md:text-base">
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>연구·자료를 참고해 성분·용량·주의사항 등을 정리 (효과 보장 아님)</span>
+                      <span>논문·가이드라인 기반 성분 검토 및 안전성 정보 제공</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>실제 사용자 후기와 전문가 코멘트를 함께 제공 (개인 경험은 사람마다 다름)</span>
+                      <span>실제 사용자 후기와 전문가 코멘트를 함께 제공</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>나의 건강 상태와 생활습관을 고려해 어떤 제품을 우선적으로 검토할지 참고 가능</span>
+                      <span>개인 건강 프로필에 맞는 제품 우선 추천</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>암 치료·재발 예방 효과를 주장하지 않으며, 의료진 상담과 함께 검토하는 것을 권장</span>
+                      <span>성분·용량·복용 타이밍까지 한눈에 비교</span>
                     </li>
                   </ul>
                 </CardContent>
@@ -852,29 +868,28 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                   <Badge variant="secondary" className="mb-2 w-fit">
                     서비스 개요 3
                   </Badge>
-                  <CardTitle className="text-2xl md:text-3xl">산림치유 프로그램 안내</CardTitle>
+                  <CardTitle className="text-2xl md:text-3xl">산림치유 프로그램</CardTitle>
                   <CardDescription className="text-base">
-                    자연 속에서 걷고, 호흡하고, 머무는 시간을 통해 스트레스와 긴장을 완화하는 데 도움을 줄 수 있는
-                    프로그램입니다.
+                    암 경험자의 몸과 마음을 위한, 자연·과학·심리를 아우르는 산림치유 솔루션
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="text-muted-foreground space-y-3 text-sm md:text-base">
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>검증된 산림치유 시설·프로그램 정보를 한눈에 보기</span>
+                      <span>검증된 산림치유 시설·프로그램 정보 제공</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>산림치유지도사와 함께하는 활동으로, 휴식·움직임·정서 회복의 시간을 마련</span>
+                      <span>산림치유지도사·통합의학 전문가와의 협력 프로그램</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>HRV 등 데이터를 활용해 스트레스 수준 변화를 ‘참고용으로’ 살펴볼 수 있습니다.</span>
+                      <span>HRV 등 데이터를 활용한 스트레스·회복 모니터링</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
-                      <span>질병 치료 프로그램이 아니며, 참가 전 의료진 상담을 권장드립니다.</span>
+                      <span>개인·가족·소규모 그룹별 맞춤형 프로그램 구성</span>
                     </li>
                   </ul>
                 </CardContent>
@@ -884,17 +899,18 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Representative Offer Section */}
+      {/* Representative Offer Section - 암 방지 근거 스타터 패키지 */}
       <section className="bg-primary/5 py-20">
         <div className="container mx-auto px-4">
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mx-auto mb-10 max-w-3xl text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                처음이라면, 이렇게 가볍게 시작해 보세요
+                처음이라면, 이 패키지부터 시작해 보세요
               </h2>
               <p className="text-muted-foreground text-sm md:text-base">
-                암 이후 생활관리를 어떻게 시작해야 할지 막막하다면, 정보를 정리하고 일상을 돌아보는 데 초점을 맞춘
-                &apos;암 이후 생활관리 스타터 패키지&apos;로 첫걸음을 도와드립니다.
+                재발 걱정은 크지만, 어디서부터 정리해야 할지 막막하다면
+                <br />
+                &apos;암 방지 근거 스타터 패키지&apos;로 첫걸음을 도와드립니다.
               </p>
             </div>
           </BlurFade>
@@ -904,44 +920,40 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               <Card className="h-full">
                 <CardHeader>
                   <Badge variant="secondary" className="mb-3 w-fit">
-                    대표 오퍼 (예정)
+                    대표 오퍼
                   </Badge>
-                  <CardTitle className="text-2xl md:text-3xl">암 이후 생활관리 스타터 패키지</CardTitle>
+                  <CardTitle className="text-2xl md:text-3xl">암 방지 근거 스타터 패키지</CardTitle>
                   <CardDescription className="text-sm md:text-base">
-                    암 치료를 대체하는 패키지가 아니라, 암 이후의 긴 시간을 살아가는 데 도움이 되는
-                    정보·건강기능식품·산림치유 체험을 함께 담은 구성입니다.
+                    암 경험자를 위한 핵심 보충제 + 생활습관 가이드 + 산림치유 체험 쿠폰을 한 번에 담은 입문 패키지
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ul className="text-muted-foreground space-y-2 text-sm md:text-base">
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">•</span>
-                      <span>일반적인 건강관리·영양보충 목적의 대표 건강기능식품 1~2종</span>
+                      <span>대표 보충제 1~2종 (예: 초고용량 커큐민 등)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">•</span>
-                      <span>암 이후 생활에서 자주 논의되는 생활습관·식단·운동 체크리스트 소책자(PDF)</span>
+                      <span>암 방지 관점에서 정리한 생활습관·식단·운동 체크리스트 소책자(PDF)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">•</span>
-                      <span>산림치유 또는 생활습관 프로그램 1회 체험 쿠폰 (스트레스 완화·쉼 중심)</span>
+                      <span>산림치유/생활습관 프로그램 1회 체험 쿠폰</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">•</span>
-                      <span>나의 생활패턴을 돌아볼 수 있는 기본 생활관리 리포트 (교육·참고용)</span>
+                      <span>AI 기반 기본 건강 리포트(베타) 제공</span>
                     </li>
                   </ul>
                   <Separator className="my-4" />
                   <div className="space-y-1 text-sm md:text-base">
                     <div className="flex items-baseline gap-2">
                       <span className="text-2xl font-bold tracking-tight">₩000,000</span>
-                      <span className="text-muted-foreground text-xs">
-                        * 예시 금액입니다. 실제 구성과 가격은 추후 안내됩니다.
-                      </span>
+                      <span className="text-muted-foreground text-xs">* 예시 금액, 추후 실제 가격으로 교체</span>
                     </div>
                     <p className="text-muted-foreground text-xs md:text-sm">
-                      해당 패키지는 암의 진단·치료·재발 예방을 위한 프로그램이 아니며, 모든 선택은 반드시 담당 의료진과
-                      상의 후 결정하시길 권장합니다.
+                      정기 구독·재구매 고객에게는 추가 혜택과 맞춤 상담을 제공합니다.
                     </p>
                   </div>
 
@@ -952,22 +964,26 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                         navigate("/products");
                       }}
                     >
-                      스타터 패키지 기획 의도 살펴보기
+                      스타터 패키지 자세히 보기
                     </Button>
                     <Button className="flex-1" variant="outline" asChild>
-                      <Link to="/contact">나에게 맞는 구성인지 상담으로 먼저 확인하기</Link>
+                      <Link to="/contact">전문가와 상의하고 시작하기</Link>
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </BlurFade>
 
-            {/* Miricanvas 패키지 이미지 자리 */}
+            {/* Representative Offer Image (Miricanvas) */}
             <BlurFade delay={0.4} duration={0.6} inView>
               <div className="mx-auto max-w-md">
+                {/* 
+                  TODO: 미리캔버스로 '암 방지 근거 스타터 패키지' 상세 이미지 제작 후 교체
+                  - 구성품 사진, 포함 서비스, 혜택을 한 장에 정리한 상세페이지형 이미지
+                */}
                 <img
                   src="/images/landing-starter-package.jpg"
-                  alt="암 이후 생활관리 스타터 패키지 구성 이미지 (예시)"
+                  alt="암 방지 근거 스타터 패키지 구성 이미지"
                   className="bg-background h-auto w-full rounded-xl border object-cover shadow-lg"
                   loading="lazy"
                   onError={(e) => {
@@ -975,7 +991,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                   }}
                 />
                 <p className="text-muted-foreground mt-3 text-center text-xs">
-                  * 이미지는 이해를 돕기 위한 예시이며, 실제 구성·디자인과 다를 수 있습니다.
+                  * 이미지는 예시입니다. 실제 구성·디자인은 추후 업데이트될 수 있습니다.
                 </p>
               </div>
             </BlurFade>
@@ -983,13 +999,13 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Feature Highlights */}
+      {/* Feature Highlights Section */}
       <section className="container mx-auto px-4 py-20">
         <BlurFade delay={0.2} duration={0.6} inView>
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base만의 기능</h2>
+            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base만의 차별화된 기능</h2>
             <p className="text-muted-foreground mx-auto max-w-2xl">
-              “치료”가 아니라 “생활관리·교육·정리”에 초점을 둔 기능들입니다.
+              단순 정보 제공을 넘어, 암 경험자의 실제 삶에 스며드는 기능들을 제공합니다.
             </p>
           </div>
         </BlurFade>
@@ -997,38 +1013,39 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         <div className="grid gap-8 md:grid-cols-2">
           {[
             {
-              title: "생활관리 관점 AI 분석",
+              title: "AI 건강 분석",
               description:
-                "혈액검사 결과와 건강 데이터를 기반으로, 생활습관 관리에서 참고할 수 있는 포인트를 요약합니다. 의료진의 진단·판단을 대신하지 않습니다.",
+                "혈액검사 결과와 건강 데이터를 AI가 분석하여, 암 방지 관점에서 꼭 짚어야 할 위험 신호와 관리 포인트를 요약해 드립니다.",
               icon: "🤖",
             },
             {
-              title: "전문가 네트워크 관점",
+              title: "전문가 네트워크",
               description:
-                "통합의학·기능의학·산림치유 전문가들의 관점을 모아, 사용자가 스스로 공부하고 질문을 정리할 수 있도록 돕습니다.",
+                "통합의학·기능의학 전문가와 산림치유지도사가 함께 개발한 콘텐츠로, 현장의 경험이 녹아 있습니다.",
               icon: "👨‍⚕️",
             },
             {
-              title: "제품·프로그램 리뷰 시스템",
+              title: "제품 리뷰 시스템",
               description:
-                "실제 사용자 후기와 전문가 코멘트를 함께 제공해, 어떤 기준으로 선택할지 참고할 수 있도록 돕습니다. 개인 경험은 사람마다 다를 수 있습니다.",
+                "실제 암 경험자들의 상세 후기와 전문가 코멘트를 함께 제공해, 보충제 선택의 불안을 줄여 드립니다.",
               icon: "⭐",
             },
             {
               title: "커뮤니티 활동",
               description:
-                "비슷한 경험을 가진 사람들과 일상·정보·감정을 나누며, 혼자가 아니라는 감각을 회복할 수 있습니다.",
+                "비슷한 상황의 사람들과 경험·정보·감정을 나누며, 혼자라는 느낌을 줄이고 회복 여정을 함께 갑니다.",
               icon: "💬",
             },
             {
-              title: "건강·생활지표 추적",
-              description: "수면·에너지·기분·통증 등 일상의 변화를 기록하며, 내 삶의 패턴을 이해하는 데 도움을 줍니다.",
+              title: "건강 추적",
+              description:
+                "수면·에너지·기분·통증 등 일상의 변화를 기록하고, 중장기적인 추세를 통해 개선 효과를 확인할 수 있습니다.",
               icon: "📈",
             },
             {
-              title: "맞춤형 정보 추천",
+              title: "맞춤형 추천",
               description:
-                "연령, 암 종류, 치료 단계, 생활환경 등을 고려해, 우선적으로 참고해 볼 만한 정보를 정리해 보여줍니다.",
+                "연령, 암 종류, 치료 단계, 생활환경에 따라 각기 다른 추천을 제공하여, 나에게 맞는 실천을 찾도록 돕습니다.",
               icon: "🎯",
             },
           ].map((feature, index) => (
@@ -1045,28 +1062,28 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Customer Testimonials Section */}
       <section className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">실제 사용자 후기와 경험</h2>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">실제 사용자 후기와 사례</h2>
               <p className="text-muted-foreground mx-auto max-w-2xl">
-                아래 후기는 개인의 경험으로, 모든 분께 동일한 경험이 보장되는 것은 아닙니다. 다만 어떤 방식으로 플랫폼을
-                활용하고 계신지 참고해 보세요.
+                네이버 쇼핑몰과 네이버 폼에서 수집한 실제 후기입니다. 체력, 수면, 불안, 회복 등 어떤 변화들이 있었는지
+                확인해 보세요.
               </p>
             </div>
           </BlurFade>
 
           {[
             {
-              title: "제품·서비스 활용 후기",
-              description: "네이버 쇼핑몰에서 수집한, 일반적인 건강관리·생활관리 지원 관점의 후기입니다.",
+              title: "제품 후기",
+              description: "네이버 쇼핑몰에서 검증된 고객 후기입니다.",
               category: "제품 후기" as const,
             },
             {
-              title: "산림치유·프로그램 후기",
-              description: "네이버 폼을 통해 수집한, 산림치유·생활습관 프로그램 체험 후기입니다.",
+              title: "산림치유 후기",
+              description: "네이버 폼을 통해 받은 프로그램 체험 후기입니다.",
               category: "산림치유 후기" as const,
             },
           ].map((group) => (
@@ -1107,13 +1124,13 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Quality Assurance */}
+      {/* Quality Assurance Section */}
       <section className="container mx-auto px-4 py-20">
         <BlurFade delay={0.2} duration={0.6} inView>
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base의 원칙</h2>
+            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base의 약속</h2>
             <p className="text-muted-foreground mx-auto max-w-2xl">
-              암 경험자의 시간을 가볍게 여기지 않기 위해 근거·투명성·안전성 세 가지 원칙을 지키려 합니다.
+              암 경험자의 시간과 불안을 가볍게 여기지 않겠습니다. 근거와 투명성, 안전성을 기준으로 정보를 선별합니다.
             </p>
           </div>
         </BlurFade>
@@ -1121,22 +1138,20 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {[
             {
-              title: "근거 중심",
-              description: "가능한 경우 peer-reviewed 연구·가이드라인·임상 자료를 참고하여 정보를 정리합니다.",
+              title: "과학적 검증",
+              description: "모든 정보는 peer-reviewed 연구, 가이드라인, 임상 자료를 바탕으로 합니다.",
             },
             {
-              title: "전문가 관여",
-              description: "관련 분야 전문가의 검토를 통해, 과도한 주장이나 과장된 표현을 지양합니다.",
+              title: "전문가 검토",
+              description: "의료진과 건강 전문가들이 직접 검토한 콘텐츠만 제공하며, 추측성 정보는 지양합니다.",
             },
             {
-              title: "투명한 한계 공유",
-              description:
-                "자료의 한계와 불확실성을 함께 전달하며, 개별 상황에 따라 해석이 달라질 수 있음을 명시합니다.",
+              title: "투명한 출처 공개",
+              description: "가능한 한 정보 출처를 명시하고, 한계와 주의사항도 함께 안내합니다.",
             },
             {
-              title: "의료행위 대체 금지",
-              description:
-                "Evidence Base의 모든 정보·제품·프로그램은 의료행위를 대체하지 않으며, 치료 변경·중단·지연의 근거로 사용되어서는 안 됩니다.",
+              title: "지속적인 업데이트",
+              description: "새로운 근거가 나오면 과거 내용을 그대로 두지 않고, 업데이트 사실을 투명하게 알립니다.",
             },
           ].map((item, index) => (
             <BlurFade key={item.title} delay={0.3 + index * 0.1} duration={0.6} inView>
@@ -1151,16 +1166,16 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Background / Team */}
+      {/* Development Background Section */}
       <section className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-4xl">
             <BlurFade delay={0.2} duration={0.6} inView>
               <div className="mb-8 text-center">
-                <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">왜 이 서비스를 만들게 되었나요?</h2>
+                <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">이 서비스를 개발한 이유</h2>
                 <p className="text-muted-foreground text-sm md:text-base">
-                  “우리 가족에게 정말 도움이 되는 선택을 하고 있는 걸까?” 암 경험자의 가족으로서 직접 겪은 질문에서
-                  Evidence Base는 시작되었습니다.
+                  “우리 가족에게 정말 도움이 되는 선택을 하고 있는 걸까?”
+                  <br />암 경험자의 가족으로서 직접 겪은 질문에서 Evidence Base는 시작되었습니다.
                 </p>
               </div>
             </BlurFade>
@@ -1170,16 +1185,22 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 <CardContent className="pt-6">
                   <div className="text-muted-foreground space-y-4 text-sm leading-relaxed md:text-base">
                     <p>
-                      건강 정보는 넘쳐나지만, 암과 관련된 내용은 특히 어렵고 무겁게 느껴집니다. 치료 중이거나 치료를
-                      마친 사람에게는 작은 선택도 심리적으로 크게 다가옵니다.
+                      오늘날 건강 정보는 넘쳐나지만, 그중 많은 부분이 과학적 근거 없이 퍼지고 있습니다. 특히 암
+                      경험자에게는 작은 선택도 심리적으로 매우 무겁게 다가옵니다.
                     </p>
                     <p>
-                      Evidence Base는 “정답”을 주려는 플랫폼이 아닙니다. 대신, 검증된 자료와 현장의 경험을 기반으로
-                      &quot;어떤 질문을 던져야 할지&quot;를 함께 정리하는 동반자가 되고자 합니다.
+                      Evidence Base는 암 경험자와 보호자가 보다 안전하고 합리적인 선택을 할 수 있도록 돕기 위해
+                      탄생했습니다. 치료를 대체하는 것이 아니라, 치료 사이와 이후의 긴 시간을 어떻게 살아갈지에 초점을
+                      맞춥니다.
                     </p>
                     <p>
-                      우리는 사용자가 자신의 몸과 삶에 대해 주체적인 결정을 내릴 수 있도록, 정보·경험·전문가 관점을
-                      연결해 주는 역할을 합니다. 단, 최종적인 의료적 판단은 언제나 담당 의료진의 몫임을 분명히 합니다.
+                      우리는 모든 사용자가 신뢰할 수 있는, 검증된 정보에 접근할 수 있어야 한다고 믿습니다. 따라서 모든
+                      정보와 추천은 과학적 검증 과정을 거치며, 전문가들의 검토를 받습니다. 동시에, 실제 현장에서 느끼는
+                      고민과 감정도 함께 다루려 합니다.
+                    </p>
+                    <p>
+                      Evidence Base는 단순한 정보 제공 플랫폼이 아니라, 암 경험자의 일상을 함께 걷는 회복 파트너가
+                      되고자 합니다.
                     </p>
                   </div>
                 </CardContent>
@@ -1189,12 +1210,13 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
+      {/* Team Story Section */}
       <section className="container mx-auto px-4 py-20">
         <BlurFade delay={0.2} duration={0.6} inView>
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Evidence Base 팀 이야기</h2>
             <p className="text-muted-foreground mx-auto max-w-2xl">
-              의료·데이터·소프트웨어·산림치유 전문가가 함께, &quot;암 이후의 삶&quot;에 집중하는 작은 통합의학 팀입니다.
+              의료·데이터·소프트웨어·산림치유 전문가가 함께 만든, 작은 통합의학 팀입니다.
             </p>
           </div>
         </BlurFade>
@@ -1205,12 +1227,18 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               <CardContent className="pt-6">
                 <div className="text-muted-foreground space-y-4 text-sm leading-relaxed md:text-base">
                   <p>
-                    우리 팀의 공통점은 &quot;암 경험자의 시간을 가볍게 여기지 않는다&quot;는 점입니다. 이미 한 번 힘들게
-                    찾아본 내용과 질문들을, 다음 사람은 조금이나마 더 쉽게 찾을 수 있도록 구조화하고 있습니다.
+                    Evidence Base는 건강과 기술에 열정을 가진 사람들로 구성되어 있습니다. 의료진, 데이터 과학자,
+                    소프트웨어 엔지니어, 산림치유 전문가 등 다양한 분야의 전문가들이 협력하여 플랫폼을 개발하고
+                    있습니다.
                   </p>
                   <p>
-                    Evidence Base는 완성된 답안지가 아니라, 사용자와 함께 채워 나가는 노트에 가깝습니다. 더 나은 근거,
-                    더 이해하기 쉬운 설명, 더 안전한 선택을 위해 꾸준히 업데이트해 나가겠습니다.
+                    우리 팀의 공통점은 &quot;암 경험자의 시간을 소중하게 생각한다&quot;는 점입니다. 똑같은 질문을 여러
+                    번 반복하지 않도록, 이미 한 번 조사한 내용을 다음 사람은 더 쉽게 볼 수 있도록, 데이터와 콘텐츠를
+                    구조화하고 있습니다.
+                  </p>
+                  <p>
+                    Evidence Base는 완성된 것이 아니라, 사용자와 함께 계속 성장하는 서비스입니다. 더 나은 근거, 더
+                    이해하기 쉬운 설명, 더 안전한 선택을 위해 끊임없이 업데이트해 나가겠습니다.
                   </p>
                 </div>
               </CardContent>
@@ -1219,14 +1247,15 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* FAQ Section */}
       <section className="bg-muted/40 py-20">
         <div className="container mx-auto px-4">
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mb-10 text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">자주 묻는 질문</h2>
               <p className="text-muted-foreground mx-auto max-w-2xl text-sm md:text-base">
-                의료법·건강기능식품 관련 규정을 준수하기 위해, 서비스의 역할과 한계를 분명하게 안내드립니다.
+                암 경험자와 보호자분들이 가장 많이 물어보시는 질문을 정리했습니다. 이 외의 궁금한 점은 언제든지 문의해
+                주세요.
               </p>
             </div>
           </BlurFade>
@@ -1248,14 +1277,15 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Compliance Notice */}
+      {/* Compliance Notice Section */}
       <section className="container mx-auto px-4 py-16">
         <BlurFade delay={0.2} duration={0.6} inView>
           <div className="mb-10 text-center">
             <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">중요한 안내사항</h2>
             <p className="text-muted-foreground mx-auto max-w-3xl text-xs md:text-sm">
               Evidence Base는 통합의학적 관점에서 암 경험자를 포함한 사용자들이 건강한 생활 습관을 만들고, 신뢰 가능한
-              정보를 바탕으로 스스로 질문을 정리하고 선택할 수 있도록 돕는 것을 목적으로 합니다.
+              정보를 바탕으로 주체적으로 건강 관리를 수행하도록 돕는 것을 목적으로 합니다. 아래 사항을 반드시 확인해
+              주세요.
             </p>
           </div>
         </BlurFade>
@@ -1263,19 +1293,19 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         <div className="grid gap-6 md:grid-cols-3">
           {[
             {
-              title: "진단·치료·예방 목적이 아님",
+              title: "의료행위가 아닙니다",
               description:
-                "제공되는 건강기능식품, 강의, 산림치유 프로그램은 질병의 진단·치료·예방을 위한 것이 아니며, 의료행위를 대체하지 않습니다.",
+                "제공되는 건강 보조제, 강의, 산림치유 프로그램은 질병의 진단·치료·예방을 위한 것이 아니며, 의료행위를 대체하지 않습니다.",
             },
             {
-              title: "정보·교육 중심 서비스",
+              title: "증거 기반 정보 제공",
               description:
-                "모든 콘텐츠는 통합의학·기능의학 연구 및 임상 자료를 바탕으로 한 ‘정보·교육용’이며, 개별 치료 결정은 담당 의료진과 상의해야 합니다.",
+                "모든 콘텐츠는 통합의학적 연구 및 임상 자료를 바탕으로 하며, 사용자가 스스로 정보를 판단하고 생활에 적용할 수 있도록 돕습니다.",
             },
             {
-              title: "치료 변경·중단 근거로 사용 금지",
+              title: "전문가 상담 권장",
               description:
-                "플랫폼의 정보와 후기는 치료 시작·변경·중단·지연의 근거로 사용될 수 없습니다. 이상 반응 발생 시 즉시 전문 의료진의 진료를 받으시기 바랍니다.",
+                "기존 치료나 복용약과의 상호작용은 전문의와 상담 후 결정해야 하며, 이상 반응 발생 시 즉시 전문 의료진의 진료를 받으시기 바랍니다.",
             },
           ].map((notice, index) => (
             <BlurFade key={notice.title} delay={0.3 + index * 0.1} duration={0.6} inView>
@@ -1290,17 +1320,18 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* CTA Section - Signup and Application */}
       <section className="bg-primary/5 py-20">
         <div className="container mx-auto px-4">
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                치료는 병원에서, 생활관리는 함께 정리해 볼까요?
+                이제, 근거 있는 선택으로 건강한 일상을 설계해 보세요
               </h2>
               <p className="text-muted-foreground mb-8 text-sm md:text-lg">
-                지금 Evidence Base에 가입하시면 암 이후 생활에서 자주 논의되는 생활습관·영양·정신건강·산림치유
-                체크리스트와 함께, 근거 기반 콘텐츠를 차분히 살펴보실 수 있습니다.
+                지금 가입하시면 암 방지 관점에서 꼭 짚어야 할 생활습관·보충제· 산림치유 체크리스트와 함께,
+                <br />
+                Evidence Base의 핵심 기능을 무료로 체험해 보실 수 있습니다.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button
@@ -1316,12 +1347,11 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                   {loaderData.isAuthenticated ? "홈으로 이동" : "무료 회원가입"}
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link to="/contact">전문가와 먼저 상담하고 싶어요</Link>
+                  <Link to="/contact">전문가에게 먼저 상담받기</Link>
                 </Button>
               </div>
               <p className="text-muted-foreground mt-4 text-xs">
-                * 언제든지 탈퇴·데이터 삭제를 요청하실 수 있으며, 광고성 정보 제공은 최소화하고 실질적인 콘텐츠 위주로
-                운영합니다.
+                * 언제든지 탈퇴·데이터 삭제를 요청하실 수 있으며, 광고성 메일 발송은 최소화합니다.
               </p>
             </div>
           </BlurFade>

@@ -2,4 +2,7 @@
   "css.validate": false,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[mdx]": {
+    "editor.formatOnSave": false
+  }
 }

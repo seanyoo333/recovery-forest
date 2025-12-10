@@ -24,7 +24,7 @@ import {
 export function SummaryBox({ children }: { children: ReactNode }) {
   return (
     <section className="my-6 rounded-lg border border-teal-200/50 bg-teal-50/50 px-4 py-3 text-sm dark:border-teal-800/50 dark:bg-teal-950/30">
-      <p className="mb-2 text-xs font-semibold tracking-wide text-teal-700 uppercase dark:text-teal-300">
+      <p className="mb-2 text-lg font-semibold tracking-wide text-teal-700 uppercase dark:text-teal-300">
         3줄 요약
       </p>
       <div className="text-foreground space-y-1.5 [&>p]:leading-relaxed">
@@ -49,7 +49,7 @@ export function WarningBox({
 }) {
   return (
     <Alert variant="destructive" className="my-6">
-      <AlertTitle className="mb-2 text-xs font-semibold tracking-wide uppercase">
+      <AlertTitle className="mb-2 text-lg font-semibold tracking-wide uppercase">
         {title}
       </AlertTitle>
       <AlertDescription className="space-y-1.5 [&>p]:leading-relaxed">
@@ -75,7 +75,7 @@ export function Callout({
   return (
     <Alert className="bg-muted/50 my-6">
       {title && (
-        <AlertTitle className="mb-2 text-xs font-semibold tracking-wide uppercase">
+        <AlertTitle className="mb-2 text-lg font-semibold tracking-wide uppercase">
           {title}
         </AlertTitle>
       )}
@@ -96,7 +96,7 @@ export function AskDoctorList({ items }: { items: string[] }) {
   if (!items.length) return null;
   return (
     <section className="my-6 rounded-lg border border-indigo-200/50 bg-indigo-50/50 px-4 py-3 text-sm dark:border-indigo-800/50 dark:bg-indigo-950/30">
-      <p className="mb-3 text-xs font-semibold tracking-wide text-indigo-700 uppercase dark:text-indigo-300">
+      <p className="mb-3 text-lg font-semibold tracking-wide text-indigo-700 uppercase dark:text-indigo-300">
         담당 선생님께 여쭤볼 수 있는 질문
       </p>
       <ul className="text-foreground space-y-2">
@@ -196,7 +196,7 @@ export function ReferenceList({ items }: { items: ReferenceItem[] }) {
   if (!items.length) return null;
   return (
     <section className="mt-8 border-t pt-6 text-sm">
-      <h2 className="mb-3 text-base font-semibold">참고 자료</h2>
+      <h2 className="mb-3 text-lg font-semibold">참고 자료</h2>
       <ul className="text-muted-foreground space-y-2 pl-5">
         {items.map((ref, index) => (
           <li

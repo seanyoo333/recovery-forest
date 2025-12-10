@@ -131,17 +131,17 @@ const menus = [
   },
   {
     name: "블로그",
-    to: "/blog-posts",
+    to: "/blog",
     items: [
       {
         name: "전체 글",
         description: "모든 블로그 글을 보세요",
-        to: "/blog-posts",
+        to: "/blog",
       },
       {
         name: "최신 글",
         description: "최신 블로그 글을 보세요",
-        to: "/blog-posts?sort=new",
+        to: "/blog?sort=new",
       },
     ],
   },
