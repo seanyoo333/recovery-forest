@@ -484,6 +484,13 @@
       "when": 1765268168188,
       "tag": "0068_long_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1765533729930,
+      "tag": "0069_daffy_firelord",
+      "breakpoints": true
     }
   ]
 }

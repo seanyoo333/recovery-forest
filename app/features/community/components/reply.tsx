@@ -151,7 +151,7 @@ export function Reply({
             ) : null}
             {isLoggedIn && isAuthor && (
               <Form method="post" className="inline">
-                <input type="hidden" name="intent" value="delete" />
+                <input type="hidden" name="intent" value="delete-reply" />
                 <input type="hidden" name="replyId" value={replyId} />
                 <Button
                   ref={deleteButtonRef}

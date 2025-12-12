@@ -90,6 +90,7 @@ export const posts = pgTable(
     content: text().notNull(),
     upvotes: bigint({ mode: "number" }).default(0),
     is_markdown: boolean().default(false), // MD 파일 여부
+    is_notice: boolean().default(false),
     topic_id: bigint({ mode: "number" })
       .references(() => topics.topic_id, {
         onDelete: "cascade",
@@ -103,19 +104,36 @@ export const posts = pgTable(
     ...timestamps,
   },
   (table) => [
-    // 모든 사용자가 게시물을 조회할 수 있음
+    // 일반 게시물은 모든 사용자가 조회 가능, 공지글은 인증된 사용자만 조회 가능
     pgPolicy("posts-select-policy", {
       for: "select",
       to: ["public"],
       as: "permissive",
-      using: sql`true`,
+      using: sql`NOT ${table.is_notice}`,
+    }),
+    // 공지글은 인증된 사용자만 조회 가능
+    pgPolicy("posts-select-notice-policy", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${table.is_notice}`,
     }),
     // 인증된 사용자만 게시물을 작성할 수 있음
     pgPolicy("posts-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`
+        ${authUid} = ${table.profile_id}
+        AND (
+          NOT ${table.is_notice} OR EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE admin_id = ${authUid}
+            AND admin_role IN ('super_admin', 'content_admin')
+            AND is_active = true
+          )
+        )
+      `,
     }),
     // 작성자만 자신의 게시물을 수정할 수 있음
     // 단, 트리거에 의한 upvotes 업데이트를 허용하기 위해 UPDATE 정책을 완화
@@ -125,14 +143,31 @@ export const posts = pgTable(
       to: authenticatedRole,
       as: "permissive",
       using: sql`true`,
-      withCheck: sql`true`,
+      withCheck: sql`
+        (
+          NOT ${table.is_notice} OR EXISTS (
+            SELECT 1 FROM admin_permissions
+            WHERE admin_id = ${authUid}
+            AND admin_role IN ('super_admin', 'content_admin')
+            AND is_active = true
+          )
+        )
+      `,
     }),
     // 작성자만 자신의 게시물을 삭제할 수 있음
     pgPolicy("posts-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`
+        (${authUid} = ${table.profile_id} AND NOT ${table.is_notice})
+        OR EXISTS (
+          SELECT 1 FROM admin_permissions
+          WHERE admin_id = ${authUid}
+          AND admin_role IN ('super_admin', 'content_admin')
+          AND is_active = true
+        )
+      `,
     }),
   ],
 );

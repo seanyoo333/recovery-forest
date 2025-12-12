@@ -101,6 +101,7 @@ export default [
       index("features/community/pages/community-page.tsx"),
       route("/submit", "features/community/pages/submit-post-page.tsx"),
       route("/:postId", "features/community/pages/post-page.tsx"),
+      route("/:postId/edit", "features/community/pages/edit-post-page.tsx"),
       route("/:postId/upvote", "features/community/pages/upvote-post-page.tsx"),
     ]),
 

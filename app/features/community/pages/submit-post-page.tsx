@@ -11,7 +11,7 @@ import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 import { createPost } from "../mutations";
-import { getTopics } from "../queries";
+import { getTopics, isAdminUser } from "../queries";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Submit Post | Evidence Base" }];
@@ -19,13 +19,17 @@ export const meta: Route.MetaFunction = () => {
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
   const [client] = makeServerClient(request);
-  await getLoggedInUserId(client);
+  const userId = await getLoggedInUserId(client);
+  const isAdmin = await isAdminUser(client, userId);
   const topics = await getTopics(client);
-  return { topics };
+  const filteredTopics = isAdmin
+    ? topics
+    : topics.filter((topic) => topic.slug !== "notice");
+  return { topics: filteredTopics, isAdmin };
 };
 
 const formSchema = z.object({
-  title: z.string().min(1).max(40),
+  title: z.string().min(1).max(100),
   category: z.string().min(1).max(100),
   content: z.string().min(1),
 });
@@ -33,6 +37,7 @@ const formSchema = z.object({
 export const action = async ({ request }: Route.ActionArgs) => {
   const [client] = makeServerClient(request);
   const userId = await getLoggedInUserId(client);
+  const isAdmin = await isAdminUser(client, userId);
   const formData = await request.formData();
   const { success, error, data } = formSchema.safeParse(
     Object.fromEntries(formData),
@@ -43,6 +48,11 @@ export const action = async ({ request }: Route.ActionArgs) => {
   }
 
   const { title, category, content } = data;
+  if (category === "notice" && !isAdmin) {
+    return {
+      fieldErrors: { category: ["공지사항은 관리자만 작성할 수 있습니다."] },
+    };
+  }
   const { post_id } = await createPost(client, {
     title,
     category,

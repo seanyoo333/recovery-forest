@@ -17,7 +17,7 @@ import makeServerClient from "~/core/lib/supa-client.server";
 
 import { PostCard } from "../components/post-card";
 import { PERIOD_OPTIONS, SORT_OPTIONS } from "../constants";
-import { getPosts, getTopics } from "../queries";
+import { getPosts, getTopics, isAdminUser } from "../queries";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Community | Evidence Base" }];
@@ -52,6 +52,11 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   }
 
   const [client, headers] = makeServerClient(request);
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  const isAdmin = await isAdminUser(client, user?.id);
+
   const [topics, posts] = await Promise.all([
     getTopics(client),
     getPosts(client, {
@@ -62,7 +67,12 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
       topic: parsedData.topic,
     }),
   ]);
-  return { topics, posts };
+
+  const filteredTopics = isAdmin
+    ? topics
+    : topics.filter((topic) => topic.slug !== "notice");
+
+  return { topics: filteredTopics, posts };
 };
 
 export default function CommunityPage({ loaderData }: Route.ComponentProps) {

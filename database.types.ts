@@ -1270,6 +1270,7 @@ export type Database = {
           content: string
           created_at: string
           is_markdown: boolean | null
+          is_notice: boolean | null
           post_id: number
           profile_id: string
           title: string
@@ -1281,6 +1282,7 @@ export type Database = {
           content: string
           created_at?: string
           is_markdown?: boolean | null
+          is_notice?: boolean | null
           post_id?: never
           profile_id: string
           title: string
@@ -1292,6 +1294,7 @@ export type Database = {
           content?: string
           created_at?: string
           is_markdown?: boolean | null
+          is_notice?: boolean | null
           post_id?: never
           profile_id?: string
           title?: string

@@ -114,3 +114,91 @@ export const deleteReply = async (
     throw error;
   }
 };
+
+export const updatePost = async (
+  client: SupabaseClient<Database>,
+  {
+    postId,
+    title,
+    category,
+    content,
+    userId,
+  }: {
+    postId: string;
+    title: string;
+    category: string;
+    content: string;
+    userId: string;
+  },
+) => {
+  // 글 작성자만 수정할 수 있도록 확인
+  const { data: post, error: fetchError } = await client
+    .from("posts")
+    .select("profile_id")
+    .eq("post_id", Number(postId))
+    .single();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  if (post.profile_id !== userId) {
+    throw new Error("글을 수정할 권한이 없습니다.");
+  }
+
+  const { data: categoryData, error: categoryError } = await client
+    .from("topics")
+    .select("topic_id")
+    .eq("slug", category)
+    .single();
+
+  if (categoryError) {
+    throw categoryError;
+  }
+
+  const { data, error } = await client
+    .from("posts")
+    .update({
+      title,
+      content,
+      topic_id: categoryData.topic_id,
+    })
+    .eq("post_id", Number(postId))
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+export const deletePost = async (
+  client: SupabaseClient<Database>,
+  { postId, userId }: { postId: string; userId: string },
+) => {
+  // 글 작성자만 삭제할 수 있도록 확인
+  const { data: post, error: fetchError } = await client
+    .from("posts")
+    .select("profile_id")
+    .eq("post_id", Number(postId))
+    .single();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  if (post.profile_id !== userId) {
+    throw new Error("글을 삭제할 권한이 없습니다.");
+  }
+
+  const { error } = await client
+    .from("posts")
+    .delete()
+    .eq("post_id", Number(postId));
+
+  if (error) {
+    throw error;
+  }
+};

@@ -9,6 +9,21 @@ import type { Database } from "~/core/lib/supa-client.server";
 
 import { createPost } from "./mutations";
 
+export const isAdminUser = async (
+  client: SupabaseClient<Database>,
+  userId?: string,
+) => {
+  if (!userId) return false;
+  const { data } = await client
+    .from("admin_permissions")
+    .select("admin_role")
+    .eq("admin_id", userId)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+};
+
 export const getTopics = async (client: SupabaseClient<Database>) => {
   const { data, error } = await client
     .from("topics")
@@ -91,6 +106,7 @@ export const getPosts = async (
   await syncMDFilesToDatabase(client);
 
   // 데이터베이스에서 포스트 가져오기 (MD 파일 포함)
+  // RLS 정책에 의해 공지글은 인증된 사용자만 조회 가능
   const baseQuery = client
     .from("community_post_list_view")
     .select(`*`)
@@ -137,12 +153,15 @@ export const getPostById = async (
   await syncMDFilesToDatabase(client);
 
   // 데이터베이스에서 포스트 조회
+  // RLS 정책에 의해 공지글은 인증된 사용자만 조회 가능
   const { data, error } = await client
     .from("community_post_detail")
     .select("*")
     .eq("post_id", parseInt(postId))
-    .single();
+    .maybeSingle();
+
   if (error) throw error;
+  if (!data) throw new Error("Post not found");
   return data;
 };
 
@@ -163,7 +182,7 @@ export const getReplies = async (
   const { data, error } = await client
     .from("post_replies")
     .select(`${replyQuery}, post_replies(${replyQuery})`)
-    .eq("post_id", postId)
+    .eq("post_id", parseInt(postId))
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
