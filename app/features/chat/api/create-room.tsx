@@ -41,12 +41,9 @@ export const action = async ({ request }: Route.ActionArgs) => {
       content: `새로운 AI 채팅방 "${roomName}"이 생성되었습니다. ${roomDescription}`,
     });
 
-    console.log("Created bot message room:", botMessageRoomId);
-
     // 생성된 대화방으로 리다이렉트
     return redirect(`/chat/botmessages/${botMessageRoomId}`);
   } catch (error) {
-    console.error("Error creating bot message room:", error);
     return Response.json(
       { error: "Failed to create chat room" },
       { status: 500 },

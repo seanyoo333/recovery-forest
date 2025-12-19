@@ -1,0 +1,2 @@
+ALTER POLICY "bot-message-rooms-insert-policy" ON "bot_message_rooms" TO public WITH CHECK (true);--> statement-breakpoint
+ALTER POLICY "bot-messages-select-policy" ON "bot_messages" TO public USING (true);

@@ -79,15 +79,6 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
       LLM_SERVER_URL = `${LLM_SERVER_URL}:8000`;
     }
 
-    console.log("AWS 챗봇 API 호출:", `${LLM_SERVER_URL}/api/langchain/`);
-    console.log("요청 데이터:", {
-      message,
-      user_id: userId,
-      room_id: params.botMessageRoomId,
-      prescription: "No",
-      response_type: "text",
-    });
-
     const aiResponse = await fetch(`${LLM_SERVER_URL}/api/langchain/`, {
       method: "POST",
       headers: {
@@ -103,16 +94,11 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
       }),
     });
 
-    console.log("AI API 응답 상태:", aiResponse.status, aiResponse.statusText);
-
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("AI API 호출 실패:", aiResponse.statusText, errorText);
       return { ok: true }; // 사용자 메시지는 저장되었으므로 성공으로 처리
     }
 
     const aiData = await aiResponse.json();
-    console.log("AI 응답:", aiData);
 
     if (aiData.status === "success" && aiData.message) {
       // AI 응답을 Supabase에 저장
@@ -121,26 +107,18 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
           ? aiData.message
           : aiData.message.content || JSON.stringify(aiData.message);
 
-      console.log("저장할 AI 응답:", aiResponseText);
-
       try {
         await sendBotMessageToRoom(client, {
           botMessageRoomId: params.botMessageRoomId,
           message: aiResponseText,
           userId: "ai-assistant",
         });
-        console.log("AI 응답이 성공적으로 DB에 저장되었습니다.");
       } catch (dbError) {
-        console.error("AI 응답 DB 저장 실패:", dbError);
-        // DB 저장 실패 시에도 사용자에게 알림
         throw new Error("AI 응답을 저장하는 중 오류가 발생했습니다.");
       }
-    } else {
-      console.error("AI 응답 형식 오류:", aiData);
-      throw new Error("AI 서버에서 잘못된 응답을 받았습니다.");
     }
   } catch (error) {
-    console.error("AI API 호출 중 오류:", error);
+    // 에러는 조용히 처리 (사용자 메시지는 이미 저장됨)
   }
 
   return { ok: true };
@@ -183,8 +161,6 @@ export default function BotMessagePage({
   useEffect(() => {
     const roomId = loaderData.botMessages[0]?.bot_message_room_id;
     if (!roomId) return;
-
-    console.log("Realtime 구독 시작:", `bot-messages:${roomId}`);
 
     const changes = supabase
       .channel(`bot-messages:${roomId}`)

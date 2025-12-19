@@ -18,7 +18,7 @@ export const hideBotMessage = async (
   const { error } = await client
     .from("bot_message_room_members")
     .update({ is_hidden: true })
-    .eq("bot_message_room_id", botMessageRoomId)
+    .eq("bot_message_room_id", Number(botMessageRoomId))
     .eq("profile_id", userId);
 
   if (error) {
@@ -47,7 +47,6 @@ export const sendBotMessage = async (
   if (existingRoom?.bot_message_room_id) {
     // 기존 채팅방이 있으면 사용
     botMessageRoomId = existingRoom.bot_message_room_id;
-    console.log("[sendMessage] Using existing room:", botMessageRoomId);
   } else {
     // 새 채팅방 생성
     const { data: roomData, error: createError } = await client
@@ -77,8 +76,6 @@ export const sendBotMessage = async (
     if (memberError) {
       throw memberError;
     }
-
-    console.log("[sendMessage] Created new room:", botMessageRoomId);
   }
 
   // 메시지 저장

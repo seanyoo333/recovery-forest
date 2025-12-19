@@ -9,6 +9,91 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "~/core/lib/supa-client.server";
 
 /**
+ * 사용자의 일반 메시지 룸 목록 조회
+ */
+export const getMessageRoomsByUserId = async (
+  client: SupabaseClient<Database>,
+  { userId }: { userId: string },
+) => {
+  // RLS 무한 재귀 방지를 위해 먼저 멤버십만 조회
+  const { data: memberships, error: membershipsError } = await client
+    .from("message_room_members")
+    .select("message_room_id, profile_id, is_hidden, created_at")
+    .eq("profile_id", userId)
+    .eq("is_hidden", false)
+    .order("created_at", { ascending: false });
+
+  if (membershipsError) {
+    throw membershipsError;
+  }
+
+  if (!memberships || memberships.length === 0) {
+    return [];
+  }
+
+  // 방 ID 목록 추출
+  const roomIds = memberships.map((m) => m.message_room_id);
+
+  // 상대방 프로필 정보 조회 (같은 방의 다른 멤버)
+  const { data: otherMembers, error: otherMembersError } = await client
+    .from("message_room_members")
+    .select("message_room_id, profile_id")
+    .in("message_room_id", roomIds)
+    .neq("profile_id", userId)
+    .eq("is_hidden", false);
+
+  if (otherMembersError) {
+    throw otherMembersError;
+  }
+
+  // 각 방의 상대방 프로필 ID 추출
+  const roomToOtherProfile = new Map<number, string>();
+  otherMembers?.forEach((member) => {
+    if (!roomToOtherProfile.has(member.message_room_id)) {
+      roomToOtherProfile.set(member.message_room_id, member.profile_id);
+    }
+  });
+
+  const otherProfileIds = [...new Set(roomToOtherProfile.values())];
+
+  if (otherProfileIds.length === 0) {
+    return memberships.map((membership) => ({
+      message_room_id: membership.message_room_id,
+      profile_id: membership.profile_id,
+      is_hidden: membership.is_hidden,
+      created_at: membership.created_at,
+      profiles: null,
+      room_type: "user" as const,
+    }));
+  }
+
+  // 프로필 정보 조회
+  const { data: profiles, error: profilesError } = await client
+    .from("profiles")
+    .select("profile_id, name, avatar, username")
+    .in("profile_id", otherProfileIds);
+
+  if (profilesError) {
+    throw profilesError;
+  }
+
+  // 데이터 조합
+  const profilesMap = new Map(profiles?.map((p) => [p.profile_id, p]) || []);
+
+  return memberships.map((membership) => {
+    const otherProfileId = roomToOtherProfile.get(membership.message_room_id);
+    return {
+      message_room_id: membership.message_room_id,
+      profile_id: membership.profile_id,
+      is_hidden: membership.is_hidden,
+      created_at: membership.created_at,
+      profiles: otherProfileId ? profilesMap.get(otherProfileId) || null : null,
+      room_type: "user" as const,
+    };
+  });
+};
+
+/**
  * 사용자의 챗봇 대화방 목록 조회
  */
 export const getBotMessageRoomsByUserId = async (
@@ -40,7 +125,6 @@ export const getBotMessageRoomsByUserId = async (
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching bot message rooms:", error);
     throw error;
   }
 
@@ -188,7 +272,6 @@ export const sendBotMessageToRoom = async (
   });
 
   if (error) {
-    console.error("메시지 저장 오류:", error);
     throw error;
   }
 };
@@ -215,7 +298,6 @@ export const getBotMessageRoomMembers = async (
     .eq("is_hidden", false);
 
   if (error) {
-    console.error("Error fetching bot message room members:", error);
     throw error;
   }
 
@@ -252,7 +334,6 @@ export const createBotMessageInvitation = async (
     .single();
 
   if (error) {
-    console.error("Error creating bot message invitation:", error);
     throw error;
   }
 

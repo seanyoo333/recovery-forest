@@ -130,7 +130,7 @@ export default function ChatPage({ loaderData }: Route.ComponentProps) {
                   Welcome to Evidence Base AI
                 </h3>
                 <p className="text-muted-foreground max-w-md">
-                  안녕하세요. 저는 EB AI 챗봇입니다.
+                  EB AI 챗봇입니다.
                   <br />
                   암 경험자의 건강관리를 돕기 위해 좋은습관 님이 만들었어요.
                   <br />

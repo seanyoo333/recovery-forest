@@ -1,0 +1,1 @@
+ALTER POLICY "message-rooms-insert-policy" ON "bot_message_room_members" RENAME TO "bot-message-rooms-insert-policy";
