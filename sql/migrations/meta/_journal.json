@@ -526,6 +526,13 @@
       "when": 1766142506612,
       "tag": "0074_cooing_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1766218884473,
+      "tag": "0075_sturdy_mockingbird",
+      "breakpoints": true
     }
   ]
 }

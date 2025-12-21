@@ -381,6 +381,7 @@ export type Database = {
       bot_message_rooms: {
         Row: {
           bot_message_room_id: number
+          conversation_id: string | null
           created_at: string
           created_by: string
           room_description: string | null
@@ -388,6 +389,7 @@ export type Database = {
         }
         Insert: {
           bot_message_room_id?: never
+          conversation_id?: string | null
           created_at?: string
           created_by: string
           room_description?: string | null
@@ -395,6 +397,7 @@ export type Database = {
         }
         Update: {
           bot_message_room_id?: never
+          conversation_id?: string | null
           created_at?: string
           created_by?: string
           room_description?: string | null
@@ -479,6 +482,111 @@ export type Database = {
           name?: string
           target?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      checkpoint_blobs: {
+        Row: {
+          blob: string | null
+          channel: string
+          checkpoint_ns: string
+          thread_id: string
+          type: string
+          version: string
+        }
+        Insert: {
+          blob?: string | null
+          channel: string
+          checkpoint_ns?: string
+          thread_id: string
+          type: string
+          version: string
+        }
+        Update: {
+          blob?: string | null
+          channel?: string
+          checkpoint_ns?: string
+          thread_id?: string
+          type?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      checkpoint_migrations: {
+        Row: {
+          v: number
+        }
+        Insert: {
+          v: number
+        }
+        Update: {
+          v?: number
+        }
+        Relationships: []
+      }
+      checkpoint_writes: {
+        Row: {
+          blob: string
+          channel: string
+          checkpoint_id: string
+          checkpoint_ns: string
+          idx: number
+          task_id: string
+          task_path: string
+          thread_id: string
+          type: string | null
+        }
+        Insert: {
+          blob: string
+          channel: string
+          checkpoint_id: string
+          checkpoint_ns?: string
+          idx: number
+          task_id: string
+          task_path?: string
+          thread_id: string
+          type?: string | null
+        }
+        Update: {
+          blob?: string
+          channel?: string
+          checkpoint_id?: string
+          checkpoint_ns?: string
+          idx?: number
+          task_id?: string
+          task_path?: string
+          thread_id?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
+      checkpoints: {
+        Row: {
+          checkpoint: Json
+          checkpoint_id: string
+          checkpoint_ns: string
+          metadata: Json
+          parent_checkpoint_id: string | null
+          thread_id: string
+          type: string | null
+        }
+        Insert: {
+          checkpoint: Json
+          checkpoint_id: string
+          checkpoint_ns?: string
+          metadata?: Json
+          parent_checkpoint_id?: string | null
+          thread_id: string
+          type?: string | null
+        }
+        Update: {
+          checkpoint?: Json
+          checkpoint_id?: string
+          checkpoint_ns?: string
+          metadata?: Json
+          parent_checkpoint_id?: string | null
+          thread_id?: string
+          type?: string | null
         }
         Relationships: []
       }

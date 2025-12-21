@@ -35,6 +35,7 @@ export const botMessageRooms = pgTable(
       .generatedAlwaysAsIdentity(),
     room_name: text().notNull().default("AI Chat Room"),
     room_description: text(),
+    conversation_id: text(), // Evibot API의 conversation_id 저장
     created_by: uuid()
       .notNull()
       .references(() => profiles.profile_id, {

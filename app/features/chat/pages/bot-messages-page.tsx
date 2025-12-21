@@ -20,10 +20,7 @@ import {
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
-import {
-  getBotMessageRoomsByUserId,
-  getMessageRoomsByUserId,
-} from "../queries";
+import { getBotMessageRoomsByUserId } from "../queries";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Bot Messages | Evidence-Base" }];
@@ -34,47 +31,32 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
     const [client] = makeServerClient(request);
     const userId = await getLoggedInUserId(client);
 
-    // AI 채팅방과 일반 채팅방을 병렬로 조회
-    const [botMessageRooms, messageRooms] = await Promise.all([
-      getBotMessageRoomsByUserId(client, { userId }).catch((err) => {
-        console.error("Error fetching bot message rooms:", err);
-        return [];
-      }),
-      getMessageRoomsByUserId(client, { userId }).catch((err) => {
-        console.error("Error fetching message rooms:", err);
-        return [];
-      }),
-    ]);
+    // AI 채팅방만 조회
+    const botMessageRooms = await getBotMessageRoomsByUserId(client, {
+      userId,
+    }).catch((err) => {
+      console.error("Error fetching bot message rooms:", err);
+      return [];
+    });
 
-    // 두 종류의 채팅방을 합치고 생성일 기준으로 정렬
-    const allRooms = [
-      ...botMessageRooms.map((room) => ({
-        ...room,
+    // AI 채팅방 목록을 생성일 기준으로 정렬
+    const rooms = botMessageRooms
+      .map((room) => ({
         id: room.bot_message_room_id,
         name: room.bot_message_rooms?.room_name || "AI Chat Room",
         description: room.bot_message_rooms?.room_description,
         created_at: room.bot_message_rooms?.created_at || room.created_at,
         creator: room.profiles,
-        room_type: "bot" as const,
-      })),
-      ...messageRooms.map((room) => ({
-        ...room,
-        id: room.message_room_id,
-        name: room.profiles?.name || "Unknown User",
-        description: null,
-        created_at: room.created_at,
-        creator: room.profiles,
-        room_type: "user" as const,
-      })),
-    ].sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return dateB - dateA; // 최신순
-    });
+      }))
+      .sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA; // 최신순
+      });
 
     return {
       userId,
-      rooms: allRooms,
+      rooms,
     };
   } catch (error) {
     console.error("Bot messages loader error:", error);
@@ -89,12 +71,6 @@ export default function BotMessagesPage({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
   const { userId, rooms } = loaderData;
 
-  const getRoomPath = (room: any) => {
-    if (room.room_type === "bot") {
-      return `/chat/botmessages/${room.id}`;
-    }
-    return `/my/messages/${room.id}`;
-  };
 
   return (
     <div className="flex h-full flex-col p-6">
@@ -122,18 +98,16 @@ export default function BotMessagesPage({ loaderData }: Route.ComponentProps) {
           <div className="grid gap-4">
             {rooms.map((room: any) => (
               <Card
-                key={`${room.room_type}-${room.id}`}
+                key={room.id}
                 className="cursor-pointer transition-colors hover:bg-gray-50"
-                onClick={() => navigate(getRoomPath(room))}
+                onClick={() => navigate(`/chat/botmessages/${room.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-lg">{room.name}</CardTitle>
-                    {room.room_type === "bot" && (
-                      <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-xs">
-                        AI
-                      </span>
-                    )}
+                    <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-xs">
+                      AI
+                    </span>
                   </div>
                   {room.description && (
                     <p className="text-muted-foreground text-sm">
@@ -144,9 +118,7 @@ export default function BotMessagesPage({ loaderData }: Route.ComponentProps) {
                 <CardContent>
                   <div className="text-muted-foreground flex items-center justify-between text-sm">
                     <span>
-                      {room.room_type === "bot"
-                        ? `생성자: ${room.creator?.name || "Unknown"}`
-                        : `상대방: ${room.creator?.name || "Unknown"}`}
+                      생성자: {room.creator?.name || "Unknown"}
                     </span>
                     <span>
                       {new Date(room.created_at).toLocaleDateString()}

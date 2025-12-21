@@ -11,7 +11,10 @@ import { redirect } from "react-router";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
-import { sendBotMessage } from "../mutations";
+import {
+  createBotMessageRoom,
+  getBotMessageRoomCountByUserId,
+} from "../queries";
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
   // GET 요청 시 기본 응답
@@ -32,18 +35,29 @@ export const action = async ({ request }: Route.ActionArgs) => {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 사용자의 AI 채팅방 개수 확인 (최대 5개 제한)
+    const roomCount = await getBotMessageRoomCountByUserId(client, { userId });
+    if (roomCount >= 5) {
+      return Response.json(
+        { error: "AI 채팅방은 최대 5개까지 생성할 수 있습니다." },
+        { status: 400 },
+      );
+    }
+
     const roomName = formData.get("roomName") as string;
     const roomDescription = formData.get("roomDescription") as string;
 
-    // sendBotMessage 함수를 사용하여 채팅방 생성 및 초기 메시지 전송
-    const botMessageRoomId = await sendBotMessage(client, {
+    // 새 채팅방 생성
+    const room = await createBotMessageRoom(client, {
       userId,
-      content: `새로운 AI 채팅방 "${roomName}"이 생성되었습니다. ${roomDescription}`,
+      roomName: roomName || "AI Chat Room",
+      roomDescription: roomDescription || undefined,
     });
 
     // 생성된 대화방으로 리다이렉트
-    return redirect(`/chat/botmessages/${botMessageRoomId}`);
+    return redirect(`/chat/botmessages/${room.bot_message_room_id}`);
   } catch (error) {
+    console.error("Failed to create chat room:", error);
     return Response.json(
       { error: "Failed to create chat room" },
       { status: 500 },

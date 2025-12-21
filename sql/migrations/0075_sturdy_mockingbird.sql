@@ -1,0 +1,1 @@
+ALTER TABLE "bot_message_rooms" ADD COLUMN "conversation_id" text;

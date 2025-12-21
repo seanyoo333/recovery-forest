@@ -238,6 +238,7 @@ export default [
         ...prefix("/api", [
           route("/langchain", "features/chat/api/langchain.tsx"),
           route("/create-room", "features/chat/api/create-room.tsx"),
+          route("/stream-message", "features/chat/api/stream-message.tsx"),
         ]),
       ]),
     ]),

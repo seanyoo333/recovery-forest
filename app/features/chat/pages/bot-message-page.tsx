@@ -8,7 +8,7 @@ import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import type { Route } from "./+types/bot-message-page";
 
-import { SendIcon } from "lucide-react";
+import { LogOut, SendIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router";
 import { Form } from "react-router";
@@ -26,9 +26,19 @@ import { supabase } from "~/core/lib/supabase.client";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 import {
+  getBotMessageRoomConversationId,
   getBotMessagesByBotMessageRoomId,
   sendBotMessageToRoom,
 } from "../queries";
+import {
+  hideBotMessage,
+  updateBotMessageRoomConversationId,
+} from "../mutations";
+import {
+  createConversation,
+  sendStreamMessage,
+} from "../utils/evibot-api";
+import { redirect, useParams } from "react-router";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Bot Message | Evidence-Base" }];
@@ -42,9 +52,32 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     userId,
   });
 
+  // 기존 conversation_id 조회
+  let conversationId: string | null = null;
+  try {
+    conversationId = await getBotMessageRoomConversationId(client, {
+      botMessageRoomId: params.botMessageRoomId,
+    });
+
+    // conversation_id가 없으면 새로 생성하고 저장
+    if (!conversationId) {
+      conversationId = await createConversation();
+      if (conversationId) {
+        await updateBotMessageRoomConversationId(client, {
+          botMessageRoomId: params.botMessageRoomId,
+          conversationId,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Failed to get or create conversation:", error);
+    // conversationId 생성 실패해도 페이지는 로드되도록 함
+  }
+
   return {
     botMessages,
     userId,
+    conversationId,
   };
 };
 
@@ -53,6 +86,25 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   const userId = await getLoggedInUserId(client);
   const formData = await request.formData();
   const message = formData.get("message") as string;
+  const actionType = formData.get("action") as string;
+
+  // 채팅방 나가기 처리
+  if (actionType === "leave") {
+    await hideBotMessage(client, {
+      userId,
+      botMessageRoomId: params.botMessageRoomId,
+    });
+    // conversationId 삭제 (채팅방 나가면 대화 기록도 함께 삭제)
+    await updateBotMessageRoomConversationId(client, {
+      botMessageRoomId: params.botMessageRoomId,
+      conversationId: null,
+    });
+    throw redirect("/chat/botmessages");
+  }
+
+  if (!message) {
+    return { ok: false, error: "Message is required" };
+  }
 
   // 사용자 메시지를 Supabase에 저장
   await sendBotMessageToRoom(client, {
@@ -61,74 +113,51 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
     userId,
   });
 
-  // 직접 AWS 챗봇 API 호출
+  // 데이터베이스에서 conversationId 조회 (formData 무시, 항상 DB에서 가져옴)
+  let conversationId: string | null = null;
   try {
-    // 환경 변수에서 URL을 가져와서 올바른 형식으로 변환
-    let LLM_SERVER_URL = process.env.LLM_SERVER_URL || "43.202.113.129";
-
-    // 프로토콜이 없으면 http:// 추가
-    if (
-      !LLM_SERVER_URL.startsWith("http://") &&
-      !LLM_SERVER_URL.startsWith("https://")
-    ) {
-      LLM_SERVER_URL = `http://${LLM_SERVER_URL}`;
-    }
-
-    // 포트가 없으면 8000 추가 (Django 기본 포트)
-    if (!LLM_SERVER_URL.includes(":")) {
-      LLM_SERVER_URL = `${LLM_SERVER_URL}:8000`;
-    }
-
-    const aiResponse = await fetch(`${LLM_SERVER_URL}/api/langchain/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        message,
-        user_id: userId,
-        room_id: params.botMessageRoomId,
-        prescription: "No",
-        response_type: "text",
-      }),
+    conversationId = await getBotMessageRoomConversationId(client, {
+      botMessageRoomId: params.botMessageRoomId,
     });
-
-    if (!aiResponse.ok) {
-      return { ok: true }; // 사용자 메시지는 저장되었으므로 성공으로 처리
-    }
-
-    const aiData = await aiResponse.json();
-
-    if (aiData.status === "success" && aiData.message) {
-      // AI 응답을 Supabase에 저장
-      const aiResponseText =
-        typeof aiData.message === "string"
-          ? aiData.message
-          : aiData.message.content || JSON.stringify(aiData.message);
-
-      try {
-        await sendBotMessageToRoom(client, {
-          botMessageRoomId: params.botMessageRoomId,
-          message: aiResponseText,
-          userId: "ai-assistant",
-        });
-      } catch (dbError) {
-        throw new Error("AI 응답을 저장하는 중 오류가 발생했습니다.");
-      }
-    }
   } catch (error) {
-    // 에러는 조용히 처리 (사용자 메시지는 이미 저장됨)
+    console.error("Failed to get conversationId:", error);
   }
 
-  return { ok: true };
+  // conversationId가 없으면 새로 생성하고 저장
+  if (!conversationId) {
+    try {
+      conversationId = await createConversation();
+      if (conversationId) {
+        await updateBotMessageRoomConversationId(client, {
+          botMessageRoomId: params.botMessageRoomId,
+          conversationId,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create conversation:", error);
+      return { ok: false, error: "Failed to create conversation", message };
+    }
+  }
+
+  return {
+    ok: true,
+    conversationId,
+    message,
+  };
+};
+
+type BotMessage = Database["public"]["Tables"]["bot_messages"]["Row"] & {
+  is_temp?: boolean;
 };
 
 export default function BotMessagePage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const [botMessages, setBotMessages] = useState(loaderData.botMessages);
+  const params = useParams();
+  const [botMessages, setBotMessages] = useState<BotMessage[]>(
+    loaderData.botMessages,
+  );
   const [isAILoading, setIsAILoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { userId, name, avatar } = useOutletContext<{
@@ -138,24 +167,108 @@ export default function BotMessagePage({
   }>();
   const formRef = useRef<HTMLFormElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const streamingMessageRef = useRef<string>("");
+  const streamingMessageIdRef = useRef<string | null>(null);
+
+
+  // actionData에서 스트리밍 시작
   useEffect(() => {
-    if (actionData?.ok) {
-      formRef.current?.reset();
-      setIsAILoading(true);
-
-      // AI 응답 대기 중임을 나타내는 임시 메시지 표시
-      const tempMessage = {
-        bot_message_id: `temp_${Date.now()}`,
-        bot_message_room_id: loaderData.botMessages[0]?.bot_message_room_id,
-        sender_id: "ai-assistant",
-        content: "AI가 응답을 생성하고 있습니다...",
-        created_at: new Date().toISOString(),
-        is_temp: true,
-      };
-
-      setBotMessages((prev) => [...prev, tempMessage]);
+    if (!actionData?.ok || !actionData.message) {
+      return;
     }
-  }, [actionData, loaderData.botMessages]);
+
+    const botMessageRoomId = params.botMessageRoomId;
+    if (!botMessageRoomId) {
+      console.error("No botMessageRoomId available for streaming");
+      return;
+    }
+
+    // 폼 리셋 및 로딩 상태 설정
+    formRef.current?.reset();
+    setIsAILoading(true);
+
+    // AI 응답 대기 중임을 나타내는 임시 메시지 표시
+    const tempMessageId = `temp_${Date.now()}`;
+    streamingMessageIdRef.current = tempMessageId;
+    streamingMessageRef.current = "";
+
+    const tempMessage: BotMessage = {
+      bot_message_id: tempMessageId as unknown as number,
+      bot_message_room_id: loaderData.botMessages[0]?.bot_message_room_id || 0,
+      sender_id: "ai-assistant",
+      content: "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_temp: true,
+    };
+
+    setBotMessages((prev) => [...prev, tempMessage]);
+
+    // 스트리밍 메시지 전송
+    // conversationId는 서버에서 데이터베이스에서 조회
+    sendStreamMessage(
+      botMessageRoomId,
+      actionData.message,
+      userId,
+      (chunk) => {
+        streamingMessageRef.current += chunk;
+        setBotMessages((prev) =>
+          prev.map((msg) =>
+            String(msg.bot_message_id) === tempMessageId
+              ? { ...msg, content: streamingMessageRef.current }
+              : msg,
+          ),
+        );
+      },
+      async () => {
+        // 스트리밍 완료 후 Supabase에 저장
+        const finalContent = streamingMessageRef.current;
+        if (finalContent && tempMessageId) {
+          try {
+            const roomId = loaderData.botMessages[0]?.bot_message_room_id;
+            if (roomId) {
+              const { error } = await supabase
+                .from("bot_messages")
+                .insert({
+                  bot_message_room_id: Number(roomId),
+                  sender_id: "ai-assistant",
+                  content: finalContent,
+                });
+
+              if (error) {
+                console.error("Failed to save AI response:", error);
+              }
+              // Supabase real-time을 통해 실제 메시지가 추가되면
+              // 임시 메시지는 자동으로 제거됨
+            }
+          } catch (error) {
+            console.error("Failed to save AI response:", error);
+          }
+        }
+
+        setIsAILoading(false);
+        streamingMessageIdRef.current = null;
+        streamingMessageRef.current = "";
+      },
+      (error) => {
+        console.error("Streaming error:", error);
+        setBotMessages((prev) =>
+          prev.map((msg) =>
+            String(msg.bot_message_id) === tempMessageId
+              ? {
+                  ...msg,
+                  content:
+                    "응답 생성 중 오류가 발생했습니다. 다시 시도해주세요.",
+                }
+              : msg,
+          ),
+        );
+        setIsAILoading(false);
+        streamingMessageIdRef.current = null;
+        streamingMessageRef.current = "";
+      },
+    );
+  }, [actionData, params.botMessageRoomId, userId]);
 
   // Supabase real-time 구독
   useEffect(() => {
@@ -224,18 +337,32 @@ export default function BotMessagePage({
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       <Card className="flex-shrink-0">
-        <CardHeader className="flex flex-row items-center gap-4">
-          <Avatar className="size-14">
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-              AI
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col gap-0">
-            <CardTitle className="text-xl">Evidence Base AI</CardTitle>
-            <p className="text-muted-foreground text-sm">
-              AI Research Assistant
-            </p>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div className="flex flex-row items-center gap-4">
+            <Avatar className="size-14">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                AI
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col gap-0">
+              <CardTitle className="text-xl">Evidence Base AI</CardTitle>
+              <p className="text-muted-foreground text-sm">
+                AI Research Assistant
+              </p>
+            </div>
           </div>
+          <Form method="post">
+            <input type="hidden" name="action" value="leave" />
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              채팅방 나가기
+            </Button>
+          </Form>
         </CardHeader>
       </Card>
 
@@ -247,7 +374,7 @@ export default function BotMessagePage({
         {botMessages.map((message) => {
           const isAI = message.sender_id === "ai-assistant";
           const isUser = message.sender_id === userId;
-          const isTemp = message.is_temp;
+          const isTemp = message.is_temp || false;
 
           return (
             <div
