@@ -239,6 +239,7 @@ export default [
           route("/langchain", "features/chat/api/langchain.tsx"),
           route("/create-room", "features/chat/api/create-room.tsx"),
           route("/stream-message", "features/chat/api/stream-message.tsx"),
+          route("/save-ai-message", "features/chat/api/save-ai-message.tsx"),
         ]),
       ]),
     ]),

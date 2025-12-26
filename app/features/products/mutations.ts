@@ -67,6 +67,41 @@ export const createProduct = async (
   return data.product_id;
 };
 
+export const updateProduct = async (
+  client: SupabaseClient<Database>,
+  {
+    productId,
+    name,
+    tagline,
+    description,
+    howItWorks,
+    url,
+    categoryId,
+  }: {
+    productId: number;
+    name: string;
+    tagline: string;
+    description: string;
+    howItWorks: string;
+    url: string;
+    categoryId: number;
+  },
+) => {
+  const { error } = await client
+    .from("products")
+    .update({
+      name,
+      tagline,
+      description,
+      how_it_works: howItWorks,
+      url,
+      category_id: categoryId,
+    })
+    .eq("product_id", productId);
+
+  if (error) throw error;
+};
+
 export const toggleProductUpvote = async (
   client: SupabaseClient<Database>,
   { productId, userId }: { productId: string; userId: string },

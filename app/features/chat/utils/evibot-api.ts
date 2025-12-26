@@ -1,34 +1,40 @@
 /**
- * Evibot Chat API Integration
+ * Chat API Integration
  *
- * Railway에 배포된 Evibot 챗봇 API와의 연동을 위한 유틸리티 함수들
- * OpenAI SDK를 사용하여 대화 히스토리를 관리합니다.
+ * Railway에 배포된 챗봇 API와의 연동을 위한 유틸리티 함수들
  */
 
 // 클라이언트와 서버 모두에서 사용 가능하도록 환경 변수 처리
-function getEvibotBaseUrl(): string {
+function getChatApiBaseUrl(): string {
   // 서버 사이드 (Node.js 환경)
   if (typeof process !== "undefined" && process.env) {
-    return process.env.EVIBOT_API_URL || "https://evibot-production.up.railway.app";
+    return (
+      process.env.CHAT_API_BASE_URL ||
+      "https://lang-chatbot-production.up.railway.app"
+    );
   }
   // 클라이언트 사이드 (브라우저 환경)
   if (typeof import.meta !== "undefined" && import.meta.env) {
-    return import.meta.env.VITE_EVIBOT_API_URL || "https://evibot-production.up.railway.app";
+    return (
+      import.meta.env.VITE_CHAT_API_BASE_URL ||
+      "https://lang-chatbot-production.up.railway.app"
+    );
   }
   // 기본값
-  return "https://evibot-production.up.railway.app";
+  return "https://lang-chatbot-production.up.railway.app";
 }
 
-const EVIBOT_BASE_URL = getEvibotBaseUrl();
+const CHAT_API_BASE_URL = getChatApiBaseUrl();
 
-interface CreateConversationResponse {
-  conversation_id: string;
-}
-
-interface CreateMessageInput {
-  question: string;
-  user_id: string;
-  category?: string;
+/**
+ * UUID v4 생성 함수
+ */
+function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 interface StatusEvent {
@@ -37,30 +43,10 @@ interface StatusEvent {
 }
 
 /**
- * 새로운 대화(conversation) 생성
+ * 새로운 대화(conversation) ID 생성 (UUID v4)
  */
-export async function createConversation(): Promise<string> {
-  try {
-    const response = await fetch(`${EVIBOT_BASE_URL}/conversations`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to create conversation: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const data = (await response.json()) as CreateConversationResponse;
-    return data.conversation_id;
-  } catch (error) {
-    console.error("Error creating conversation:", error);
-    throw error;
-  }
+export function createConversationId(): string {
+  return generateUUID();
 }
 
 /**
@@ -74,24 +60,20 @@ export async function createConversation(): Promise<string> {
  */
 export async function sendStreamMessage(
   botMessageRoomId: string,
-  question: string,
+  message: string,
   user_id: string,
   onChunk: (chunk: string) => void,
   onComplete?: () => void,
   onError?: (error: Error) => void,
-  category?: string,
 ): Promise<void> {
   try {
     // 서버 사이드 프록시 API를 통해 요청 (CORS 문제 해결)
     // conversationId는 서버에서 데이터베이스에서 조회
     const params = new URLSearchParams({
       botMessageRoomId,
-      question,
+      message,
       userId: user_id,
     });
-    if (category) {
-      params.append("category", category);
-    }
 
     const response = await fetch(
       `/chat/api/stream-message?${params.toString()}`,
@@ -153,6 +135,22 @@ export async function sendStreamMessage(
               return;
             }
 
+            // error 이벤트 처리
+            if (currentEvent === "error") {
+              try {
+                const errorData = JSON.parse(data);
+                const errorMessage = new Error(
+                  errorData.message || "Stream error occurred",
+                );
+                onError?.(errorMessage);
+                return;
+              } catch {
+                const errorMessage = new Error(data || "Stream error occurred");
+                onError?.(errorMessage);
+                return;
+              }
+            }
+
             // status 이벤트 처리 (로깅용, 콜백은 호출하지 않음)
             if (currentEvent === "status") {
               try {
@@ -165,7 +163,6 @@ export async function sendStreamMessage(
             }
 
             // 일반 data 라인 (텍스트 델타)
-            // JSON이 아닌 일반 텍스트일 수 있으므로 직접 전달
             if (data.trim()) {
               onChunk(data);
             }
@@ -201,17 +198,16 @@ export async function sendStreamMessage(
  * @deprecated 스트리밍을 사용하는 것을 권장합니다.
  */
 export async function sendMessage(
-  conversationId: string,
-  question: string,
+  botMessageRoomId: string,
+  message: string,
   user_id: string,
-  category?: string,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     let fullResponse = "";
 
     sendStreamMessage(
-      conversationId,
-      question,
+      botMessageRoomId,
+      message,
       user_id,
       (chunk) => {
         fullResponse += chunk;
@@ -222,8 +218,6 @@ export async function sendMessage(
       (error) => {
         reject(error);
       },
-      category,
     );
   });
 }
-

@@ -189,10 +189,7 @@ export const getBotMessageRoomConversationId = async (
 
   return data?.conversation_id || null;
 };
-
-/**
- * 챗봇 대화방에 메시지 전송
- */
+/* 메세지 저장 */
 export const sendBotMessageToRoom = async (
   client: SupabaseClient<Database>,
   {
@@ -202,6 +199,7 @@ export const sendBotMessageToRoom = async (
   }: { botMessageRoomId: string; message: string; userId: string },
 ) => {
   // 사용자가 해당 채팅방의 멤버인지 확인 (AI 메시지가 아닌 경우에만)
+  // is_hidden : 사용자가 채팅방 종료시 방 숨김, 데이터 보존
   if (userId !== "ai-assistant") {
     const { count, error: countError } = await client
       .from("bot_message_room_members")
@@ -230,4 +228,3 @@ export const sendBotMessageToRoom = async (
     throw error;
   }
 };
-

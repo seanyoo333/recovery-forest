@@ -1,4 +1,10 @@
-import { Bot, Home, Sparkles, Zap } from "lucide-react";
+import {
+  Bot,
+  Home,
+  LayoutDashboard,
+  MessageCircle,
+  Sparkles,
+} from "lucide-react";
 import { Link } from "react-router";
 
 import {
@@ -28,16 +34,11 @@ export default function ChatSidebar() {
     name: "Evidence Base AI",
     avatar: "/ai-bot-avatar.png",
     description: "AI-powered research assistant",
-    capabilities: ["처방전으로 만들기", "대화 내용 요약", "추가 근거 저장"],
+    capabilities: ["혈액검사 기반", "근거자료 기반", "개인 맞춤 제품 상담"],
     status: "Online",
   };
 
   const isConnected = true;
-
-  const handleQuickAction = (action: string) => {
-    // 여기서 실제 입력 처리 로직을 구현할 수 있습니다
-    console.log("Quick action:", action);
-  };
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -73,21 +74,19 @@ export default function ChatSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => handleQuickAction("analyze")}>
-                <Zap className="h-4 w-4" />
-                <span>초대하기</span>
+              <SidebarMenuButton asChild>
+                <Link to="/chat/botmessages">
+                  <MessageCircle className="h-4 w-4" />
+                  <span>채팅방 목록</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => handleQuickAction("trends")}>
-                <Sparkles className="h-4 w-4" />
-                <span>종료하기</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => handleQuickAction("review")}>
-                <Bot className="h-4 w-4" />
-                <span>내 상태창 확인</span>
+              <SidebarMenuButton asChild>
+                <Link to="/my/dashboard">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>내 대시보드</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -144,4 +143,3 @@ export default function ChatSidebar() {
     </Sidebar>
   );
 }
-

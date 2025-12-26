@@ -11,8 +11,8 @@ interface MessageBubbleProps {
   avatarFallback: string;
   content: string;
   isCurrentUser?: boolean;
-  lastTime: string;
-  isRead: boolean;
+  lastTime?: string;
+  isRead?: boolean;
 }
 
 export function MessageBubble({

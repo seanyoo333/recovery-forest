@@ -72,6 +72,10 @@ import {
 
 const menus = [
   {
+    name: "소개",
+    to: "/landing",
+  },
+  {
     name: "기능의학 병원",
     to: "/clinic",
     items: [

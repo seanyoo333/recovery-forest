@@ -1,4 +1,5 @@
 import {
+  BotIcon,
   ChevronRight,
   Home,
   LayoutDashboard,
@@ -58,6 +59,14 @@ export default function SidebarMain({
             <Link to="/my/dashboard">
               <LayoutDashboard />
               <span>대시보드</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <Link to="/chat">
+              <BotIcon />
+              <span>EVIDENCE BASE AI 챗봇</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

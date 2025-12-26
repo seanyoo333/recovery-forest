@@ -35,7 +35,7 @@ export const botMessageRooms = pgTable(
       .generatedAlwaysAsIdentity(),
     room_name: text().notNull().default("AI Chat Room"),
     room_description: text(),
-    conversation_id: text(), // Evibot API의 conversation_id 저장
+    conversation_id: uuid(), // 챗봇 API의 conversation_id 저장 (UUID v4)
     created_by: uuid()
       .notNull()
       .references(() => profiles.profile_id, {
@@ -46,45 +46,34 @@ export const botMessageRooms = pgTable(
       .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
-    pgPolicy("Enable read access for all users", {
+    // SELECT: public에게 모든 접근 허용 (Realtime 작동을 위해)
+    pgPolicy("bot-message-rooms select", {
       for: "select",
       to: ["public"],
       as: "permissive",
       using: sql`true`,
     }),
-    // 인증된 사용자만 대화방을 생성할 수 있음 (자신이 생성자가 되도록)
-    pgPolicy("bot-message-rooms-insert-policy", {
+    // INSERT: 생성자가 채팅방을 만들 수 있도록 허용
+    pgPolicy("bot-message-rooms insert", {
       for: "insert",
-      to: ["public"],
+      to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`true`,
+      withCheck: sql`${table.created_by} = ${authUid}`,
     }),
-    // 대화방 생성자만 대화방을 수정할 수 있음
-    pgPolicy("bot-message-rooms-update-policy", {
+    // UPDATE: authenticated에게 is_bot_user_member를 사용한 접근 제어
+    pgPolicy("bot-message-rooms update", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM bot_message_room_members
-        WHERE bot_message_room_id = ${table.bot_message_room_id}
-        AND profile_id = ${authUid}
-      )`,
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM bot_message_room_members
-        WHERE bot_message_room_id = ${table.bot_message_room_id}
-        AND profile_id = ${authUid}
-      )`,
+      using: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
+      withCheck: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
-    // 대화방 생성자만 대화방을 삭제할 수 있음
-    pgPolicy("bot-message-rooms-delete-policy", {
+    // DELETE: authenticated에게 is_bot_user_member를 사용한 접근 제어
+    pgPolicy("bot-message-rooms delete", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM bot_message_room_members
-        WHERE bot_message_room_id = ${table.bot_message_room_id}
-        AND profile_id = ${authUid}
-      )`,
+      using: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
   ],
 );
@@ -121,36 +110,38 @@ export const botMessageRoomMembers = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.bot_message_room_id, table.profile_id] }),
-    // 같은 방의 멤버는 다른 멤버도 조회할 수 있음 (메시지 화면에서 상대방 정보 표시를 위함)
-    // message_room_members 패턴 참고
-    pgPolicy("Enable read access for all users", {
+    // SELECT: public에게 모든 접근 허용 (Realtime 작동을 위해)
+    pgPolicy("bot-message-room-members select", {
       for: "select",
       to: ["public"],
       as: "permissive",
       using: sql`true`,
     }),
-    // 인증된 사용자만 멤버를 추가할 수 있음
-    // message_room_members 패턴 참고: 단순화하여 무한 재귀 방지
-    pgPolicy("bot-message-room-members-insert-policy", {
+    // INSERT: 생성자가 자신을 멤버로 추가할 수 있도록 허용
+    pgPolicy("bot-message-room-members insert", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`true`, // 멤버 추가는 자유롭게 허용 (애플리케이션 레벨에서 검증)
+      withCheck: sql`${table.profile_id} = ${authUid} AND EXISTS (
+        SELECT 1 FROM ${botMessageRooms}
+        WHERE ${botMessageRooms.bot_message_room_id} = ${table.bot_message_room_id}
+        AND ${botMessageRooms.created_by} = ${authUid}
+      )`,
     }),
-    // 자신의 멤버십만 수정할 수 있음
-    pgPolicy("bot-message-room-members-update-policy", {
+    // UPDATE: authenticated에게 is_bot_user_member를 사용한 접근 제어
+    pgPolicy("bot-message-room-members update", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
-      withCheck: sql`${authUid} = ${table.profile_id}`,
+      using: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
+      withCheck: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
-    // 자신의 멤버십만 삭제할 수 있음
-    pgPolicy("bot-message-room-members-delete-policy", {
+    // DELETE: authenticated에게 is_bot_user_member를 사용한 접근 제어
+    pgPolicy("bot-message-room-members delete", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
   ],
 );
@@ -181,38 +172,41 @@ export const botMessages = pgTable(
       .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
-    // 메시지 룸 멤버만 해당 룸의 메시지를 조회할 수 있음
-    // message_room_members 패턴 참고: 단순화하여 모든 인증된 사용자가 조회 가능
-    // (실제 멤버 체크는 애플리케이션 레벨에서 처리)
-    pgPolicy("bot-messages-select-policy", {
+    // SELECT: public에게 모든 접근 허용 (Realtime 작동을 위해)
+    pgPolicy("bot-messages select", {
       for: "select",
-      to: authenticatedRole,
+      to: ["public"],
       as: "permissive",
       using: sql`true`,
     }),
-    // 인증된 사용자만 메시지를 전송할 수 있음
-    // message_room_members 패턴 참고: 단순화
-    // (실제 멤버 체크와 sender_id 검증은 애플리케이션 레벨에서 처리)
-    pgPolicy("bot-messages-insert-policy", {
+    // INSERT: AI 메시지 저장 허용 (sender_id가 "ai-assistant"이고 사용자가 멤버인 경우)
+    pgPolicy("bot-messages insert ai", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`true`,
+      withCheck: sql`${table.sender_id} = 'ai-assistant' AND public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
-    // 자신이 보낸 메시지만 수정할 수 있음
-    pgPolicy("bot-messages-update-policy", {
+    // INSERT: 사용자 메시지 저장 허용 (사용자가 멤버인 경우)
+    pgPolicy("bot-messages insert user", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${table.sender_id} = ${authUid}::text AND public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
+    }),
+    // UPDATE: authenticated에게 is_bot_user_member를 사용한 접근 제어
+    pgPolicy("bot-messages update", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${table.sender_id} = ${authUid}::text`,
-      withCheck: sql`${table.sender_id} = ${authUid}::text`,
+      using: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
+      withCheck: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
-    // 자신이 보낸 메시지만 삭제할 수 있음
-    pgPolicy("bot-messages-delete-policy", {
+    // DELETE: authenticated에게 is_bot_user_member를 사용한 접근 제어
+    pgPolicy("bot-messages delete", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${table.sender_id} = ${authUid}::text`,
+      using: sql`public.is_bot_user_member(${table.bot_message_room_id}, ${authUid})`,
     }),
   ],
 );

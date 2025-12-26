@@ -108,13 +108,6 @@ export default function ChatPage({ loaderData }: Route.ComponentProps) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {/* 포인트 표시 */}
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Coins className="h-3 w-3" />
-                {points} 포인트
-              </Badge>
-            </div>
           </div>
         </CardHeader>
 
@@ -130,25 +123,8 @@ export default function ChatPage({ loaderData }: Route.ComponentProps) {
                   Welcome to Evidence Base AI
                 </h3>
                 <p className="text-muted-foreground max-w-md">
-                  EB AI 챗봇입니다.
-                  <br />
-                  암 경험자의 건강관리를 돕기 위해 좋은습관 님이 만들었어요.
-                  <br />
-                  근거 기반 정보와 당신의 건강정보를 기반으로 답변해드릴게요.
+                  당신의 건강정보를 기반으로 증거 기반 정보를 제공해드립니다.
                 </p>
-
-                {/* 포인트 정보 */}
-                <div className="mt-4 rounded-lg bg-blue-50 p-4">
-                  <div className="mb-2 flex items-center justify-center gap-2">
-                    <Coins className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">
-                      현재 포인트: {points}
-                    </span>
-                  </div>
-                  <p className="text-xs text-blue-700">
-                    메시지 1개당 {pointsPerMessage}포인트가 소모됩니다.
-                  </p>
-                </div>
 
                 {/* 채팅 시작하기 버튼 */}
                 <div className="mt-6">
@@ -208,6 +184,18 @@ export default function ChatPage({ loaderData }: Route.ComponentProps) {
                   </div>
                 </div>
 
+                {/* 포인트 정보 */}
+                <div className="mt-4 rounded-lg bg-blue-50 p-4">
+                  <div className="mb-2 flex items-center justify-center gap-2">
+                    <Coins className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">
+                      현재 포인트: {points}
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    메시지 1개당 {pointsPerMessage}포인트가 소모됩니다.
+                  </p>
+                </div>
                 {/* 포인트 부족 시 안내 */}
                 {points < pointsPerMessage && (
                   <div className="mt-4 rounded-lg bg-yellow-50 p-4">

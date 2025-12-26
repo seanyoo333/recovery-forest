@@ -1,7 +1,7 @@
 /**
  * Stream Message API Endpoint
  *
- * Evibot API로의 스트리밍 요청을 프록시하여 CORS 문제를 해결합니다.
+ * 챗봇 API로의 스트리밍 요청을 프록시하여 CORS 문제를 해결합니다.
  * 서버 사이드에서 요청을 처리하고 스트리밍 응답을 클라이언트로 전달합니다.
  * conversationId는 데이터베이스에서 조회하여 항상 최신 값을 사용합니다.
  */
@@ -10,30 +10,27 @@ import type { Route } from "./+types/stream-message";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
-import {
-  getBotMessageRoomConversationId,
-} from "../queries";
 import { updateBotMessageRoomConversationId } from "../mutations";
-import { createConversation } from "../utils/evibot-api";
+import { getBotMessageRoomConversationId } from "../queries";
+import { createConversationId } from "../utils/evibot-api";
 
-const EVIBOT_BASE_URL =
-  process.env.EVIBOT_API_URL || "https://evibot-production.up.railway.app";
+const CHAT_API_BASE_URL =
+  process.env.CHAT_API_BASE_URL ||
+  "https://lang-chatbot-production.up.railway.app";
 
-interface CreateMessageInput {
-  question: string;
+interface ChatRequest {
+  message: string;
   user_id: string;
-  category?: string;
-  conversation_id?: string;
+  conversation_id: string;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const botMessageRoomId = url.searchParams.get("botMessageRoomId");
-  const question = url.searchParams.get("question");
+  const message = url.searchParams.get("message");
   const userId = url.searchParams.get("userId");
-  const category = url.searchParams.get("category");
 
-  if (!botMessageRoomId || !question || !userId) {
+  if (!botMessageRoomId || !message || !userId) {
     return new Response(
       JSON.stringify({ error: "Missing required parameters" }),
       {
@@ -47,13 +44,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
   const authenticatedUserId = await getLoggedInUserId(client);
   if (authenticatedUserId !== userId) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   // 데이터베이스에서 conversationId 조회
@@ -69,7 +63,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   // conversationId가 없으면 새로 생성하고 저장
   if (!conversationId) {
     try {
-      conversationId = await createConversation();
+      conversationId = createConversationId();
       if (conversationId) {
         await updateBotMessageRoomConversationId(client, {
           botMessageRoomId,
@@ -99,32 +93,43 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   try {
-    const requestBody: CreateMessageInput = {
-      question,
+    const requestBody: ChatRequest = {
+      message,
       user_id: userId,
       conversation_id: conversationId,
     };
-    if (category) {
-      requestBody.category = category;
-    }
 
-    // Evibot API로 스트리밍 요청
-    const response = await fetch(
-      `${EVIBOT_BASE_URL}/conversations/${conversationId}/message-stream`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-        },
-        body: JSON.stringify(requestBody),
+    const apiUrl = `${CHAT_API_BASE_URL}/conversations/${conversationId}/message-stream`;
+
+    // 챗봇 API로 스트리밍 요청
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
       },
-    );
+      body: JSON.stringify(requestBody),
+    });
 
     if (!response.ok) {
+      let errorBody = "";
+      try {
+        errorBody = await response.text();
+      } catch {
+        // 응답 본문 읽기 실패 시 무시
+      }
+
+      console.error("Chat API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: apiUrl,
+        errorBody,
+      });
+
       return new Response(
         JSON.stringify({
           error: `Failed to send message: ${response.status} ${response.statusText}`,
+          details: errorBody || undefined,
         }),
         {
           status: response.status,
@@ -134,13 +139,10 @@ export async function loader({ request }: Route.LoaderArgs) {
     }
 
     if (!response.body) {
-      return new Response(
-        JSON.stringify({ error: "Response body is null" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Response body is null" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // 스트리밍 응답을 클라이언트로 전달
@@ -167,4 +169,3 @@ export async function loader({ request }: Route.LoaderArgs) {
     );
   }
 }
-

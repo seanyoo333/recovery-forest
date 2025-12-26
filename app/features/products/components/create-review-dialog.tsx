@@ -28,7 +28,10 @@ export default function CreateReviewDialog() {
         <DialogTitle className="text-2xl">
           이 제품에 대해 어떻게 생각하세요?
         </DialogTitle>
-        <DialogDescription>리뷰를 작성해 주세요.</DialogDescription>
+        <DialogDescription>
+          실제 구매자만 리뷰를 작성할 수 있으며, 유효한 주문번호로 리뷰를 남기면
+          AI 채팅에 사용할 수 있는 포인트가 지급됩니다.
+        </DialogDescription>
       </DialogHeader>
       <Form className="space-y-10" method="post">
         <div>
@@ -71,6 +74,53 @@ export default function CreateReviewDialog() {
             </p>
           )}
         </div>
+
+        {/* 주문 정보 입력 */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="order_number" className="flex flex-col gap-1">
+              주문번호
+              <small className="text-muted-foreground">
+                온라인 몰에서 발급된 주문번호를 입력해 주세요.
+              </small>
+            </Label>
+            <InputPair
+              id="order_number"
+              name="order_number"
+              label=""
+              hideLabel
+              description=""
+              placeholder="예: 2024-01-01-12345678"
+              required
+            />
+            {actionData?.formErrors?.order_number && (
+              <p className="text-red-500">
+                {actionData.formErrors.order_number.join(", ")}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="order_date" className="flex flex-col gap-1">
+              주문일자
+              <small className="text-muted-foreground">
+                주문일자가 6개월 이내인 경우에만 포인트가 지급됩니다.
+              </small>
+            </Label>
+            <input
+              id="order_date"
+              name="order_date"
+              type="date"
+              required
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            />
+            {actionData?.formErrors?.order_date && (
+              <p className="text-red-500">
+                {actionData.formErrors.order_date.join(", ")}
+              </p>
+            )}
+          </div>
+        </div>
+
         <InputPair
           textArea
           required

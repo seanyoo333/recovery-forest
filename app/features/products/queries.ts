@@ -175,6 +175,17 @@ export const getProductById = async (
   return data;
 };
 
+export const getAllProductsForAdmin = async (
+  client: SupabaseClient<Database>,
+) => {
+  const { data, error } = await client
+    .from("products")
+    .select(productListSelect)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
 export const getReviews = async (
   client: SupabaseClient<Database>,
   { productId }: { productId: string },

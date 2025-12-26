@@ -43,7 +43,14 @@ import { team } from "../teams/schema";
 // import { authUsers } from "drizzle-orm/supabase";
 
 // 사용자 역할 (실제 데이터베이스 구조와 일치)
-export const userRoles = pgEnum("user_role", ["healthy", "patient", "caregiver", "doctor", "health_exp", "other"]);
+export const userRoles = pgEnum("user_role", [
+  "healthy",
+  "patient",
+  "caregiver",
+  "doctor",
+  "health_exp",
+  "other",
+]);
 
 // 관리자 권한 (시스템에서만 설정 가능)
 export const adminRoles = pgEnum("admin_role", [
@@ -244,12 +251,18 @@ export const follows = pgTable(
   ],
 );
 
-export const notificationType = pgEnum("notification_type", ["follow", "review", "reply"]);
+export const notificationType = pgEnum("notification_type", [
+  "follow",
+  "review",
+  "reply",
+]);
 
 export const notifications = pgTable(
   "notifications",
   {
-    notification_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    notification_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     source_id: uuid().references(() => profiles.profile_id, {
       onDelete: "cascade",
     }),
@@ -306,51 +319,28 @@ export const notifications = pgTable(
 export const messageRooms = pgTable(
   "message_rooms",
   {
-    message_room_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    message_room_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     created_at: timestamp()
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
   },
   (table) => [
-    pgPolicy("Enable read access for all users", {
+    // SELECT: public에게 모든 접근 허용 (Realtime 작동을 위해)
+    pgPolicy("message-rooms select", {
       for: "select",
       to: ["public"],
       as: "permissive",
       using: sql`true`,
     }),
-    // 메시지 룸을 자유롭게 생성할 수 있음
-    pgPolicy("message-rooms-insert-policy", {
-      for: "insert",
-      to: ["public"],
-      as: "permissive",
-      withCheck: sql`true`, // 룸 생성은 자유롭게 허용
-    }),
-    // 메시지 룸 멤버만 해당 룸을 수정할 수 있음
-    pgPolicy("message-rooms-update-policy", {
-      for: "update",
+    // ALL: authenticated에게 is_user_member를 사용한 접근 제어
+    pgPolicy("message-rooms policy", {
+      for: "all",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM message_room_members
-        WHERE message_room_id = ${table.message_room_id}
-        AND profile_id = ${authUid}
-      )`,
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM message_room_members
-        WHERE message_room_id = ${table.message_room_id}
-        AND profile_id = ${authUid}
-      )`,
-    }),
-    // 메시지 룸 멤버만 해당 룸을 삭제할 수 있음
-    pgPolicy("message-rooms-delete-policy", {
-      for: "delete",
-      to: authenticatedRole,
-      as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM message_room_members
-        WHERE message_room_id = ${table.message_room_id}
-        AND profile_id = ${authUid}
-      )`,
+      using: sql`public.is_user_member(${table.message_room_id}, ${authUid})`,
+      withCheck: sql`public.is_user_member(${table.message_room_id}, ${authUid})`,
     }),
   ],
 );
@@ -358,9 +348,12 @@ export const messageRooms = pgTable(
 export const messageRoomMembers = pgTable(
   "message_room_members",
   {
-    message_room_id: bigint({ mode: "number" }).references(() => messageRooms.message_room_id, {
-      onDelete: "cascade",
-    }),
+    message_room_id: bigint({ mode: "number" }).references(
+      () => messageRooms.message_room_id,
+      {
+        onDelete: "cascade",
+      },
+    ),
     profile_id: uuid().references(() => profiles.profile_id, {
       onDelete: "cascade",
     }),
@@ -372,39 +365,20 @@ export const messageRoomMembers = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.message_room_id, table.profile_id] }),
-    // 같은 방의 멤버는 다른 멤버도 조회할 수 있음 (메시지 화면에서 상대방 정보 표시를 위함)
-    pgPolicy("Enable read access for all users", {
+    // SELECT: public에게 모든 접근 허용 (Realtime 작동을 위해)
+    pgPolicy("message-room-members select", {
       for: "select",
       to: ["public"],
       as: "permissive",
       using: sql`true`,
     }),
-    // 인증된 사용자만 메시지 룸에 참여할 수 있음
-    // 자신의 멤버십을 추가하거나, 새로 생성된 메시지룸(아직 메시지가 없는 방)에 다른 사용자를 초대할 수 있음
-    //새로 생성된 메시지룸에 다른 사용자를 초대하는 경우
-    //조건: 1) 현재 사용자가 이미 해당 방의 멤버이고, 2) 해당 방에 아직 메시지가 없음
-    pgPolicy("message-room-members-insert-policy", {
-      for: "insert",
+    // ALL: authenticated에게 is_user_member를 사용한 접근 제어
+    pgPolicy("message-room-members policy", {
+      for: "all",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`true`,
-    }),
-    // 같은 방의 멤버는 다른 멤버의 is_read와 is_hidden을 수정할 수 있음
-    // (메시지 전송 시 수신자의 읽음 상태를 업데이트하기 위함)
-    // 주의: profile_id와 message_room_id는 변경할 수 없음 (애플리케이션 레벨에서 보장)
-    pgPolicy("message-room-members-update-policy", {
-      for: "update",
-      to: authenticatedRole,
-      as: "permissive",
-      withCheck: sql`${authUid} = ${table.profile_id}`,
-      using: sql`${authUid} = ${table.profile_id}`,
-    }),
-    // 사용자는 자신의 멤버십만 삭제할 수 있음
-    pgPolicy("message-room-members-delete-policy", {
-      for: "delete",
-      to: authenticatedRole,
-      as: "permissive",
-      using: sql`${authUid} = ${table.profile_id}`,
+      using: sql`public.is_user_member(${table.message_room_id}, ${authUid})`,
+      withCheck: sql`public.is_user_member(${table.message_room_id}, ${authUid})`,
     }),
   ],
 );
@@ -412,7 +386,9 @@ export const messageRoomMembers = pgTable(
 export const messages = pgTable(
   "messages",
   {
-    message_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    message_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     message_room_id: bigint({ mode: "number" })
       .references(() => messageRooms.message_room_id, {
         onDelete: "cascade",
@@ -430,36 +406,20 @@ export const messages = pgTable(
     is_read: boolean().default(false).notNull(),
   },
   (table) => [
-    // 메시지 룸 멤버만 해당 룸의 메시지를 조회할 수 있음
-    pgPolicy("messages-select-policy", {
+    // SELECT: public에게 모든 접근 허용 (Realtime 작동을 위해)
+    pgPolicy("messages select", {
       for: "select",
-      to: authenticatedRole,
+      to: ["public"],
       as: "permissive",
-      using: sql`true 
-  `,
+      using: sql`true`,
     }),
-    // 인증된 사용자만 메시지를 전송할 수 있음
-    pgPolicy("messages-insert-policy", {
-      for: "insert",
+    // ALL: authenticated에게 is_user_member를 사용한 접근 제어
+    pgPolicy("messages policy", {
+      for: "all",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`true 
-    `,
-    }),
-    // 메시지 발신자만 자신의 메시지를 수정할 수 있음
-    pgPolicy("messages-update-policy", {
-      for: "update",
-      to: authenticatedRole,
-      as: "permissive",
-      using: sql`${authUid} = ${table.sender_id}`,
-      withCheck: sql`${authUid} = ${table.sender_id}`,
-    }),
-    // 메시지 발신자만 자신의 메시지를 삭제할 수 있음
-    pgPolicy("messages-delete-policy", {
-      for: "delete",
-      to: authenticatedRole,
-      as: "permissive",
-      using: sql`${authUid} = ${table.sender_id}`,
+      using: sql`public.is_user_member(${table.message_room_id}, ${authUid})`,
+      withCheck: sql`public.is_user_member(${table.message_room_id}, ${authUid})`,
     }),
   ],
 );
@@ -471,9 +431,16 @@ export const messages = pgTable(
  * to patients undergoing treatment or monitoring.
  */
 
-export const patientTreatmentStatusEnum = pgEnum("patient_treatment_status", ["ongoing", "completed", "follow_up"]);
+export const patientTreatmentStatusEnum = pgEnum("patient_treatment_status", [
+  "ongoing",
+  "completed",
+  "follow_up",
+]);
 
-export const medicationStatusEnum = pgEnum("patient_medication_status", ["none", "active"]);
+export const medicationStatusEnum = pgEnum("patient_medication_status", [
+  "none",
+  "active",
+]);
 
 export const patientHealthProfiles = pgTable(
   "patient_health_profiles",
@@ -532,7 +499,9 @@ export const patientHealthProfiles = pgTable(
 export const bloodTestTypes = pgTable(
   "blood_test_types",
   {
-    test_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    test_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     standard_name: text().notNull(),
     variations: jsonb().$type<Record<string, unknown>>().default({}),
     unit: text().notNull(),
@@ -576,7 +545,9 @@ export const bloodTestTypes = pgTable(
 export const bloodTestImages = pgTable(
   "blood_test_images",
   {
-    image_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    image_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     patient_id: uuid()
       .references(() => patientHealthProfiles.patient_id, {
         onDelete: "cascade",
@@ -627,7 +598,9 @@ export const bloodTestImages = pgTable(
 export const bloodTestResults = pgTable(
   "blood_test_results",
   {
-    result_id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    result_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
     patient_id: uuid()
       .references(() => patientHealthProfiles.patient_id, {
         onDelete: "cascade",
@@ -638,9 +611,12 @@ export const bloodTestResults = pgTable(
         onDelete: "restrict",
       })
       .notNull(),
-    image_id: bigint({ mode: "number" }).references(() => bloodTestImages.image_id, {
-      onDelete: "set null",
-    }),
+    image_id: bigint({ mode: "number" }).references(
+      () => bloodTestImages.image_id,
+      {
+        onDelete: "set null",
+      },
+    ),
     result_value: doublePrecision().notNull(),
     confidence: doublePrecision(),
     result_unit: text(),

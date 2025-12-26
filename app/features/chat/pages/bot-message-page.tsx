@@ -8,10 +8,11 @@ import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import type { Route } from "./+types/bot-message-page";
 
-import { LogOut, SendIcon } from "lucide-react";
+import { Bot, LogOut, SendIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router";
 import { Form } from "react-router";
+import { redirect, useParams } from "react-router";
 
 import {
   Avatar,
@@ -26,19 +27,15 @@ import { supabase } from "~/core/lib/supabase.client";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 import {
-  getBotMessageRoomConversationId,
-  getBotMessagesByBotMessageRoomId,
-  sendBotMessageToRoom,
-} from "../queries";
-import {
   hideBotMessage,
   updateBotMessageRoomConversationId,
 } from "../mutations";
 import {
-  createConversation,
-  sendStreamMessage,
-} from "../utils/evibot-api";
-import { redirect, useParams } from "react-router";
+  getBotMessageRoomConversationId,
+  getBotMessagesByBotMessageRoomId,
+  sendBotMessageToRoom,
+} from "../queries";
+import { createConversationId, sendStreamMessage } from "../utils/evibot-api";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Bot Message | Evidence-Base" }];
@@ -61,7 +58,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
     // conversation_id가 없으면 새로 생성하고 저장
     if (!conversationId) {
-      conversationId = await createConversation();
+      conversationId = createConversationId();
       if (conversationId) {
         await updateBotMessageRoomConversationId(client, {
           botMessageRoomId: params.botMessageRoomId,
@@ -126,7 +123,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   // conversationId가 없으면 새로 생성하고 저장
   if (!conversationId) {
     try {
-      conversationId = await createConversation();
+      conversationId = createConversationId();
       if (conversationId) {
         await updateBotMessageRoomConversationId(client, {
           botMessageRoomId: params.botMessageRoomId,
@@ -169,7 +166,6 @@ export default function BotMessagePage({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const streamingMessageRef = useRef<string>("");
   const streamingMessageIdRef = useRef<string | null>(null);
-
 
   // actionData에서 스트리밍 시작
   useEffect(() => {
@@ -221,22 +217,27 @@ export default function BotMessagePage({
         );
       },
       async () => {
-        // 스트리밍 완료 후 Supabase에 저장
+        // 스트리밍 완료 후 서버 사이드 API를 통해 저장
         const finalContent = streamingMessageRef.current;
         if (finalContent && tempMessageId) {
           try {
             const roomId = loaderData.botMessages[0]?.bot_message_room_id;
             if (roomId) {
-              const { error } = await supabase
-                .from("bot_messages")
-                .insert({
-                  bot_message_room_id: Number(roomId),
-                  sender_id: "ai-assistant",
-                  content: finalContent,
-                });
+              const formData = new FormData();
+              formData.append(
+                "botMessageRoomId",
+                params.botMessageRoomId || "",
+              );
+              formData.append("content", finalContent);
 
-              if (error) {
-                console.error("Failed to save AI response:", error);
+              const response = await fetch("/chat/api/save-ai-message", {
+                method: "POST",
+                body: formData,
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("Failed to save AI response:", errorData);
               }
               // Supabase real-time을 통해 실제 메시지가 추가되면
               // 임시 메시지는 자동으로 제거됨
@@ -335,13 +336,13 @@ export default function BotMessagePage({
   }, [botMessages, isInitialLoad]);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden p-6">
       <Card className="flex-shrink-0">
         <CardHeader className="flex flex-row items-center justify-between gap-4">
           <div className="flex flex-row items-center gap-4">
             <Avatar className="size-14">
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                AI
+                EVI
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-0">
@@ -358,9 +359,18 @@ export default function BotMessagePage({
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
+              onClick={(e) => {
+                if (
+                  !confirm(
+                    "이 방이 종료되면, 기존에 대화가 모두 사라집니다. 종료하시겠습니까?",
+                  )
+                ) {
+                  e.preventDefault();
+                }
+              }}
             >
               <LogOut className="h-4 w-4" />
-              채팅방 나가기
+              채팅방 종료
             </Button>
           </Form>
         </CardHeader>
@@ -389,13 +399,17 @@ export default function BotMessagePage({
                 {!isUser && (
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback
-                      className={`text-xs text-white ${
+                      className={`text-white ${
                         isAI
                           ? "bg-gradient-to-br from-blue-500 to-purple-600"
                           : "bg-gray-500"
                       }`}
                     >
-                      {isAI ? "AI" : "U"}
+                      {isAI ? (
+                        <Bot className="h-4 w-4" />
+                      ) : (
+                        <span className="text-xs">U</span>
+                      )}
                     </AvatarFallback>
                   </Avatar>
                 )}
@@ -424,9 +438,11 @@ export default function BotMessagePage({
                     }`}
                   >
                     {isAI && !isTemp && (
-                      <span className="font-medium text-blue-600">
-                        AI Assistant
-                      </span>
+                      <>
+                        <span className="font-medium text-blue-600">
+                          AI Assistant
+                        </span>{" "}
+                      </>
                     )}
                     {isTemp && (
                       <span className="font-medium text-yellow-600">

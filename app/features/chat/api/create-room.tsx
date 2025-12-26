@@ -11,10 +11,12 @@ import { redirect } from "react-router";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
+import { updateBotMessageRoomConversationId } from "../mutations";
 import {
   createBotMessageRoom,
   getBotMessageRoomCountByUserId,
 } from "../queries";
+import { createConversationId } from "../utils/evibot-api";
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
   // GET 요청 시 기본 응답
@@ -54,8 +56,18 @@ export const action = async ({ request }: Route.ActionArgs) => {
       roomDescription: roomDescription || undefined,
     });
 
-    // 생성된 대화방으로 리다이렉트
-    return redirect(`/chat/botmessages/${room.bot_message_room_id}`);
+    // conversation_id 생성 및 저장
+    const conversationId = createConversationId();
+    await updateBotMessageRoomConversationId(client, {
+      botMessageRoomId: String(room.bot_message_room_id),
+      conversationId,
+    });
+
+    // 성공 시 JSON 반환 (useFetcher와 호환)
+    return Response.json({
+      success: true,
+      bot_message_room_id: room.bot_message_room_id,
+    });
   } catch (error) {
     console.error("Failed to create chat room:", error);
     return Response.json(
