@@ -37,10 +37,33 @@ function generateUUID(): string {
   });
 }
 
-interface StatusEvent {
-  phase: string;
-  message: string;
+export type Section = "p1" | "p2" | "p3" | "p4";
+
+export interface OutputPayload {
+  first_paragraph: string;
+  second_paragraph: string;
+  third_paragraph: string;
+  fourth_paragraph: string;
+  references: Array<{
+    source_type: string;
+    title: string;
+    url: string;
+    pmid?: string;
+    year?: number;
+    authors?: string;
+  }>;
+  warning?: string;
 }
+
+type ServerEvent =
+  | { type: "start"; data: { conversation_id: string } }
+  | { type: "status"; data: { node: string; text: string } }
+  | { type: "section_start"; data: { section: Section } }
+  | { type: "delta"; data: { section: Section; text: string } }
+  | { type: "section_done"; data: { section: Section } }
+  | { type: "complete"; data: { output: OutputPayload } }
+  | { type: "saved"; data: {} }
+  | { type: "error"; data: { message: string } };
 
 /**
  * 새로운 대화(conversation) ID 생성 (UUID v4)
@@ -52,38 +75,46 @@ export function createConversationId(): string {
 /**
  * 스트리밍 메시지 전송 및 응답 처리
  *
- * Server-Sent Events (SSE) 형식으로 응답을 받아 처리합니다.
+ * 서버는 줄바꿈으로 구분된 JSON 문자열을 스트리밍합니다.
  * CORS 문제를 피하기 위해 서버 사이드 프록시 API를 통해 요청합니다.
- * - `event: status` - 상태 업데이트 (phase, message)
- * - `data: {text}` - 텍스트 델타 (일반 텍스트)
- * - `event: done` - 스트리밍 완료
+ *
+ * 이벤트 타입:
+ * - `start`: 대화 시작 (conversation_id)
+ * - `status`: 상태 업데이트 (node, text)
+ * - `section_start`: 섹션 시작 (section)
+ * - `delta`: 텍스트 델타 (section, text)
+ * - `section_done`: 섹션 완료 (section)
+ * - `complete`: 최종 출력 (output)
+ * - `saved`: 저장 완료
  */
-export async function sendStreamMessage(
+export async function streamChat(
   botMessageRoomId: string,
   message: string,
   user_id: string,
-  onChunk: (chunk: string) => void,
-  onComplete?: () => void,
-  onError?: (error: Error) => void,
+  callbacks: {
+    onStart?: (conversationId: string) => void;
+    onStatus: (text: string) => void;
+    onSectionStart?: (section: Section) => void;
+    onDelta: (section: Section, text: string) => void;
+    onSectionDone?: (section: Section) => void;
+    onComplete: (output: OutputPayload) => void;
+    onSaved: () => void;
+    onError?: (error: Error) => void;
+  },
 ): Promise<void> {
   try {
-    // 서버 사이드 프록시 API를 통해 요청 (CORS 문제 해결)
-    // conversationId는 서버에서 데이터베이스에서 조회
-    const params = new URLSearchParams({
-      botMessageRoomId,
-      message,
-      userId: user_id,
-    });
-
-    const response = await fetch(
-      `/chat/api/stream-message?${params.toString()}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "text/event-stream",
-        },
+    const response = await fetch(`/chat/api/stream-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
       },
-    );
+      body: JSON.stringify({
+        botMessageRoomId,
+        message,
+        userId: user_id,
+      }),
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -98,126 +129,79 @@ export async function sendStreamMessage(
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let currentEvent: string | null = null;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
+        if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
+        // 서버는 줄바꿈(\n)으로 구분된 JSON 문자열을 보냄
         const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+        buffer = lines.pop() ?? ""; // 마지막 불완전한 줄은 버퍼에 보관
 
         for (const line of lines) {
-          // 빈 라인은 이벤트 구분자
-          if (line.trim() === "") {
-            currentEvent = null;
-            continue;
-          }
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
 
-          // event: 타입 라인
-          if (line.startsWith("event: ")) {
-            currentEvent = line.slice(7).trim();
-            continue;
-          }
+          try {
+            const msg = JSON.parse(trimmedLine) as ServerEvent;
+            console.log("[SSE Event]", msg.type, msg);
 
-          // data: 라인 처리
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-
-            // done 이벤트 처리
-            if (currentEvent === "done") {
-              onComplete?.();
-              return;
+            if (msg.type === "start") {
+              callbacks.onStart?.(msg.data.conversation_id);
+            } else if (msg.type === "status") {
+              callbacks.onStatus(msg.data.text);
+            } else if (msg.type === "section_start") {
+              callbacks.onSectionStart?.(msg.data.section);
+            } else if (msg.type === "delta") {
+              callbacks.onDelta(msg.data.section, msg.data.text);
+            } else if (msg.type === "section_done") {
+              callbacks.onSectionDone?.(msg.data.section);
+            } else if (msg.type === "complete") {
+              callbacks.onComplete(msg.data.output);
+            } else if (msg.type === "saved") {
+              callbacks.onSaved();
+            } else if (msg.type === "error") {
+              callbacks.onError?.(new Error(msg.data.message));
             }
-
-            // error 이벤트 처리
-            if (currentEvent === "error") {
-              try {
-                const errorData = JSON.parse(data);
-                const errorMessage = new Error(
-                  errorData.message || "Stream error occurred",
-                );
-                onError?.(errorMessage);
-                return;
-              } catch {
-                const errorMessage = new Error(data || "Stream error occurred");
-                onError?.(errorMessage);
-                return;
-              }
-            }
-
-            // status 이벤트 처리 (로깅용, 콜백은 호출하지 않음)
-            if (currentEvent === "status") {
-              try {
-                const status = JSON.parse(data) as StatusEvent;
-                console.debug("Stream status:", status.phase, status.message);
-              } catch {
-                // 파싱 실패는 무시
-              }
-              continue;
-            }
-
-            // 일반 data 라인 (텍스트 델타)
-            if (data.trim()) {
-              onChunk(data);
-            }
+          } catch (parseError) {
+            console.warn("[SSE] Parse error:", trimmedLine, parseError);
           }
         }
       }
-
-      // 남은 버퍼 처리
-      if (buffer.trim()) {
-        const trimmed = buffer.trim();
-        if (trimmed.startsWith("data: ")) {
-          onChunk(trimmed.slice(6));
-        } else if (trimmed && !trimmed.startsWith("event: ")) {
-          onChunk(trimmed);
-        }
-      }
-
-      onComplete?.();
     } finally {
       reader.releaseLock();
     }
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error : new Error("Unknown error");
-    onError?.(errorMessage);
+    callbacks.onError?.(errorMessage);
     throw errorMessage;
   }
 }
 
 /**
- * 비스트리밍 메시지 전송 (간단한 응답용)
- *
- * @deprecated 스트리밍을 사용하는 것을 권장합니다.
+ * @deprecated streamChat을 사용하세요.
  */
-export async function sendMessage(
+export async function sendStreamMessage(
   botMessageRoomId: string,
   message: string,
   user_id: string,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let fullResponse = "";
-
-    sendStreamMessage(
-      botMessageRoomId,
-      message,
-      user_id,
-      (chunk) => {
-        fullResponse += chunk;
-      },
-      () => {
-        resolve(fullResponse);
-      },
-      (error) => {
-        reject(error);
-      },
-    );
-  });
+  onChunk: (chunk: string) => void,
+  onComplete?: () => void,
+  onError?: (error: Error) => void,
+): Promise<void> {
+  return streamChat(
+    botMessageRoomId,
+    message,
+    user_id,
+    {
+      onStatus: () => {},
+      onDelta: (_section, text) => onChunk(text),
+      onComplete: () => onComplete?.(),
+      onSaved: () => {},
+      onError,
+    },
+  );
 }

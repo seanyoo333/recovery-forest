@@ -8,7 +8,17 @@ import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import type { Route } from "./+types/bot-message-page";
 
-import { Bot, LogOut, SendIcon } from "lucide-react";
+import {
+  BookOpen,
+  FileSearch,
+  Globe,
+  Loader2,
+  LogOut,
+  Search,
+  SendIcon,
+  User,
+  FileText,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router";
 import { Form } from "react-router";
@@ -35,7 +45,11 @@ import {
   getBotMessagesByBotMessageRoomId,
   sendBotMessageToRoom,
 } from "../queries";
-import { createConversationId, sendStreamMessage } from "../utils/evibot-api";
+import {
+  createConversationId,
+  streamChat,
+  type OutputPayload,
+} from "../utils/evibot-api";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Bot Message | Evidence-Base" }];
@@ -110,7 +124,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
     userId,
   });
 
-  // 데이터베이스에서 conversationId 조회 (formData 무시, 항상 DB에서 가져옴)
+  // 데이터베이스에서 conversationId 조회
   let conversationId: string | null = null;
   try {
     conversationId = await getBotMessageRoomConversationId(client, {
@@ -164,8 +178,15 @@ export default function BotMessagePage({
   }>();
   const formRef = useRef<HTMLFormElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const streamingMessageRef = useRef<string>("");
-  const streamingMessageIdRef = useRef<string | null>(null);
+  const isWriterStreamingRef = useRef(false);
+
+  // 스트리밍 상태
+  const [streamingText, setStreamingText] = useState("");
+  const [isWriterStreaming, setIsWriterStreaming] = useState(false);
+  const [output, setOutput] = useState<OutputPayload | null>(null);
+  const [status, setStatus] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   // actionData에서 스트리밍 시작
   useEffect(() => {
@@ -179,99 +200,195 @@ export default function BotMessagePage({
       return;
     }
 
-    // 폼 리셋 및 로딩 상태 설정
+    // 폼 리셋 및 상태 초기화
     formRef.current?.reset();
     setIsAILoading(true);
+    setIsStreaming(true);
+    setStatus("시작...");
+    setSaved(false);
+    setOutput(null);
+    setStreamingText("");
+    setIsWriterStreaming(false);
+    isWriterStreamingRef.current = false;
 
-    // AI 응답 대기 중임을 나타내는 임시 메시지 표시
-    const tempMessageId = `temp_${Date.now()}`;
-    streamingMessageIdRef.current = tempMessageId;
-    streamingMessageRef.current = "";
-
-    const tempMessage: BotMessage = {
-      bot_message_id: tempMessageId as unknown as number,
-      bot_message_room_id: loaderData.botMessages[0]?.bot_message_room_id || 0,
-      sender_id: "ai-assistant",
-      content: "",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      is_temp: true,
-    };
-
-    setBotMessages((prev) => [...prev, tempMessage]);
-
-    // 스트리밍 메시지 전송
-    // conversationId는 서버에서 데이터베이스에서 조회
-    sendStreamMessage(
+    streamChat(
       botMessageRoomId,
       actionData.message,
       userId,
-      (chunk) => {
-        streamingMessageRef.current += chunk;
-        setBotMessages((prev) =>
-          prev.map((msg) =>
-            String(msg.bot_message_id) === tempMessageId
-              ? { ...msg, content: streamingMessageRef.current }
-              : msg,
-          ),
-        );
-      },
-      async () => {
-        // 스트리밍 완료 후 서버 사이드 API를 통해 저장
-        const finalContent = streamingMessageRef.current;
-        if (finalContent && tempMessageId) {
-          try {
-            const roomId = loaderData.botMessages[0]?.bot_message_room_id;
-            if (roomId) {
-              const formData = new FormData();
-              formData.append(
-                "botMessageRoomId",
-                params.botMessageRoomId || "",
-              );
-              formData.append("content", finalContent);
-
-              const response = await fetch("/chat/api/save-ai-message", {
-                method: "POST",
-                body: formData,
-              });
-
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error("Failed to save AI response:", errorData);
-              }
-              // Supabase real-time을 통해 실제 메시지가 추가되면
-              // 임시 메시지는 자동으로 제거됨
-            }
-          } catch (error) {
-            console.error("Failed to save AI response:", error);
+      {
+        onStart: (conversationId) => {
+          console.log("[SSE] Conversation started:", conversationId);
+        },
+        onStatus: (text) => {
+          console.log("[SSE] Status:", text);
+          setStatus(text);
+        },
+        onSectionStart: (section) => {
+          console.log("[SSE] Section start:", section);
+          // writer 스트리밍 시작 감지
+          if (!isWriterStreamingRef.current) {
+            isWriterStreamingRef.current = true;
+            setIsWriterStreaming(true);
+            setStreamingText("");
           }
-        }
-
-        setIsAILoading(false);
-        streamingMessageIdRef.current = null;
-        streamingMessageRef.current = "";
-      },
-      (error) => {
-        console.error("Streaming error:", error);
-        setBotMessages((prev) =>
-          prev.map((msg) =>
-            String(msg.bot_message_id) === tempMessageId
-              ? {
-                  ...msg,
-                  content:
-                    "응답 생성 중 오류가 발생했습니다. 다시 시도해주세요.",
-                }
-              : msg,
-          ),
-        );
-        setIsAILoading(false);
-        streamingMessageIdRef.current = null;
-        streamingMessageRef.current = "";
+        },
+        onDelta: (section, text) => {
+          // 새 텍스트 추가 후 전체 텍스트를 정리하는 함수
+          setStreamingText((prev) => {
+            // 새 텍스트를 추가
+            const newText = prev + text;
+            
+            // 누적된 전체 텍스트에서 태그 및 불필요한 내용 제거
+            let cleanedText = newText
+              // JSON 태그와 그 사이의 모든 내용 제거 (가장 먼저 처리)
+              .replace(/\[\[JSON\]\][\s\S]*?\[\[\/JSON\]\]/g, '')
+              // JSON 블록 전체 제거 (중괄호 포함, 여러 줄, 더 포괄적으로)
+              .replace(/\{[\s\S]*?"(first_paragraph|second_paragraph|third_paragraph|fourth_paragraph|references|source_type|title|url|pmid|year|authors)"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"first_paragraph"[\s\S]*?"fourth_paragraph"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"first_paragraph"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"second_paragraph"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"third_paragraph"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"fourth_paragraph"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"source_type"[\s\S]*?\}/g, '')
+              .replace(/\{[\s\S]*?"references"[\s\S]*?\}/g, '')
+              // JSON 객체 시작 부분 제거 (불완전한 JSON 블록)
+              .replace(/\{[^}]*"source_type"[^}]*/g, '')
+              .replace(/\{[^}]*"first_paragraph"[^}]*/g, '')
+              .replace(/\{[^}]*"second_paragraph"[^}]*/g, '')
+              .replace(/\{[^}]*"third_paragraph"[^}]*/g, '')
+              .replace(/\{[^}]*"fourth_paragraph"[^}]*/g, '')
+              // JSON 필드명 문자열 제거 (따옴표 포함)
+              .replace(/"first_paragraph"\s*:/g, '')
+              .replace(/"second_paragraph"\s*:/g, '')
+              .replace(/"third_paragraph"\s*:/g, '')
+              .replace(/"fourth_paragraph"\s*:/g, '')
+              .replace(/"references"\s*:/g, '')
+              .replace(/"source_type"\s*:/g, '')
+              .replace(/"title"\s*:/g, '')
+              .replace(/"url"\s*:/g, '')
+              .replace(/"pmid"\s*:/g, '')
+              .replace(/"year"\s*:/g, '')
+              .replace(/"authors"\s*:/g, '')
+              // 모든 태그 패턴 제거 (완전한 태그)
+              .replace(/\[\[P[1-4]\]\]/g, '')
+              .replace(/\[\[\/P[1-4]\]\]/g, '')
+              .replace(/\[\[JSON\]\]/g, '')
+              .replace(/\[\[\/JSON\]\]/g, '')
+              // 불완전한 태그 패턴 제거
+              .replace(/\[\[[PJ][1-4]?\/?\]?\]?/g, '')
+              .replace(/\[\[[^\]]*\]\]/g, '') // [[...]] 형태의 모든 태그
+              // 단독으로 나타나는 태그 문자들 제거 (P1, P2, P3, P4, /P1, /P2, /P3, /P4)
+              .replace(/\bP[1-4]\b/g, '')
+              .replace(/\b\/P[1-4]\b/g, '')
+              .replace(/\bJSON\b/g, '')
+              .replace(/\b\/JSON\b/g, '')
+              // 슬래시 제거 (단독으로 나타나는 경우)
+              .replace(/\s*\/\s*/g, ' ')
+              .replace(/\/+/g, '')
+              // 남은 태그 괄호 제거
+              .replace(/\[\[/g, '')
+              .replace(/\]\]/g, '')
+              // 섹션 헤더 제거 (공백 허용, 여러 줄 모드)
+              .replace(/\(1\)\s*기전\s*:/g, '')
+              .replace(/\(2\)\s*근거\s*:/g, '')
+              .replace(/\(3\)\s*환자\s*관련\s*해석\s*:/g, '')
+              .replace(/\(4\)\s*실천적\s*조언\s*:/g, '')
+              // 숫자 패턴의 섹션 헤더 제거 (예: (1) , (2) 등, 여러 줄 모드)
+              .replace(/^\(\d+\)\s*[가-힣\s]*:\s*/gm, '')
+              // 줄 시작의 섹션 헤더 제거 (예: 줄바꿈 후 (1) 기전:)
+              .replace(/\n\s*\(\d+\)\s*[가-힣\s]*:\s*/g, '\n')
+              // 연속된 공백 정리
+              .replace(/\n{3,}/g, '\n\n')
+              .replace(/\s{2,}/g, ' ') // 연속된 공백을 하나로
+              .trim();
+            
+            return cleanedText;
+          });
+        },
+        onSectionDone: (section) => {
+          console.log("[SSE] Section done:", section);
+          // 섹션 완료 시 줄바꿈 추가하고 전체 텍스트 정리
+          setStreamingText((prev) => {
+            const newText = prev + "\n\n";
+            // 태그 및 불필요한 내용 제거 (혹시 섹션 완료 시점에 남아있을 수 있는 태그)
+            return newText
+              // JSON 태그와 그 사이의 모든 내용 제거
+              .replace(/\[\[JSON\]\][\s\S]*?\[\[\/JSON\]\]/g, '')
+              // JSON 블록 전체 제거
+              .replace(/\{[\s\S]*?"(first_paragraph|second_paragraph|third_paragraph|fourth_paragraph|references|source_type|title|url|pmid|year|authors)"[\s\S]*?\}/g, '')
+              .replace(/\{[^}]*"source_type"[^}]*/g, '')
+              // JSON 필드명 문자열 제거 (따옴표 포함)
+              .replace(/"first_paragraph"\s*:/g, '')
+              .replace(/"second_paragraph"\s*:/g, '')
+              .replace(/"third_paragraph"\s*:/g, '')
+              .replace(/"fourth_paragraph"\s*:/g, '')
+              .replace(/"references"\s*:/g, '')
+              .replace(/"source_type"\s*:/g, '')
+              .replace(/"title"\s*:/g, '')
+              .replace(/"url"\s*:/g, '')
+              .replace(/"pmid"\s*:/g, '')
+              .replace(/"year"\s*:/g, '')
+              .replace(/"authors"\s*:/g, '')
+              // 모든 태그 패턴 제거
+              .replace(/\[\[P[1-4]\]\]/g, '')
+              .replace(/\[\[\/P[1-4]\]\]/g, '')
+              .replace(/\[\[JSON\]\]/g, '')
+              .replace(/\[\[\/JSON\]\]/g, '')
+              .replace(/\[\[[PJ][1-4]?\/?\]?\]?/g, '')
+              .replace(/\[\[[^\]]*\]\]/g, '')
+              // 단독으로 나타나는 태그 문자들 제거
+              .replace(/\bP[1-4]\b/g, '')
+              .replace(/\b\/P[1-4]\b/g, '')
+              .replace(/\bJSON\b/g, '')
+              .replace(/\b\/JSON\b/g, '')
+              // 슬래시 제거 (단독으로 나타나는 경우)
+              .replace(/\s*\/\s*/g, ' ')
+              .replace(/\/+/g, '')
+              // 남은 태그 괄호 제거
+              .replace(/\[\[/g, '')
+              .replace(/\]\]/g, '')
+              // 연속된 공백 정리
+              .replace(/\n{3,}/g, '\n\n')
+              .replace(/\s{2,}/g, ' ') // 연속된 공백을 하나로
+              .trim();
+          });
+        },
+        onComplete: (outputPayload) => {
+          console.log("[SSE] Complete:", outputPayload);
+          setOutput(outputPayload);
+          setStatus("완료!");
+          // 최종 결과를 하나의 텍스트로 합치기
+          const finalText = [
+            outputPayload.first_paragraph,
+            outputPayload.second_paragraph,
+            outputPayload.third_paragraph,
+            outputPayload.fourth_paragraph,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+          setStreamingText(finalText);
+          setIsAILoading(false);
+        },
+        onSaved: () => {
+          console.log("[SSE] Saved");
+          setSaved(true);
+          setIsStreaming(false);
+          setIsWriterStreaming(false);
+          isWriterStreamingRef.current = false;
+        },
+        onError: (error) => {
+          console.error("[SSE] Error:", error);
+          setStatus(`오류: ${error.message}`);
+          setIsAILoading(false);
+          setIsStreaming(false);
+          setIsWriterStreaming(false);
+          isWriterStreamingRef.current = false;
+        },
       },
     );
   }, [actionData, params.botMessageRoomId, userId]);
 
-  // Supabase real-time 구독
+  // Supabase real-time 구독 (사용자 메시지 + AI 메시지)
   useEffect(() => {
     const roomId = loaderData.botMessages[0]?.bot_message_room_id;
     if (!roomId) return;
@@ -290,15 +407,31 @@ export default function BotMessagePage({
           const newMessage =
             payload.new as Database["public"]["Tables"]["bot_messages"]["Row"];
 
-          // 실제 AI 응답이 오면 임시 메시지 제거
-          if (newMessage.sender_id === "ai-assistant") {
-            setBotMessages((prev) => {
-              const filtered = prev.filter((msg) => !msg.is_temp);
-              return [...filtered, newMessage];
-            });
-            setIsAILoading(false);
-          } else {
+          // 사용자 메시지 추가
+          if (newMessage.sender_id === userId) {
             setBotMessages((prev) => [...prev, newMessage]);
+          }
+
+          // AI 메시지 도착 시 상태 메시지 숨기고 메시지 추가
+          if (newMessage.sender_id === "ai-assistant") {
+            // 상태 메시지 숨기기
+            setStatus("");
+            setSaved(false);
+            setOutput(null);
+            setStreamingText("");
+            setIsStreaming(false);
+            setIsWriterStreaming(false);
+            isWriterStreamingRef.current = false;
+
+            // AI 메시지를 botMessages에 추가
+            setBotMessages((prev) => {
+              // 중복 방지: 이미 존재하는 메시지는 추가하지 않음
+              const exists = prev.some(
+                (msg) => msg.bot_message_id === newMessage.bot_message_id,
+              );
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
           }
         },
       )
@@ -307,33 +440,37 @@ export default function BotMessagePage({
     return () => {
       changes.unsubscribe();
     };
-  }, [loaderData.botMessages[0]?.bot_message_room_id]); // roomId만 의존성으로 변경
+  }, [loaderData.botMessages[0]?.bot_message_room_id, userId]);
 
-  // 초기 로드 시 스크롤을 맨 아래로 설정
+  // 스크롤 자동 이동 (초기 로드, 새 메시지, AI 응답 완료 시)
   useEffect(() => {
-    if (isInitialLoad && messagesContainerRef.current) {
-      // scroll-behavior를 auto로 설정하여 애니메이션 없이 즉시 스크롤
+    if (!messagesContainerRef.current) return;
+
+    if (isInitialLoad) {
+      // 초기 로드 시: 애니메이션 없이 즉시 스크롤
       messagesContainerRef.current.style.scrollBehavior = "auto";
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
 
-      // 스크롤 후 다시 smooth로 변경
       setTimeout(() => {
         if (messagesContainerRef.current) {
           messagesContainerRef.current.style.scrollBehavior = "smooth";
         }
         setIsInitialLoad(false);
       }, 0);
-    }
-  }, [isInitialLoad]);
-
-  // 새 메시지가 추가될 때 스크롤을 아래로 이동
-  useEffect(() => {
-    if (!isInitialLoad && messagesContainerRef.current) {
+    } else {
+      // 새 메시지 또는 AI 응답 완료 시: 부드럽게 스크롤
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
     }
-  }, [botMessages, isInitialLoad]);
+  }, [
+    isInitialLoad,
+    botMessages,
+    streamingText,
+    isWriterStreaming,
+    output,
+    saved,
+  ]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden p-6">
@@ -378,84 +515,274 @@ export default function BotMessagePage({
 
       <div
         ref={messagesContainerRef}
-        className="h-[calc(100vh-300px)] space-y-4 overflow-y-scroll px-4 py-4"
+        className="flex h-[calc(100vh-300px)] flex-col space-y-4 overflow-y-scroll px-4 py-4"
         style={{ scrollBehavior: isInitialLoad ? "auto" : "smooth" }}
       >
-        {botMessages.map((message) => {
-          const isAI = message.sender_id === "ai-assistant";
-          const isUser = message.sender_id === userId;
-          const isTemp = message.is_temp || false;
+        {/* 메시지 목록 (사용자 + AI) */}
+        <div className="space-y-4">
+          {botMessages.map((message) => {
+            const isUser = message.sender_id === userId;
+            const isAI = message.sender_id === "ai-assistant";
 
-          return (
-            <div
-              key={message.bot_message_id}
-              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`flex max-w-xs gap-3 lg:max-w-md ${
-                  isUser ? "flex-row-reverse" : "flex-row"
-                }`}
-              >
-                {!isUser && (
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarFallback
-                      className={`text-white ${
-                        isAI
-                          ? "bg-gradient-to-br from-blue-500 to-purple-600"
-                          : "bg-gray-500"
-                      }`}
-                    >
-                      {isAI ? (
-                        <Bot className="h-4 w-4" />
+            // 사용자 메시지
+            if (isUser) {
+              return (
+                <div
+                  key={message.bot_message_id}
+                  className="flex justify-end"
+                >
+                  <div className="flex max-w-xs gap-3 lg:max-w-md flex-row-reverse">
+                    <div className="rounded-lg px-4 py-2 bg-blue-500 text-white">
+                      <p className="text-sm whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                      <p className="mt-1 text-xs opacity-75">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // AI 메시지 (항상 표시)
+            if (isAI) {
+              let aiContent: OutputPayload | null = null;
+              try {
+                aiContent = JSON.parse(message.content) as OutputPayload;
+              } catch {
+                // JSON 파싱 실패 시 원본 텍스트 표시
+                aiContent = null;
+              }
+
+              const paragraphs = aiContent
+                ? [
+                    aiContent.first_paragraph,
+                    aiContent.second_paragraph,
+                    aiContent.third_paragraph,
+                    aiContent.fourth_paragraph,
+                  ].filter(Boolean)
+                : [];
+
+              return (
+                <div
+                  key={message.bot_message_id}
+                  className="flex justify-start"
+                >
+                  <div className="flex max-w-3xl gap-3 flex-row">
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                        EVI
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="w-full space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+                      {aiContent ? (
+                        <>
+                          {/* 문단들 */}
+                          <div className="space-y-5">
+                            {paragraphs.map((paragraph, index) => (
+                              <p
+                                key={index}
+                                className="text-foreground leading-7 text-base"
+                              >
+                                {paragraph}
+                              </p>
+                            ))}
+                          </div>
+
+                          {/* 참고 문헌 */}
+                          {aiContent.references &&
+                            aiContent.references.length > 0 && (
+                              <div className="border-t pt-6">
+                                <h3 className="text-muted-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                                  참고 문헌
+                                </h3>
+                                <ol className="space-y-3">
+                                  {aiContent.references.map((ref, i) => {
+                                    const hasValidUrl =
+                                      ref.url &&
+                                      ref.url.trim() !== "" &&
+                                      ref.url !== "#";
+
+                                    return (
+                                      <li
+                                        key={i}
+                                        className="text-muted-foreground text-sm leading-relaxed"
+                                      >
+                                        <span className="font-medium">
+                                          {i + 1}.{" "}
+                                        </span>
+                                        {hasValidUrl ? (
+                                          <a
+                                            href={ref.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-primary hover:text-primary/80 font-medium underline-offset-4 hover:underline"
+                                          >
+                                            {ref.title}
+                                          </a>
+                                        ) : (
+                                          <span className="font-medium text-foreground">
+                                            {ref.title}
+                                          </span>
+                                        )}
+                                        {ref.source_type && (
+                                          <>
+                                            . <span className="font-medium">
+                                              {ref.source_type}
+                                            </span>
+                                          </>
+                                        )}
+                                        {ref.year && (
+                                          <>
+                                            . <span>{ref.year}</span>
+                                          </>
+                                        )}
+                                        {ref.authors && (
+                                          <>
+                                            . <span>{ref.authors}</span>
+                                          </>
+                                        )}
+                                        {ref.pmid && (
+                                          <span className="ml-2 text-xs">
+                                            (PMID: {ref.pmid})
+                                          </span>
+                                        )}
+                                      </li>
+                                    );
+                                  })}
+                                </ol>
+                              </div>
+                            )}
+                        </>
                       ) : (
-                        <span className="text-xs">U</span>
+                        <p className="text-foreground whitespace-pre-wrap leading-7 text-base">
+                          {message.content}
+                        </p>
                       )}
+                      <p className="mt-4 text-xs text-muted-foreground">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })}
+        </div>
+
+        {/* AI 응답 */}
+        {(isStreaming || saved) && (
+          <div className="space-y-4">
+            {/* 검색 중 상태 표시 (writer 스트리밍이 아닐 때만) */}
+            {!isWriterStreaming && status && (
+              <div className="flex items-center gap-2 transition-opacity duration-300 animate-in fade-in">
+                <Loader2 className="size-4 animate-spin text-primary" />
+                {getStatusIcon(status)}
+                <span className="text-sm text-muted-foreground">{status}</span>
+              </div>
+            )}
+
+            {saved && (
+              <div className="flex items-center gap-2 transition-opacity duration-300 animate-in fade-in">
+                <div className="size-4 rounded-full bg-green-500" />
+                <span className="text-sm text-green-600">✅ 저장 완료</span>
+              </div>
+            )}
+
+            {output?.warning && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 transition-opacity duration-300 animate-in fade-in">
+                ⚠ {output.warning}
+              </div>
+            )}
+
+            {/* Writer 스트리밍이 시작되면 하나의 텍스트 영역에 표시 */}
+            {(isWriterStreaming || output) && (
+              <div className="flex justify-start">
+                <div className="flex max-w-3xl gap-3 flex-row">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      EVI
                     </AvatarFallback>
                   </Avatar>
-                )}
-                <div
-                  className={`rounded-lg px-4 py-2 ${
-                    isUser
-                      ? "bg-blue-500 text-white"
-                      : isAI
-                        ? isTemp
-                          ? "border border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 text-gray-700"
-                          : "border border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50 text-gray-900"
-                        : "bg-gray-100 text-gray-900"
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">
-                    {isTemp && (
-                      <span className="mr-2 inline-block animate-pulse">
-                        ⏳
-                      </span>
+                  <div className="w-full space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+                    <div className="space-y-5">
+                      <div className="text-foreground whitespace-pre-wrap leading-7 text-base">
+                        {streamingText || (isWriterStreaming ? "작성 중..." : "")}
+                      </div>
+                    </div>
+
+                    {/* 참고 문헌 (완료 후에만 표시) */}
+                    {output?.references && output.references.length > 0 && (
+                      <div className="border-t pt-6">
+                        <h3 className="text-muted-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                          참고 문헌
+                        </h3>
+                        <ol className="space-y-3">
+                          {output.references.map((ref, i) => {
+                            const hasValidUrl =
+                              ref.url &&
+                              ref.url.trim() !== "" &&
+                              ref.url !== "#";
+
+                            return (
+                              <li
+                                key={i}
+                                className="text-muted-foreground text-sm leading-relaxed"
+                              >
+                                <span className="font-medium">
+                                  {i + 1}.{" "}
+                                </span>
+                                {hasValidUrl ? (
+                                  <a
+                                    href={ref.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-primary hover:text-primary/80 font-medium underline-offset-4 hover:underline"
+                                  >
+                                    {ref.title}
+                                  </a>
+                                ) : (
+                                  <span className="font-medium text-foreground">
+                                    {ref.title}
+                                  </span>
+                                )}
+                                {ref.source_type && (
+                                  <>
+                                    . <span className="font-medium">
+                                      {ref.source_type}
+                                    </span>
+                                  </>
+                                )}
+                                {ref.year && (
+                                  <>
+                                    . <span>{ref.year}</span>
+                                  </>
+                                )}
+                                {ref.authors && (
+                                  <>
+                                    . <span>{ref.authors}</span>
+                                  </>
+                                )}
+                                {ref.pmid && (
+                                  <span className="ml-2 text-xs">
+                                    (PMID: {ref.pmid})
+                                  </span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </div>
                     )}
-                    {message.content}
-                  </p>
-                  <p
-                    className={`mt-1 text-xs ${
-                      isUser ? "opacity-75" : "text-muted-foreground"
-                    }`}
-                  >
-                    {isAI && !isTemp && (
-                      <>
-                        <span className="font-medium text-blue-600">
-                          AI Assistant
-                        </span>{" "}
-                      </>
-                    )}
-                    {isTemp && (
-                      <span className="font-medium text-yellow-600">
-                        응답 생성 중...
-                      </span>
-                    )}
-                    {new Date(message.created_at).toLocaleTimeString()}
-                  </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        )}
       </div>
 
       <Card className="flex-shrink-0">
@@ -497,3 +824,29 @@ export default function BotMessagePage({
 export const shouldRevalidate = (args: ShouldRevalidateFunctionArgs) => {
   return args.currentUrl.pathname !== args.nextUrl.pathname;
 };
+
+// 상태 메시지에 따른 아이콘 반환
+function getStatusIcon(status: string) {
+  if (status.includes("분석")) {
+    return <Search className="size-4 text-primary" />;
+  }
+  if (status.includes("RAG") || status.includes("검색")) {
+    return <FileSearch className="size-4 text-primary" />;
+  }
+  if (status.includes("웹")) {
+    return <Globe className="size-4 text-primary" />;
+  }
+  if (status.includes("PubMed") || status.includes("논문")) {
+    return <BookOpen className="size-4 text-primary" />;
+  }
+  if (status.includes("Scholar")) {
+    return <BookOpen className="size-4 text-primary" />;
+  }
+  if (status.includes("환자")) {
+    return <User className="size-4 text-primary" />;
+  }
+  if (status.includes("작성") || status.includes("문서")) {
+    return <FileText className="size-4 text-primary" />;
+  }
+  return null;
+}
