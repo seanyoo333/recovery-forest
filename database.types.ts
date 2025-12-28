@@ -898,6 +898,71 @@ export type Database = {
           },
         ]
       }
+      health_bookmarks: {
+        Row: {
+          bookmark_id: number
+          bot_message_id: number | null
+          bot_message_room_id: number
+          content: Json
+          created_at: string
+          notes: string | null
+          profile_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          bookmark_id?: never
+          bot_message_id?: number | null
+          bot_message_room_id: number
+          content: Json
+          created_at?: string
+          notes?: string | null
+          profile_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bookmark_id?: never
+          bot_message_id?: number | null
+          bot_message_room_id?: number
+          content?: Json
+          created_at?: string
+          notes?: string | null
+          profile_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_bookmarks_bot_message_room_id_bot_message_rooms_bot_mess"
+            columns: ["bot_message_room_id"]
+            isOneToOne: false
+            referencedRelation: "bot_message_rooms"
+            referencedColumns: ["bot_message_room_id"]
+          },
+          {
+            foreignKeyName: "health_bookmarks_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "health_profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "health_bookmarks_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "health_bookmarks_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       message_room_members: {
         Row: {
           created_at: string

@@ -561,6 +561,13 @@
       "when": 1766728392904,
       "tag": "0079_cloudy_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1766907536541,
+      "tag": "0080_greedy_stryfe",
+      "breakpoints": true
     }
   ]
 }

@@ -211,6 +211,94 @@ export const botMessages = pgTable(
   ],
 );
 
+/**
+ * Health Bookmarks Table
+ *
+ * 건강 질문 답변을 북마크로 저장하는 테이블
+ * 봇 메시지가 cron으로 삭제되어도 북마크는 유지됨
+ * bot_message_id는 참조용이며 외래키 없음 (nullable)
+ */
+export const healthBookmarks = pgTable(
+  "health_bookmarks",
+  {
+    bookmark_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    profile_id: uuid()
+      .notNull()
+      .references(() => profiles.profile_id, { onDelete: "cascade" }),
+    // 봇 메시지 ID (참조용, 외래키 없음 - 봇 메시지 삭제되어도 북마크 유지)
+    bot_message_id: bigint({ mode: "number" }),
+    bot_message_room_id: bigint({ mode: "number" })
+      .notNull()
+      .references(() => botMessageRooms.bot_message_room_id, {
+        onDelete: "cascade",
+      }),
+    // 저장된 내용 (JSON 형태)
+    content: jsonb()
+      .notNull()
+      .$type<{
+        question: string;
+        answer: {
+          first_paragraph?: string;
+          second_paragraph?: string;
+          third_paragraph?: string;
+          fourth_paragraph?: string;
+          references?: Array<{
+            source_type: string;
+            title: string;
+            url: string;
+            pmid?: string;
+            year?: number;
+            authors?: string;
+          }>;
+          warning?: string;
+        };
+      }>(),
+    // 북마크 제목 (사용자가 수정 가능)
+    title: text(),
+    // 메모
+    notes: text(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+  },
+  (table) => [
+    // SELECT: 사용자는 자신의 북마크만 조회 가능
+    pgPolicy("health-bookmarks-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${table.profile_id} = ${authUid}`,
+    }),
+    // INSERT: 사용자는 자신의 북마크만 생성 가능
+    pgPolicy("health-bookmarks-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${table.profile_id} = ${authUid}`,
+    }),
+    // UPDATE: 사용자는 자신의 북마크만 수정 가능
+    pgPolicy("health-bookmarks-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${table.profile_id} = ${authUid}`,
+      withCheck: sql`${table.profile_id} = ${authUid}`,
+    }),
+    // DELETE: 사용자는 자신의 북마크만 삭제 가능
+    pgPolicy("health-bookmarks-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${table.profile_id} = ${authUid}`,
+    }),
+  ],
+);
+
 /* 챗봇 대화방 초대를 관리하는 테이블블
 export const botMessageInvitations = pgTable(
   "bot_message_invitations",

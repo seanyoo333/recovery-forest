@@ -70,7 +70,7 @@ const data = {
       items: [
         {
           title: "근거자료 북마크",
-          url: "#",
+          url: "/my/dashboard/bookmarks",
         },
         {
           title: "근거자료 기반 질문하기",

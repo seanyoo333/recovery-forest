@@ -262,6 +262,10 @@ export default [
             "/health/submit",
             "features/users/dashboard/pages/dashboard-health-submit.tsx",
           ),
+          /* route(
+            "/bookmarks",
+            "features/users/dashboard/pages/dashboard-bookmarks.tsx",
+          ), */
           route("/cart", "features/users/screens/dashboard-cart.tsx"),
           route(
             "/products/:productId",
