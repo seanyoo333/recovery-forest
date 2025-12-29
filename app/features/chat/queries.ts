@@ -228,3 +228,50 @@ export const sendBotMessageToRoom = async (
     throw error;
   }
 };
+
+/**
+ * 사용자의 건강 북마크 목록 조회
+ */
+export const getHealthBookmarksByUserId = async (
+  client: SupabaseClient<Database>,
+  { userId }: { userId: string },
+) => {
+  const { data, error } = await client
+    .from("health_bookmarks")
+    .select("*")
+    .eq("profile_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
+/**
+ * 특정 북마크 조회
+ */
+export const getHealthBookmarkById = async (
+  client: SupabaseClient<Database>,
+  {
+    userId,
+    bookmarkId,
+  }: {
+    userId: string;
+    bookmarkId: number;
+  },
+) => {
+  const { data, error } = await client
+    .from("health_bookmarks")
+    .select("*")
+    .eq("bookmark_id", bookmarkId)
+    .eq("profile_id", userId)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};

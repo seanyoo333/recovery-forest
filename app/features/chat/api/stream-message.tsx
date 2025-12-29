@@ -10,14 +10,13 @@ import type { Route } from "./+types/stream-message";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
-import {
-  getBotMessageRoomConversationId,
-} from "../queries";
 import { updateBotMessageRoomConversationId } from "../mutations";
+import { getBotMessageRoomConversationId } from "../queries";
 import { createConversationId } from "../utils/evibot-api";
 
 const CHAT_API_BASE_URL =
-  process.env.CHAT_API_BASE_URL || "https://lang-chatbot-production.up.railway.app";
+  process.env.CHAT_API_BASE_URL ||
+  "https://lang-chatbot-production.up.railway.app";
 
 interface ChatRequest {
   message: string;
@@ -103,10 +102,7 @@ export async function action({ request }: Route.ActionArgs) {
     }
 
     if (!response.body) {
-      return Response.json(
-        { error: "Response body is null" },
-        { status: 500 },
-      );
+      return Response.json({ error: "Response body is null" }, { status: 500 });
     }
 
     // 스트리밍 응답을 클라이언트로 전달
@@ -127,4 +123,3 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 }
-

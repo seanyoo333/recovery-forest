@@ -240,6 +240,10 @@ export default [
           route("/create-room", "features/chat/api/create-room.tsx"),
           route("/stream-message", "features/chat/api/stream-message.tsx"),
           route("/save-ai-message", "features/chat/api/save-ai-message.tsx"),
+          route(
+            "/save-health-bookmark",
+            "features/chat/api/save-health-bookmark.tsx",
+          ),
         ]),
       ]),
     ]),
@@ -262,10 +266,14 @@ export default [
             "/health/submit",
             "features/users/dashboard/pages/dashboard-health-submit.tsx",
           ),
-          /* route(
+          route(
             "/bookmarks",
             "features/users/dashboard/pages/dashboard-bookmarks.tsx",
-          ), */
+          ),
+          route(
+            "/bookmarks/:bookmarkId/question",
+            "features/users/dashboard/pages/bookmark-question-page.tsx",
+          ),
           route("/cart", "features/users/screens/dashboard-cart.tsx"),
           route(
             "/products/:productId",

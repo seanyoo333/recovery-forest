@@ -53,6 +53,7 @@ export interface OutputPayload {
     authors?: string;
   }>;
   warning?: string;
+  is_health_question?: boolean; // 건강 관련 질문 여부
 }
 
 type ServerEvent =
@@ -192,16 +193,11 @@ export async function sendStreamMessage(
   onComplete?: () => void,
   onError?: (error: Error) => void,
 ): Promise<void> {
-  return streamChat(
-    botMessageRoomId,
-    message,
-    user_id,
-    {
-      onStatus: () => {},
-      onDelta: (_section, text) => onChunk(text),
-      onComplete: () => onComplete?.(),
-      onSaved: () => {},
-      onError,
-    },
-  );
+  return streamChat(botMessageRoomId, message, user_id, {
+    onStatus: () => {},
+    onDelta: (_section, text) => onChunk(text),
+    onComplete: () => onComplete?.(),
+    onSaved: () => {},
+    onError,
+  });
 }

@@ -229,32 +229,28 @@ export const healthBookmarks = pgTable(
       .references(() => profiles.profile_id, { onDelete: "cascade" }),
     // 봇 메시지 ID (참조용, 외래키 없음 - 봇 메시지 삭제되어도 북마크 유지)
     bot_message_id: bigint({ mode: "number" }),
-    bot_message_room_id: bigint({ mode: "number" })
-      .notNull()
-      .references(() => botMessageRooms.bot_message_room_id, {
-        onDelete: "cascade",
-      }),
+    // 봇 메시지 방 ID (참조용, 채팅방 삭제되어도 북마크 유지)
+    // cascade 제거: 채팅방이 삭제되어도 북마크는 유지되어야 함
+    bot_message_room_id: bigint({ mode: "number" }),
     // 저장된 내용 (JSON 형태)
-    content: jsonb()
-      .notNull()
-      .$type<{
-        question: string;
-        answer: {
-          first_paragraph?: string;
-          second_paragraph?: string;
-          third_paragraph?: string;
-          fourth_paragraph?: string;
-          references?: Array<{
-            source_type: string;
-            title: string;
-            url: string;
-            pmid?: string;
-            year?: number;
-            authors?: string;
-          }>;
-          warning?: string;
-        };
-      }>(),
+    content: jsonb().notNull().$type<{
+      question: string;
+      answer: {
+        first_paragraph?: string;
+        second_paragraph?: string;
+        third_paragraph?: string;
+        fourth_paragraph?: string;
+        references?: Array<{
+          source_type: string;
+          title: string;
+          url: string;
+          pmid?: string;
+          year?: number;
+          authors?: string;
+        }>;
+        warning?: string;
+      };
+    }>(),
     // 북마크 제목 (사용자가 수정 가능)
     title: text(),
     // 메모

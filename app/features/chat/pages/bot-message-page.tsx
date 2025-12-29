@@ -10,18 +10,18 @@ import type { Route } from "./+types/bot-message-page";
 
 import {
   BookOpen,
+  Bookmark,
   FileSearch,
+  FileText,
   Globe,
   Loader2,
   LogOut,
   Search,
   SendIcon,
   User,
-  FileText,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useOutletContext } from "react-router";
-import { Form } from "react-router";
+import { Form, Link, useOutletContext } from "react-router";
 import { redirect, useParams } from "react-router";
 
 import {
@@ -46,9 +46,9 @@ import {
   sendBotMessageToRoom,
 } from "../queries";
 import {
+  type OutputPayload,
   createConversationId,
   streamChat,
-  type OutputPayload,
 } from "../utils/evibot-api";
 
 export const meta: Route.MetaFunction = () => {
@@ -187,6 +187,9 @@ export default function BotMessagePage({
   const [status, setStatus] = useState("");
   const [saved, setSaved] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [bookmarkingMessageId, setBookmarkingMessageId] = useState<
+    number | null
+  >(null);
 
   // actionData에서 스트리밍 시작
   useEffect(() => {
@@ -211,181 +214,187 @@ export default function BotMessagePage({
     setIsWriterStreaming(false);
     isWriterStreamingRef.current = false;
 
-    streamChat(
-      botMessageRoomId,
-      actionData.message,
-      userId,
-      {
-        onStart: (conversationId) => {
-          console.log("[SSE] Conversation started:", conversationId);
-        },
-        onStatus: (text) => {
-          console.log("[SSE] Status:", text);
-          setStatus(text);
-        },
-        onSectionStart: (section) => {
-          console.log("[SSE] Section start:", section);
-          // writer 스트리밍 시작 감지
-          if (!isWriterStreamingRef.current) {
-            isWriterStreamingRef.current = true;
-            setIsWriterStreaming(true);
-            setStreamingText("");
-          }
-        },
-        onDelta: (section, text) => {
-          // 새 텍스트 추가 후 전체 텍스트를 정리하는 함수
-          setStreamingText((prev) => {
-            // 새 텍스트를 추가
-            const newText = prev + text;
-            
-            // 누적된 전체 텍스트에서 태그 및 불필요한 내용 제거
-            let cleanedText = newText
-              // JSON 태그와 그 사이의 모든 내용 제거 (가장 먼저 처리)
-              .replace(/\[\[JSON\]\][\s\S]*?\[\[\/JSON\]\]/g, '')
-              // JSON 블록 전체 제거 (중괄호 포함, 여러 줄, 더 포괄적으로)
-              .replace(/\{[\s\S]*?"(first_paragraph|second_paragraph|third_paragraph|fourth_paragraph|references|source_type|title|url|pmid|year|authors)"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"first_paragraph"[\s\S]*?"fourth_paragraph"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"first_paragraph"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"second_paragraph"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"third_paragraph"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"fourth_paragraph"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"source_type"[\s\S]*?\}/g, '')
-              .replace(/\{[\s\S]*?"references"[\s\S]*?\}/g, '')
-              // JSON 객체 시작 부분 제거 (불완전한 JSON 블록)
-              .replace(/\{[^}]*"source_type"[^}]*/g, '')
-              .replace(/\{[^}]*"first_paragraph"[^}]*/g, '')
-              .replace(/\{[^}]*"second_paragraph"[^}]*/g, '')
-              .replace(/\{[^}]*"third_paragraph"[^}]*/g, '')
-              .replace(/\{[^}]*"fourth_paragraph"[^}]*/g, '')
-              // JSON 필드명 문자열 제거 (따옴표 포함)
-              .replace(/"first_paragraph"\s*:/g, '')
-              .replace(/"second_paragraph"\s*:/g, '')
-              .replace(/"third_paragraph"\s*:/g, '')
-              .replace(/"fourth_paragraph"\s*:/g, '')
-              .replace(/"references"\s*:/g, '')
-              .replace(/"source_type"\s*:/g, '')
-              .replace(/"title"\s*:/g, '')
-              .replace(/"url"\s*:/g, '')
-              .replace(/"pmid"\s*:/g, '')
-              .replace(/"year"\s*:/g, '')
-              .replace(/"authors"\s*:/g, '')
-              // 모든 태그 패턴 제거 (완전한 태그)
-              .replace(/\[\[P[1-4]\]\]/g, '')
-              .replace(/\[\[\/P[1-4]\]\]/g, '')
-              .replace(/\[\[JSON\]\]/g, '')
-              .replace(/\[\[\/JSON\]\]/g, '')
-              // 불완전한 태그 패턴 제거
-              .replace(/\[\[[PJ][1-4]?\/?\]?\]?/g, '')
-              .replace(/\[\[[^\]]*\]\]/g, '') // [[...]] 형태의 모든 태그
-              // 단독으로 나타나는 태그 문자들 제거 (P1, P2, P3, P4, /P1, /P2, /P3, /P4)
-              .replace(/\bP[1-4]\b/g, '')
-              .replace(/\b\/P[1-4]\b/g, '')
-              .replace(/\bJSON\b/g, '')
-              .replace(/\b\/JSON\b/g, '')
-              // 슬래시 제거 (단독으로 나타나는 경우)
-              .replace(/\s*\/\s*/g, ' ')
-              .replace(/\/+/g, '')
-              // 남은 태그 괄호 제거
-              .replace(/\[\[/g, '')
-              .replace(/\]\]/g, '')
-              // 섹션 헤더 제거 (공백 허용, 여러 줄 모드)
-              .replace(/\(1\)\s*기전\s*:/g, '')
-              .replace(/\(2\)\s*근거\s*:/g, '')
-              .replace(/\(3\)\s*환자\s*관련\s*해석\s*:/g, '')
-              .replace(/\(4\)\s*실천적\s*조언\s*:/g, '')
-              // 숫자 패턴의 섹션 헤더 제거 (예: (1) , (2) 등, 여러 줄 모드)
-              .replace(/^\(\d+\)\s*[가-힣\s]*:\s*/gm, '')
-              // 줄 시작의 섹션 헤더 제거 (예: 줄바꿈 후 (1) 기전:)
-              .replace(/\n\s*\(\d+\)\s*[가-힣\s]*:\s*/g, '\n')
-              // 연속된 공백 정리
-              .replace(/\n{3,}/g, '\n\n')
-              .replace(/\s{2,}/g, ' ') // 연속된 공백을 하나로
-              .trim();
-            
-            return cleanedText;
-          });
-        },
-        onSectionDone: (section) => {
-          console.log("[SSE] Section done:", section);
-          // 섹션 완료 시 줄바꿈 추가하고 전체 텍스트 정리
-          setStreamingText((prev) => {
-            const newText = prev + "\n\n";
-            // 태그 및 불필요한 내용 제거 (혹시 섹션 완료 시점에 남아있을 수 있는 태그)
-            return newText
-              // JSON 태그와 그 사이의 모든 내용 제거
-              .replace(/\[\[JSON\]\][\s\S]*?\[\[\/JSON\]\]/g, '')
-              // JSON 블록 전체 제거
-              .replace(/\{[\s\S]*?"(first_paragraph|second_paragraph|third_paragraph|fourth_paragraph|references|source_type|title|url|pmid|year|authors)"[\s\S]*?\}/g, '')
-              .replace(/\{[^}]*"source_type"[^}]*/g, '')
-              // JSON 필드명 문자열 제거 (따옴표 포함)
-              .replace(/"first_paragraph"\s*:/g, '')
-              .replace(/"second_paragraph"\s*:/g, '')
-              .replace(/"third_paragraph"\s*:/g, '')
-              .replace(/"fourth_paragraph"\s*:/g, '')
-              .replace(/"references"\s*:/g, '')
-              .replace(/"source_type"\s*:/g, '')
-              .replace(/"title"\s*:/g, '')
-              .replace(/"url"\s*:/g, '')
-              .replace(/"pmid"\s*:/g, '')
-              .replace(/"year"\s*:/g, '')
-              .replace(/"authors"\s*:/g, '')
-              // 모든 태그 패턴 제거
-              .replace(/\[\[P[1-4]\]\]/g, '')
-              .replace(/\[\[\/P[1-4]\]\]/g, '')
-              .replace(/\[\[JSON\]\]/g, '')
-              .replace(/\[\[\/JSON\]\]/g, '')
-              .replace(/\[\[[PJ][1-4]?\/?\]?\]?/g, '')
-              .replace(/\[\[[^\]]*\]\]/g, '')
-              // 단독으로 나타나는 태그 문자들 제거
-              .replace(/\bP[1-4]\b/g, '')
-              .replace(/\b\/P[1-4]\b/g, '')
-              .replace(/\bJSON\b/g, '')
-              .replace(/\b\/JSON\b/g, '')
-              // 슬래시 제거 (단독으로 나타나는 경우)
-              .replace(/\s*\/\s*/g, ' ')
-              .replace(/\/+/g, '')
-              // 남은 태그 괄호 제거
-              .replace(/\[\[/g, '')
-              .replace(/\]\]/g, '')
-              // 연속된 공백 정리
-              .replace(/\n{3,}/g, '\n\n')
-              .replace(/\s{2,}/g, ' ') // 연속된 공백을 하나로
-              .trim();
-          });
-        },
-        onComplete: (outputPayload) => {
-          console.log("[SSE] Complete:", outputPayload);
-          setOutput(outputPayload);
-          setStatus("완료!");
-          // 최종 결과를 하나의 텍스트로 합치기
-          const finalText = [
-            outputPayload.first_paragraph,
-            outputPayload.second_paragraph,
-            outputPayload.third_paragraph,
-            outputPayload.fourth_paragraph,
-          ]
-            .filter(Boolean)
-            .join("\n\n");
-          setStreamingText(finalText);
-          setIsAILoading(false);
-        },
-        onSaved: () => {
-          console.log("[SSE] Saved");
-          setSaved(true);
-          setIsStreaming(false);
-          setIsWriterStreaming(false);
-          isWriterStreamingRef.current = false;
-        },
-        onError: (error) => {
-          console.error("[SSE] Error:", error);
-          setStatus(`오류: ${error.message}`);
-          setIsAILoading(false);
-          setIsStreaming(false);
-          setIsWriterStreaming(false);
-          isWriterStreamingRef.current = false;
-        },
+    streamChat(botMessageRoomId, actionData.message, userId, {
+      onStart: (conversationId) => {
+        console.log("[SSE] Conversation started:", conversationId);
       },
-    );
+      onStatus: (text) => {
+        console.log("[SSE] Status:", text);
+        setStatus(text);
+      },
+      onSectionStart: (section) => {
+        console.log("[SSE] Section start:", section);
+        // writer 스트리밍 시작 감지
+        if (!isWriterStreamingRef.current) {
+          isWriterStreamingRef.current = true;
+          setIsWriterStreaming(true);
+          setStreamingText("");
+        }
+      },
+      onDelta: (section, text) => {
+        // 새 텍스트 추가 후 전체 텍스트를 정리하는 함수
+        setStreamingText((prev) => {
+          // 새 텍스트를 추가
+          const newText = prev + text;
+
+          // 누적된 전체 텍스트에서 태그 및 불필요한 내용 제거
+          let cleanedText = newText
+            // JSON 태그와 그 사이의 모든 내용 제거 (가장 먼저 처리)
+            .replace(/\[\[JSON\]\][\s\S]*?\[\[\/JSON\]\]/g, "")
+            // JSON 블록 전체 제거 (중괄호 포함, 여러 줄, 더 포괄적으로)
+            .replace(
+              /\{[\s\S]*?"(first_paragraph|second_paragraph|third_paragraph|fourth_paragraph|references|source_type|title|url|pmid|year|authors)"[\s\S]*?\}/g,
+              "",
+            )
+            .replace(
+              /\{[\s\S]*?"first_paragraph"[\s\S]*?"fourth_paragraph"[\s\S]*?\}/g,
+              "",
+            )
+            .replace(/\{[\s\S]*?"first_paragraph"[\s\S]*?\}/g, "")
+            .replace(/\{[\s\S]*?"second_paragraph"[\s\S]*?\}/g, "")
+            .replace(/\{[\s\S]*?"third_paragraph"[\s\S]*?\}/g, "")
+            .replace(/\{[\s\S]*?"fourth_paragraph"[\s\S]*?\}/g, "")
+            .replace(/\{[\s\S]*?"source_type"[\s\S]*?\}/g, "")
+            .replace(/\{[\s\S]*?"references"[\s\S]*?\}/g, "")
+            // JSON 객체 시작 부분 제거 (불완전한 JSON 블록)
+            .replace(/\{[^}]*"source_type"[^}]*/g, "")
+            .replace(/\{[^}]*"first_paragraph"[^}]*/g, "")
+            .replace(/\{[^}]*"second_paragraph"[^}]*/g, "")
+            .replace(/\{[^}]*"third_paragraph"[^}]*/g, "")
+            .replace(/\{[^}]*"fourth_paragraph"[^}]*/g, "")
+            // JSON 필드명 문자열 제거 (따옴표 포함)
+            .replace(/"first_paragraph"\s*:/g, "")
+            .replace(/"second_paragraph"\s*:/g, "")
+            .replace(/"third_paragraph"\s*:/g, "")
+            .replace(/"fourth_paragraph"\s*:/g, "")
+            .replace(/"references"\s*:/g, "")
+            .replace(/"source_type"\s*:/g, "")
+            .replace(/"title"\s*:/g, "")
+            .replace(/"url"\s*:/g, "")
+            .replace(/"pmid"\s*:/g, "")
+            .replace(/"year"\s*:/g, "")
+            .replace(/"authors"\s*:/g, "")
+            // 모든 태그 패턴 제거 (완전한 태그)
+            .replace(/\[\[P[1-4]\]\]/g, "")
+            .replace(/\[\[\/P[1-4]\]\]/g, "")
+            .replace(/\[\[JSON\]\]/g, "")
+            .replace(/\[\[\/JSON\]\]/g, "")
+            // 불완전한 태그 패턴 제거
+            .replace(/\[\[[PJ][1-4]?\/?\]?\]?/g, "")
+            .replace(/\[\[[^\]]*\]\]/g, "") // [[...]] 형태의 모든 태그
+            // 단독으로 나타나는 태그 문자들 제거 (P1, P2, P3, P4, /P1, /P2, /P3, /P4)
+            .replace(/\bP[1-4]\b/g, "")
+            .replace(/\b\/P[1-4]\b/g, "")
+            .replace(/\bJSON\b/g, "")
+            .replace(/\b\/JSON\b/g, "")
+            // 슬래시 제거 (단독으로 나타나는 경우)
+            .replace(/\s*\/\s*/g, " ")
+            .replace(/\/+/g, "")
+            // 남은 태그 괄호 제거
+            .replace(/\[\[/g, "")
+            .replace(/\]\]/g, "")
+            // 섹션 헤더 제거 (공백 허용, 여러 줄 모드)
+            .replace(/\(1\)\s*기전\s*:/g, "")
+            .replace(/\(2\)\s*근거\s*:/g, "")
+            .replace(/\(3\)\s*환자\s*관련\s*해석\s*:/g, "")
+            .replace(/\(4\)\s*실천적\s*조언\s*:/g, "")
+            // 숫자 패턴의 섹션 헤더 제거 (예: (1) , (2) 등, 여러 줄 모드)
+            .replace(/^\(\d+\)\s*[가-힣\s]*:\s*/gm, "")
+            // 줄 시작의 섹션 헤더 제거 (예: 줄바꿈 후 (1) 기전:)
+            .replace(/\n\s*\(\d+\)\s*[가-힣\s]*:\s*/g, "\n")
+            // 연속된 공백 정리
+            .replace(/\n{3,}/g, "\n\n")
+            .replace(/\s{2,}/g, " ") // 연속된 공백을 하나로
+            .trim();
+
+          return cleanedText;
+        });
+      },
+      onSectionDone: (section) => {
+        console.log("[SSE] Section done:", section);
+        // 섹션 완료 시 줄바꿈 추가하고 전체 텍스트 정리
+        setStreamingText((prev) => {
+          const newText = prev + "\n\n";
+          // 태그 및 불필요한 내용 제거 (혹시 섹션 완료 시점에 남아있을 수 있는 태그)
+          return (
+            newText
+              // JSON 태그와 그 사이의 모든 내용 제거
+              .replace(/\[\[JSON\]\][\s\S]*?\[\[\/JSON\]\]/g, "")
+              // JSON 블록 전체 제거
+              .replace(
+                /\{[\s\S]*?"(first_paragraph|second_paragraph|third_paragraph|fourth_paragraph|references|source_type|title|url|pmid|year|authors)"[\s\S]*?\}/g,
+                "",
+              )
+              .replace(/\{[^}]*"source_type"[^}]*/g, "")
+              // JSON 필드명 문자열 제거 (따옴표 포함)
+              .replace(/"first_paragraph"\s*:/g, "")
+              .replace(/"second_paragraph"\s*:/g, "")
+              .replace(/"third_paragraph"\s*:/g, "")
+              .replace(/"fourth_paragraph"\s*:/g, "")
+              .replace(/"references"\s*:/g, "")
+              .replace(/"source_type"\s*:/g, "")
+              .replace(/"title"\s*:/g, "")
+              .replace(/"url"\s*:/g, "")
+              .replace(/"pmid"\s*:/g, "")
+              .replace(/"year"\s*:/g, "")
+              .replace(/"authors"\s*:/g, "")
+              // 모든 태그 패턴 제거
+              .replace(/\[\[P[1-4]\]\]/g, "")
+              .replace(/\[\[\/P[1-4]\]\]/g, "")
+              .replace(/\[\[JSON\]\]/g, "")
+              .replace(/\[\[\/JSON\]\]/g, "")
+              .replace(/\[\[[PJ][1-4]?\/?\]?\]?/g, "")
+              .replace(/\[\[[^\]]*\]\]/g, "")
+              // 단독으로 나타나는 태그 문자들 제거
+              .replace(/\bP[1-4]\b/g, "")
+              .replace(/\b\/P[1-4]\b/g, "")
+              .replace(/\bJSON\b/g, "")
+              .replace(/\b\/JSON\b/g, "")
+              // 슬래시 제거 (단독으로 나타나는 경우)
+              .replace(/\s*\/\s*/g, " ")
+              .replace(/\/+/g, "")
+              // 남은 태그 괄호 제거
+              .replace(/\[\[/g, "")
+              .replace(/\]\]/g, "")
+              // 연속된 공백 정리
+              .replace(/\n{3,}/g, "\n\n")
+              .replace(/\s{2,}/g, " ") // 연속된 공백을 하나로
+              .trim()
+          );
+        });
+      },
+      onComplete: (outputPayload) => {
+        console.log("[SSE] Complete:", outputPayload);
+        setOutput(outputPayload);
+        setStatus("완료!");
+        // 최종 결과를 하나의 텍스트로 합치기
+        const finalText = [
+          outputPayload.first_paragraph,
+          outputPayload.second_paragraph,
+          outputPayload.third_paragraph,
+          outputPayload.fourth_paragraph,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        setStreamingText(finalText);
+        setIsAILoading(false);
+      },
+      onSaved: () => {
+        console.log("[SSE] Saved");
+        setSaved(true);
+        setIsStreaming(false);
+        setIsWriterStreaming(false);
+        isWriterStreamingRef.current = false;
+      },
+      onError: (error) => {
+        console.error("[SSE] Error:", error);
+        setStatus(`오류: ${error.message}`);
+        setIsAILoading(false);
+        setIsStreaming(false);
+        setIsWriterStreaming(false);
+        isWriterStreamingRef.current = false;
+      },
+    });
   }, [actionData, params.botMessageRoomId, userId]);
 
   // Supabase real-time 구독 (사용자 메시지 + AI 메시지)
@@ -489,27 +498,39 @@ export default function BotMessagePage({
               </p>
             </div>
           </div>
-          <Form method="post">
-            <input type="hidden" name="action" value="leave" />
-            <Button
-              type="submit"
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={(e) => {
-                if (
-                  !confirm(
-                    "이 방이 종료되면, 기존에 대화가 모두 사라집니다. 종료하시겠습니까?",
-                  )
-                ) {
-                  e.preventDefault();
-                }
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              채팅방 종료
-            </Button>
-          </Form>
+          <div className="flex items-center gap-2">
+            <Link to="/my/dashboard/bookmarks">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Bookmark className="h-4 w-4" />
+                북마크 보러가기
+              </Button>
+            </Link>
+            <Form method="post">
+              <input type="hidden" name="action" value="leave" />
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={(e) => {
+                  if (
+                    !confirm(
+                      "이 방이 종료되면, 기존에 대화가 모두 사라집니다. 종료하시겠습니까?",
+                    )
+                  ) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                채팅방 종료
+              </Button>
+            </Form>
+          </div>
         </CardHeader>
       </Card>
 
@@ -527,12 +548,9 @@ export default function BotMessagePage({
             // 사용자 메시지
             if (isUser) {
               return (
-                <div
-                  key={message.bot_message_id}
-                  className="flex justify-end"
-                >
-                  <div className="flex max-w-xs gap-3 lg:max-w-md flex-row-reverse">
-                    <div className="rounded-lg px-4 py-2 bg-blue-500 text-white">
+                <div key={message.bot_message_id} className="flex justify-end">
+                  <div className="flex max-w-xs flex-row-reverse gap-3 lg:max-w-md">
+                    <div className="rounded-lg bg-blue-500 px-4 py-2 text-white">
                       <p className="text-sm whitespace-pre-wrap">
                         {message.content}
                       </p>
@@ -569,13 +587,13 @@ export default function BotMessagePage({
                   key={message.bot_message_id}
                   className="flex justify-start"
                 >
-                  <div className="flex max-w-3xl gap-3 flex-row">
+                  <div className="flex max-w-3xl flex-row gap-3">
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                         EVI
                       </AvatarFallback>
                     </Avatar>
-                    <div className="w-full space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+                    <div className="bg-card w-full space-y-6 rounded-xl border p-6 shadow-sm">
                       {aiContent ? (
                         <>
                           {/* 문단들 */}
@@ -583,7 +601,7 @@ export default function BotMessagePage({
                             {paragraphs.map((paragraph, index) => (
                               <p
                                 key={index}
-                                className="text-foreground leading-7 text-base"
+                                className="text-foreground text-base leading-7"
                               >
                                 {paragraph}
                               </p>
@@ -594,7 +612,7 @@ export default function BotMessagePage({
                           {aiContent.references &&
                             aiContent.references.length > 0 && (
                               <div className="border-t pt-6">
-                                <h3 className="text-muted-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                                <h3 className="text-muted-foreground mb-4 text-sm font-semibold tracking-wide uppercase">
                                   참고 문헌
                                 </h3>
                                 <ol className="space-y-3">
@@ -622,13 +640,14 @@ export default function BotMessagePage({
                                             {ref.title}
                                           </a>
                                         ) : (
-                                          <span className="font-medium text-foreground">
+                                          <span className="text-foreground font-medium">
                                             {ref.title}
                                           </span>
                                         )}
                                         {ref.source_type && (
                                           <>
-                                            . <span className="font-medium">
+                                            .{" "}
+                                            <span className="font-medium">
                                               {ref.source_type}
                                             </span>
                                           </>
@@ -656,13 +675,122 @@ export default function BotMessagePage({
                             )}
                         </>
                       ) : (
-                        <p className="text-foreground whitespace-pre-wrap leading-7 text-base">
+                        <p className="text-foreground text-base leading-7 whitespace-pre-wrap">
                           {message.content}
                         </p>
                       )}
-                      <p className="mt-4 text-xs text-muted-foreground">
-                        {new Date(message.created_at).toLocaleTimeString()}
-                      </p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <p className="text-muted-foreground text-xs">
+                          {new Date(message.created_at).toLocaleTimeString()}
+                        </p>
+                        {/* 건강 질문인 경우에만 북마크 버튼 표시 */}
+                        {aiContent && aiContent.is_health_question === true && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                            onClick={async () => {
+                              if (
+                                bookmarkingMessageId === message.bot_message_id
+                              ) {
+                                return;
+                              }
+
+                              // 해당 AI 메시지 이전의 사용자 질문 찾기
+                              const messageIndex = botMessages.findIndex(
+                                (m) =>
+                                  m.bot_message_id === message.bot_message_id,
+                              );
+                              const userQuestion =
+                                messageIndex > 0
+                                  ? botMessages
+                                      .slice(0, messageIndex)
+                                      .reverse()
+                                      .find((m) => m.sender_id === userId)
+                                      ?.content
+                                  : "";
+
+                              if (!userQuestion) {
+                                alert("질문을 찾을 수 없습니다.");
+                                return;
+                              }
+
+                              setBookmarkingMessageId(message.bot_message_id);
+
+                              try {
+                                const response = await fetch(
+                                  "/chat/api/save-health-bookmark",
+                                  {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      botMessageId: String(
+                                        message.bot_message_id,
+                                      ),
+                                      botMessageRoomId: params.botMessageRoomId,
+                                      question: userQuestion,
+                                      answer: {
+                                        first_paragraph:
+                                          aiContent.first_paragraph,
+                                        second_paragraph:
+                                          aiContent.second_paragraph,
+                                        third_paragraph:
+                                          aiContent.third_paragraph,
+                                        fourth_paragraph:
+                                          aiContent.fourth_paragraph,
+                                        references: aiContent.references,
+                                        warning: aiContent.warning,
+                                      },
+                                      title: userQuestion.substring(0, 100),
+                                    }),
+                                  },
+                                );
+
+                                if (!response.ok) {
+                                  const errorData = await response
+                                    .json()
+                                    .catch(() => ({}));
+                                  throw new Error(
+                                    errorData.error ||
+                                      "북마크 저장에 실패했습니다.",
+                                  );
+                                }
+
+                                alert("북마크에 저장되었습니다!");
+                              } catch (error) {
+                                console.error(
+                                  "Failed to save bookmark:",
+                                  error,
+                                );
+                                alert(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "북마크 저장에 실패했습니다.",
+                                );
+                              } finally {
+                                setBookmarkingMessageId(null);
+                              }
+                            }}
+                            disabled={
+                              bookmarkingMessageId === message.bot_message_id
+                            }
+                          >
+                            {bookmarkingMessageId === message.bot_message_id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                저장 중...
+                              </>
+                            ) : (
+                              <>
+                                <Bookmark className="h-4 w-4" />
+                                북마크로 저장하기
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -678,22 +806,22 @@ export default function BotMessagePage({
           <div className="space-y-4">
             {/* 검색 중 상태 표시 (writer 스트리밍이 아닐 때만) */}
             {!isWriterStreaming && status && (
-              <div className="flex items-center gap-2 transition-opacity duration-300 animate-in fade-in">
-                <Loader2 className="size-4 animate-spin text-primary" />
+              <div className="animate-in fade-in flex items-center gap-2 transition-opacity duration-300">
+                <Loader2 className="text-primary size-4 animate-spin" />
                 {getStatusIcon(status)}
-                <span className="text-sm text-muted-foreground">{status}</span>
+                <span className="text-muted-foreground text-sm">{status}</span>
               </div>
             )}
 
             {saved && (
-              <div className="flex items-center gap-2 transition-opacity duration-300 animate-in fade-in">
+              <div className="animate-in fade-in flex items-center gap-2 transition-opacity duration-300">
                 <div className="size-4 rounded-full bg-green-500" />
                 <span className="text-sm text-green-600">✅ 저장 완료</span>
               </div>
             )}
 
             {output?.warning && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 transition-opacity duration-300 animate-in fade-in">
+              <div className="animate-in fade-in rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 transition-opacity duration-300">
                 ⚠ {output.warning}
               </div>
             )}
@@ -701,23 +829,24 @@ export default function BotMessagePage({
             {/* Writer 스트리밍이 시작되면 하나의 텍스트 영역에 표시 */}
             {(isWriterStreaming || output) && (
               <div className="flex justify-start">
-                <div className="flex max-w-3xl gap-3 flex-row">
+                <div className="flex max-w-3xl flex-row gap-3">
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                       EVI
                     </AvatarFallback>
                   </Avatar>
-                  <div className="w-full space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+                  <div className="bg-card w-full space-y-6 rounded-xl border p-6 shadow-sm">
                     <div className="space-y-5">
-                      <div className="text-foreground whitespace-pre-wrap leading-7 text-base">
-                        {streamingText || (isWriterStreaming ? "작성 중..." : "")}
+                      <div className="text-foreground text-base leading-7 whitespace-pre-wrap">
+                        {streamingText ||
+                          (isWriterStreaming ? "작성 중..." : "")}
                       </div>
                     </div>
 
                     {/* 참고 문헌 (완료 후에만 표시) */}
                     {output?.references && output.references.length > 0 && (
                       <div className="border-t pt-6">
-                        <h3 className="text-muted-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                        <h3 className="text-muted-foreground mb-4 text-sm font-semibold tracking-wide uppercase">
                           참고 문헌
                         </h3>
                         <ol className="space-y-3">
@@ -732,9 +861,7 @@ export default function BotMessagePage({
                                 key={i}
                                 className="text-muted-foreground text-sm leading-relaxed"
                               >
-                                <span className="font-medium">
-                                  {i + 1}.{" "}
-                                </span>
+                                <span className="font-medium">{i + 1}. </span>
                                 {hasValidUrl ? (
                                   <a
                                     href={ref.url}
@@ -745,13 +872,14 @@ export default function BotMessagePage({
                                     {ref.title}
                                   </a>
                                 ) : (
-                                  <span className="font-medium text-foreground">
+                                  <span className="text-foreground font-medium">
                                     {ref.title}
                                   </span>
                                 )}
                                 {ref.source_type && (
                                   <>
-                                    . <span className="font-medium">
+                                    .{" "}
+                                    <span className="font-medium">
                                       {ref.source_type}
                                     </span>
                                   </>
@@ -828,25 +956,25 @@ export const shouldRevalidate = (args: ShouldRevalidateFunctionArgs) => {
 // 상태 메시지에 따른 아이콘 반환
 function getStatusIcon(status: string) {
   if (status.includes("분석")) {
-    return <Search className="size-4 text-primary" />;
+    return <Search className="text-primary size-4" />;
   }
   if (status.includes("RAG") || status.includes("검색")) {
-    return <FileSearch className="size-4 text-primary" />;
+    return <FileSearch className="text-primary size-4" />;
   }
   if (status.includes("웹")) {
-    return <Globe className="size-4 text-primary" />;
+    return <Globe className="text-primary size-4" />;
   }
   if (status.includes("PubMed") || status.includes("논문")) {
-    return <BookOpen className="size-4 text-primary" />;
+    return <BookOpen className="text-primary size-4" />;
   }
   if (status.includes("Scholar")) {
-    return <BookOpen className="size-4 text-primary" />;
+    return <BookOpen className="text-primary size-4" />;
   }
   if (status.includes("환자")) {
-    return <User className="size-4 text-primary" />;
+    return <User className="text-primary size-4" />;
   }
   if (status.includes("작성") || status.includes("문서")) {
-    return <FileText className="size-4 text-primary" />;
+    return <FileText className="text-primary size-4" />;
   }
   return null;
 }
