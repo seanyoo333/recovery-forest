@@ -87,9 +87,8 @@ export default function CreateReviewDialog() {
             <InputPair
               id="order_number"
               name="order_number"
-              label=""
-              hideLabel
-              description=""
+              label="주문번호"
+              description="온라인 몰에서 발급된 주문번호를 입력해 주세요."
               placeholder="예: 2024-01-01-12345678"
               required
             />

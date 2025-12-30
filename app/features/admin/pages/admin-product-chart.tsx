@@ -1,25 +1,25 @@
 import type { Route } from "./+types/admin-product-chart";
 
+import { Link } from "react-router";
 import { Area, AreaChart } from "recharts";
 import { CartesianGrid, XAxis } from "recharts";
-import { Link } from "react-router";
 
+import { Button } from "~/core/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
-import { Button } from "~/core/components/ui/button";
 import type { ChartConfig } from "~/core/components/ui/chart";
 import { ChartTooltipContent } from "~/core/components/ui/chart";
 import { ChartTooltip } from "~/core/components/ui/chart";
 import { ChartContainer } from "~/core/components/ui/chart";
 import makeServerClient from "~/core/lib/supa-client.server";
+import { getAllProductsForAdmin } from "~/features/products/queries";
 
 import { requireAdminRole, requireAuthentication } from "../guards.server";
 import { getWeeklyEventStats } from "../queries";
-import { getAllProductsForAdmin } from "~/features/products/queries";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "제품 차트 | 관리자 | Evidence Base" }];
@@ -91,31 +91,31 @@ export default function AdminProductChartPage({
                 <tbody>
                   {products.map((product: any) => (
                     <tr key={product.product_id} className="border-b">
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                      <td className="text-muted-foreground px-3 py-2 text-xs">
                         {product.product_id}
                       </td>
                       <td className="px-3 py-2 font-medium">{product.name}</td>
-                      <td className="px-3 py-2 text-muted-foreground">
+                      <td className="text-muted-foreground px-3 py-2">
                         {product.tagline}
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">
+                      <td className="text-muted-foreground px-3 py-2">
                         {product.category_id ?? "-"}
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                      <td className="text-muted-foreground px-3 py-2 text-xs">
                         {product.created_at
                           ? new Date(product.created_at).toLocaleDateString()
                           : "-"}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-2">
-                          <Button asChild size="xs" variant="outline">
+                          <Button asChild size="sm" variant="outline">
                             <Link
                               to={`/products/${product.product_id}/overview`}
                             >
                               공개 페이지
                             </Link>
                           </Button>
-                          <Button asChild size="xs">
+                          <Button asChild size="sm">
                             <Link
                               to={`/my/admin-dashboard/products/${product.product_id}`}
                             >

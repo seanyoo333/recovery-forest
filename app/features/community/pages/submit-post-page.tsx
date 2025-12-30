@@ -82,7 +82,7 @@ export default function SubmitPostPage({
           id="title"
           description="(40자 이내)"
           required
-          placeholder="What's on your mind?"
+          placeholder="무엇이 궁금하신가요?"
         />
         {actionData && "fieldErrors" in actionData && (
           <div className="text-red-500">

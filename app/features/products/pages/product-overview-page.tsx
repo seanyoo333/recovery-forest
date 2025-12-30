@@ -10,7 +10,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
   const { error, data } = await adminClient
     .from("products")
     .select("product_id")
-    .eq("product_id", params.productId)
+    .eq("product_id", Number(params.productId))
     .single();
 
   if (data) {
@@ -26,7 +26,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
       event_data: {
         product_id: params.productId,
       },
-      profile_id: user?.id || null,
+      profile_id: user?.id as string,
     });
   }
 

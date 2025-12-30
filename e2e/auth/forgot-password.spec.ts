@@ -47,6 +47,9 @@ test.describe("Reset Password UI", () => {
   // Navigate to the forgot password page before each test
   test.beforeEach(async ({ page }) => {
     await page.goto("/auth/forgot-password/reset");
+    // Wait for page to load
+    await page.waitForLoadState("networkidle");
+    await page.waitForSelector("#email", { state: "visible" });
   });
 
   /**

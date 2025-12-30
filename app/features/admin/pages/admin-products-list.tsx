@@ -1,4 +1,4 @@
-import type { Route } from "../../users/screens/+types/admin-products-list";
+import type { Route } from "./+types/admin-products-list";
 
 import { Link } from "react-router";
 

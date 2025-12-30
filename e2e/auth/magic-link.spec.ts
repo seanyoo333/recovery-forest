@@ -46,6 +46,9 @@ test.describe("Magic Link UI", () => {
   // Navigate to the magic link page before each test
   test.beforeEach(async ({ page }) => {
     await page.goto("/auth/magic-link");
+    // Wait for page to load
+    await page.waitForLoadState("networkidle");
+    await page.waitForSelector("#email", { state: "visible" });
   });
 
   /**
@@ -127,6 +130,9 @@ test.describe.serial("Magic Link Flow", () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto("/auth/magic-link");
+    // Wait for page to load
+    await page.waitForLoadState("networkidle");
+    await page.waitForSelector("#email", { state: "visible" });
   });
 
   /**
@@ -199,11 +205,33 @@ test.describe.serial("Magic Link Flow", () => {
     page,
   }) => {
     // Get the confirmation token directly from the database
-    const [{ confirmation_token }] = await db.execute<{
-      confirmation_token: string;
-    }>(
-      sql`SELECT confirmation_token FROM auth.users WHERE email = ${TEST_EMAIL}`,
-    );
+    // 토큰이 생성될 때까지 재시도 (Supabase가 토큰을 생성하는 데 시간이 걸릴 수 있음)
+    let confirmation_token: string | null = null;
+    let retries = 10;
+
+    while (retries > 0 && !confirmation_token) {
+      const results = await db.execute<{
+        confirmation_token: string | null;
+      }>(
+        sql`SELECT confirmation_token FROM auth.users WHERE email = ${TEST_EMAIL}`,
+      );
+
+      if (results.length > 0 && results[0].confirmation_token) {
+        confirmation_token = results[0].confirmation_token;
+        break;
+      }
+
+      // Wait 1 second before retrying
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      retries--;
+    }
+
+    // 토큰이 없으면 에러 발생
+    if (!confirmation_token) {
+      throw new Error(
+        `Confirmation token not found for user ${TEST_EMAIL} after ${10 - retries} retries`,
+      );
+    }
 
     // Simulate clicking the magic link in the email
     await page.goto(
@@ -211,7 +239,7 @@ test.describe.serial("Magic Link Flow", () => {
     );
 
     // Verify successful login by checking redirect to home page
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/", { timeout: 10000 });
   });
 
   /**

@@ -79,7 +79,13 @@ export async function action({ request }: { request: Request }) {
         name,
         marketing_consent: marketingConsent,
         avatar: avatarUrl,
-        role,
+        role: role as
+          | "healthy"
+          | "patient"
+          | "caregiver"
+          | "doctor"
+          | "health_exp"
+          | "other",
         headline,
         bio,
       })

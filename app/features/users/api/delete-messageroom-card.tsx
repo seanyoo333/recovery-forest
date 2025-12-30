@@ -1,4 +1,4 @@
-import type { Route } from "./+types/delete-message-bubble";
+import type { Route } from "./+types/delete-messageroom-card";
 
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";

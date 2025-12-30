@@ -27,6 +27,7 @@ export const locations = pgEnum(
 export const levels = pgEnum("level", LEVELS);
 
 export const photoTypes = pgEnum("photo_type", [
+  "logo",
   "exterior",
   "interior",
   "equipment",
@@ -71,42 +72,42 @@ export const clinics = pgTable(
       as: "permissive",
       using: sql`true`,
     }),
-    // 병원 소유자 또는 관리자만 병원을 생성할 수 있음
+    // 관리자만 병원을 생성할 수 있음
     pgPolicy("clinics-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`${authUid} = ${table.clinic_boss} OR EXISTS (
+      withCheck: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
         AND admin_role IN ('super_admin', 'clinic_admin')
         AND is_active = true
       )`,
     }),
-    // 병원 소유자 또는 관리자만 병원을 수정할 수 있음
+    // 관리자만 병원을 수정할 수 있음
     pgPolicy("clinics-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.clinic_boss} OR EXISTS (
+      using: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
         AND admin_role IN ('super_admin', 'clinic_admin')
         AND is_active = true
       )`,
-      withCheck: sql`${authUid} = ${table.clinic_boss} OR EXISTS (
+      withCheck: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
         AND admin_role IN ('super_admin', 'clinic_admin')
         AND is_active = true
       )`,
     }),
-    // 병원 소유자 또는 관리자만 병원을 삭제할 수 있음
+    // 관리자만 병원을 삭제할 수 있음
     pgPolicy("clinics-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`${authUid} = ${table.clinic_boss} OR EXISTS (
+      using: sql`EXISTS (
         SELECT 1 FROM admin_permissions
         WHERE admin_id = ${authUid}
         AND admin_role IN ('super_admin', 'clinic_admin')
@@ -148,74 +149,46 @@ export const clinicPhotos = pgTable(
       as: "permissive",
       using: sql`true`,
     }),
-    // 병원 소유자 또는 관리자만 병원 사진을 생성할 수 있음
+    // 관리자만 병원 사진을 생성할 수 있음
     pgPolicy("clinic-photos-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
       withCheck: sql`EXISTS (
-        SELECT 1 FROM clinics
-        WHERE clinic_id = ${table.clinic_id}
-        AND (
-          clinic_boss = ${authUid}
-          OR EXISTS (
-            SELECT 1 FROM admin_permissions
-            WHERE admin_id = ${authUid}
-            AND admin_role IN ('super_admin', 'clinic_admin')
-            AND is_active = true
-          )
-        )
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'clinic_admin')
+        AND is_active = true
       )`,
     }),
-    // 병원 소유자 또는 관리자만 병원 사진을 수정할 수 있음
+    // 관리자만 병원 사진을 수정할 수 있음
     pgPolicy("clinic-photos-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
       using: sql`EXISTS (
-        SELECT 1 FROM clinics
-        WHERE clinic_id = ${table.clinic_id}
-        AND (
-          clinic_boss = ${authUid}
-          OR EXISTS (
-            SELECT 1 FROM admin_permissions
-            WHERE admin_id = ${authUid}
-            AND admin_role IN ('super_admin', 'clinic_admin')
-            AND is_active = true
-          )
-        )
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'clinic_admin')
+        AND is_active = true
       )`,
       withCheck: sql`EXISTS (
-        SELECT 1 FROM clinics
-        WHERE clinic_id = ${table.clinic_id}
-        AND (
-          clinic_boss = ${authUid}
-          OR EXISTS (
-            SELECT 1 FROM admin_permissions
-            WHERE admin_id = ${authUid}
-            AND admin_role IN ('super_admin', 'clinic_admin')
-            AND is_active = true
-          )
-        )
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'clinic_admin')
+        AND is_active = true
       )`,
     }),
-    // 병원 소유자 또는 관리자만 병원 사진을 삭제할 수 있음
+    // 관리자만 병원 사진을 삭제할 수 있음
     pgPolicy("clinic-photos-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
       using: sql`EXISTS (
-        SELECT 1 FROM clinics
-        WHERE clinic_id = ${table.clinic_id}
-        AND (
-          clinic_boss = ${authUid}
-          OR EXISTS (
-            SELECT 1 FROM admin_permissions
-            WHERE admin_id = ${authUid}
-            AND admin_role IN ('super_admin', 'clinic_admin')
-            AND is_active = true
-          )
-        )
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'clinic_admin')
+        AND is_active = true
       )`,
     }),
   ],

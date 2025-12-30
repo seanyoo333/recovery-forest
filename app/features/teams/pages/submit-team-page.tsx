@@ -58,8 +58,8 @@ export default function SubmitTeamPage({ actionData }: Route.ComponentProps) {
         <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-3">
           <InputPair
             label="전문가 그룹명"
-            description="(20 characters max)"
-            placeholder="i.e 좋은습관"
+            description="(최대 20자)"
+            placeholder="예: 좋은습관"
             name="name"
             maxLength={20}
             type="text"
@@ -119,8 +119,8 @@ export default function SubmitTeamPage({ actionData }: Route.ComponentProps) {
           )}
           <InputPair
             label="전문가 그룹 소개"
-            description="(200자 이내)"
-            placeholder="i.e 좋은습관은 좋은 습관을 만드는 팀입니다."
+            description="(최대 200자)"
+            placeholder="예: 좋은습관은 좋은 습관을 만드는 팀입니다."
             name="description"
             maxLength={200}
             type="text"

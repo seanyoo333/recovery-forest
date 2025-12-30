@@ -1,25 +1,24 @@
 /**
  * User Settings E2E Tests
- * 
+ *
  * This file contains end-to-end tests for the user settings functionality, including:
  * 1. Theme switching (light/dark mode)
  * 2. Locale/language switching (English, Spanish, Korean)
- * 
+ *
  * These tests verify that user preferences are correctly applied and persisted
  * across page reloads, ensuring a consistent user experience.
- * 
+ *
  * The tests use Playwright for browser automation and verify changes to
  * HTML attributes that reflect the current theme and locale settings.
  */
-
 import { expect, test } from "@playwright/test";
 
 /**
  * Test suite for the Theme Switcher functionality
- * 
+ *
  * These tests verify that users can switch between light and dark themes,
  * and that the selected theme is correctly applied to the page.
- * 
+ *
  * The theme is reflected in the HTML class attribute, which controls
  * the application of CSS variables for theming.
  */
@@ -34,18 +33,23 @@ test.describe("Theme Switcher", () => {
 
   /**
    * Test that verifies switching to dark mode
-   * 
+   *
    * This test clicks the theme switcher dropdown, selects the "Dark" option,
    * and verifies that the HTML element has the "dark" class applied.
-   * 
+   *
    * The presence of the "dark" class indicates that dark mode styles
    * are being applied throughout the application.
    */
   test("should switch to dark mode", async ({ page }) => {
     // Open the theme switcher dropdown
     await page.getByTestId("theme-switcher").click();
+    // Wait for dropdown menu to open
+    await page.waitForSelector('[role="menuitem"]', {
+      state: "visible",
+      timeout: 5000,
+    });
     // Select the dark theme option
-    await page.getByText("Dark", { exact: true }).click();
+    await page.getByRole("menuitem", { name: /Dark/ }).click();
     // Get the class attribute from the HTML element
     const htmlClass = await page.locator("html").getAttribute("class");
     // Verify the dark class is applied
@@ -54,18 +58,23 @@ test.describe("Theme Switcher", () => {
 
   /**
    * Test that verifies switching to light mode
-   * 
+   *
    * This test clicks the theme switcher dropdown, selects the "Light" option,
    * and verifies that the HTML element has the "light" class applied.
-   * 
+   *
    * The presence of the "light" class indicates that light mode styles
    * are being applied throughout the application.
    */
   test("should switch to light mode", async ({ page }) => {
     // Open the theme switcher dropdown
     await page.getByTestId("theme-switcher").click();
+    // Wait for dropdown menu to open
+    await page.waitForSelector('[role="menuitem"]', {
+      state: "visible",
+      timeout: 5000,
+    });
     // Select the light theme option
-    await page.getByText("Light", { exact: true }).click();
+    await page.getByRole("menuitem", { name: /Light/ }).click();
     // Get the class attribute from the HTML element
     const htmlClass = await page.locator("html").getAttribute("class");
     // Verify the light class is applied
@@ -75,10 +84,10 @@ test.describe("Theme Switcher", () => {
 
 /**
  * Test suite for the Locale Switcher functionality
- * 
+ *
  * These tests verify that users can switch between different languages (locales),
  * and that the selected locale is correctly applied and persisted.
- * 
+ *
  * The locale is reflected in the HTML lang attribute, which affects:
  * - Text content throughout the application
  * - Date and number formatting
@@ -96,19 +105,24 @@ test.describe("Locale Switcher", () => {
 
   /**
    * Test that verifies switching to Spanish locale
-   * 
+   *
    * This test clicks the language switcher dropdown, selects the "Spanish" option,
    * waits for the change to be applied, reloads the page, and verifies that
    * the HTML element has the "es" (Spanish) lang attribute.
-   * 
+   *
    * The page reload confirms that the language preference is persisted
    * using cookies or local storage.
    */
   test("should switch to Spanish", async ({ page }) => {
     // Open the language switcher dropdown
     await page.getByTestId("lang-switcher").click();
+    // Wait for dropdown menu to open
+    await page.waitForSelector('[role="menuitem"]', {
+      state: "visible",
+      timeout: 5000,
+    });
     // Select the Spanish language option
-    await page.getByText("Spanish").click();
+    await page.getByRole("menuitem", { name: /Spanish|Español/ }).click();
     // Wait for the language change to be applied and saved
     await page.waitForTimeout(2000);
     // Reload the page to verify persistence
@@ -121,19 +135,24 @@ test.describe("Locale Switcher", () => {
 
   /**
    * Test that verifies switching to Korean locale
-   * 
+   *
    * This test clicks the language switcher dropdown, selects the "Korean" option,
    * waits for the change to be applied, reloads the page, and verifies that
    * the HTML element has the "ko" (Korean) lang attribute.
-   * 
+   *
    * The page reload confirms that the language preference is persisted
    * using cookies or local storage.
    */
   test("should switch to Korean", async ({ page }) => {
     // Open the language switcher dropdown
     await page.getByTestId("lang-switcher").click();
+    // Wait for dropdown menu to open
+    await page.waitForSelector('[role="menuitem"]', {
+      state: "visible",
+      timeout: 5000,
+    });
     // Select the Korean language option
-    await page.getByText("Korean").click();
+    await page.getByRole("menuitem", { name: /Korean|한국어/ }).click();
     // Wait for the language change to be applied and saved
     await page.waitForTimeout(2000);
     // Reload the page to verify persistence
@@ -146,19 +165,24 @@ test.describe("Locale Switcher", () => {
 
   /**
    * Test that verifies switching to English locale
-   * 
+   *
    * This test clicks the language switcher dropdown, selects the "English" option,
    * waits for the change to be applied, reloads the page, and verifies that
    * the HTML element has the "en" (English) lang attribute.
-   * 
+   *
    * The page reload confirms that the language preference is persisted
    * using cookies or local storage.
    */
   test("should switch to English", async ({ page }) => {
     // Open the language switcher dropdown
     await page.getByTestId("lang-switcher").click();
+    // Wait for dropdown menu to open
+    await page.waitForSelector('[role="menuitem"]', {
+      state: "visible",
+      timeout: 5000,
+    });
     // Select the English language option
-    await page.getByText("English").click();
+    await page.getByRole("menuitem", { name: /English|영어/ }).click();
     // Wait for the language change to be applied and saved
     await page.waitForTimeout(2000);
     // Reload the page to verify persistence

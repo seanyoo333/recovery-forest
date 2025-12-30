@@ -7,7 +7,7 @@ import { Button } from "~/core/components/ui/button";
 import makeServerClient from "~/core/lib/supa-client.server";
 
 import { PhotoGallery } from "../components/photo-gallery";
-import { getClinicById } from "../queries";
+import { getClinicById, getClinicPhotos } from "../queries";
 
 export const meta: Route.MetaFunction = () => {
   return [{ title: "Clinic Details | Evidence Base" }];
@@ -16,7 +16,8 @@ export const meta: Route.MetaFunction = () => {
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const [client, headers] = makeServerClient(request);
   const clinic = await getClinicById(client, { clinicId: params.clinicId });
-  return { clinic };
+  const photos = await getClinicPhotos(client, { clinicId: clinic.clinic_id });
+  return { clinic, photos };
 };
 
 export default function ClinicPage({ loaderData }: Route.ComponentProps) {
@@ -27,10 +28,24 @@ export default function ClinicPage({ loaderData }: Route.ComponentProps) {
         <div className="space-y-10 md:col-span-4">
           <div className="flex flex-col gap-2">
             <div className="relative left-10 size-40 overflow-hidden rounded-full bg-white">
-              <img
-                src={loaderData.clinic.clinic_logo}
-                className="h-full w-full object-cover"
-              />
+              {(() => {
+                const logoPhoto = loaderData.photos.find(
+                  (p: any) => p.photo_type === "logo",
+                );
+                return logoPhoto ? (
+                  <img
+                    src={logoPhoto.photo_url}
+                    alt="병원 로고"
+                    className="h-full w-full object-cover"
+                  />
+                ) : loaderData.clinic.clinic_logo ? (
+                  <img
+                    src={loaderData.clinic.clinic_logo}
+                    alt="병원 로고"
+                    className="h-full w-full object-cover"
+                  />
+                ) : null;
+              })()}
             </div>
             <h1 className="text-4xl font-bold">
               {loaderData.clinic.clinic_name}
@@ -84,7 +99,7 @@ export default function ClinicPage({ loaderData }: Route.ComponentProps) {
           </div>
           <div className="space-y-2.5">
             <h4 className="text-2xl font-bold">병원 사진</h4>
-            <PhotoGallery photos={loaderData.clinic.photos} />
+            <PhotoGallery photos={loaderData.photos as unknown as any[]} />
           </div>
         </div>
         <div className="sticky top-20 space-y-5 rounded-lg border p-6 md:col-span-2 md:mt-32">

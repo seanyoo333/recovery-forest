@@ -902,7 +902,7 @@ export type Database = {
         Row: {
           bookmark_id: number
           bot_message_id: number | null
-          bot_message_room_id: number
+          bot_message_room_id: number | null
           content: Json
           created_at: string
           notes: string | null
@@ -913,7 +913,7 @@ export type Database = {
         Insert: {
           bookmark_id?: never
           bot_message_id?: number | null
-          bot_message_room_id: number
+          bot_message_room_id?: number | null
           content: Json
           created_at?: string
           notes?: string | null
@@ -924,7 +924,7 @@ export type Database = {
         Update: {
           bookmark_id?: never
           bot_message_id?: number | null
-          bot_message_room_id?: number
+          bot_message_room_id?: number | null
           content?: Json
           created_at?: string
           notes?: string | null
@@ -933,13 +933,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "health_bookmarks_bot_message_room_id_bot_message_rooms_bot_mess"
-            columns: ["bot_message_room_id"]
-            isOneToOne: false
-            referencedRelation: "bot_message_rooms"
-            referencedColumns: ["bot_message_room_id"]
-          },
           {
             foreignKeyName: "health_bookmarks_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
@@ -2712,7 +2705,13 @@ export type Database = {
       notification_type: "follow" | "review" | "reply"
       patient_medication_status: "none" | "active"
       patient_treatment_status: "ongoing" | "completed" | "follow_up"
-      photo_type: "exterior" | "interior" | "equipment" | "staff" | "other"
+      photo_type:
+        | "logo"
+        | "exterior"
+        | "interior"
+        | "equipment"
+        | "staff"
+        | "other"
       team_position: "doctor" | "nurse" | "nutritionist" | "foresttherapist"
       user_role:
         | "healthy"
@@ -2862,7 +2861,14 @@ export const Constants = {
       notification_type: ["follow", "review", "reply"],
       patient_medication_status: ["none", "active"],
       patient_treatment_status: ["ongoing", "completed", "follow_up"],
-      photo_type: ["exterior", "interior", "equipment", "staff", "other"],
+      photo_type: [
+        "logo",
+        "exterior",
+        "interior",
+        "equipment",
+        "staff",
+        "other",
+      ],
       team_position: ["doctor", "nurse", "nutritionist", "foresttherapist"],
       user_role: [
         "healthy",

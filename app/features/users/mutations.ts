@@ -59,7 +59,7 @@ export const seeNotification = async (
   const { error } = await client
     .from("notifications")
     .update({ seen: true })
-    .eq("notification_id", notificationId)
+    .eq("notification_id", parseInt(notificationId))
     .eq("target_id", userId);
   if (error) {
     throw error;
@@ -87,7 +87,7 @@ export const isReadMessageRoom = async (
   const { error } = await client
     .from("message_room_members")
     .update({ is_read: true })
-    .eq("message_room_id", messageRoomId)
+    .eq("message_room_id", parseInt(messageRoomId))
     .eq("profile_id", userId);
   if (error) {
     throw error;
@@ -101,7 +101,7 @@ export const hideMessageRoom = async (
   const { error } = await client
     .from("message_room_members")
     .update({ is_hidden: true })
-    .eq("message_room_id", messageRoomId)
+    .eq("message_room_id", parseInt(messageRoomId))
     .eq("profile_id", userId);
   if (error) {
     throw error;

@@ -568,6 +568,20 @@
       "when": 1766907536541,
       "tag": "0080_greedy_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1767086110940,
+      "tag": "0081_famous_goblin_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1767086777386,
+      "tag": "0082_curly_silver_centurion",
+      "breakpoints": true
     }
   ]
 }

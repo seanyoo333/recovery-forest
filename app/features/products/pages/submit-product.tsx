@@ -1,4 +1,4 @@
-import type { Route } from "./+types/submit-page";
+import type { Route } from "./+types/submit-product";
 
 import { useState } from "react";
 import { Form, redirect } from "react-router";
@@ -64,23 +64,16 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
   console.log("Uploaded file path:", uploadData.path);
 
-  // 방법 1: Signed URL 생성 (토큰이 포함된 안전한 URL) - 권장
-  const ONE_YEAR_IN_SECONDS = 60 * 60 * 24 * 365; // 1년 = 31,536,000초
-  const { data: signedUrlData } = await client.storage
-    .from("products")
-    .createSignedUrl(uploadData.path, ONE_YEAR_IN_SECONDS);
+  // Public URL 사용 (버킷이 public으로 설정됨)
+  const {
+    data: { publicUrl },
+  } = await client.storage.from("products").getPublicUrl(uploadData.path);
 
-  if (!signedUrlData?.signedUrl) {
-    return { formError: { picture: ["Failed to create signed URL"] } };
+  if (!publicUrl) {
+    return { formError: { picture: ["Failed to get public URL"] } };
   }
 
-  console.log("Signed URL:", signedUrlData.signedUrl);
-
-  // 방법 2: Public URL 사용 (버킷이 public이어야 함)
-  // const { data: { publicUrl } } = await client.storage
-  //   .from("products")
-  //   .getPublicUrl(uploadData.path);
-  // console.log("Public URL:", publicUrl);
+  console.log("Public URL:", publicUrl);
 
   const productId = await createProduct(client, {
     name: rest.name,
@@ -88,7 +81,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
     description: rest.description,
     howItWorks: rest.how_it_works,
     url: rest.url,
-    pictureUrl: signedUrlData.signedUrl, // Signed URL 사용
+    pictureUrl: publicUrl,
     categoryId: rest.category,
     userId,
   });
@@ -127,13 +120,13 @@ export default function SubmitPage({
       >
         <div className="space-y-5">
           <InputPair
-            label="Name"
-            description="This is the name of your product"
+            label="제품명"
+            description="등록할 제품의 이름을 입력하세요"
             id="name"
             name="name"
             type="text"
             required
-            placeholder="Name of your product"
+            placeholder="제품 이름을 입력하세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -141,13 +134,13 @@ export default function SubmitPage({
               <p className="text-red-500">{actionData.formErrors.name}</p>
             )}
           <InputPair
-            label="Tagline"
-            description="60 characters or less"
+            label="태그라인"
+            description="60자 이내로 입력하세요"
             id="tagline"
             name="tagline"
             required
             type="text"
-            placeholder="A concise description of your product"
+            placeholder="제품에 대한 간단한 설명을 입력하세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -156,7 +149,7 @@ export default function SubmitPage({
             )}
           <InputPair
             label="URL"
-            description="The URL of your product"
+            description="제품의 웹사이트 URL을 입력하세요"
             id="url"
             name="url"
             required
@@ -170,13 +163,13 @@ export default function SubmitPage({
             )}
           <InputPair
             textArea
-            label="Description"
-            description="A detailed description of your product"
+            label="설명"
+            description="제품에 대한 상세한 설명을 입력하세요"
             id="description"
             name="description"
             required
             type="text"
-            placeholder="A detailed description of your product"
+            placeholder="제품의 기능, 특징, 장점 등을 자세히 설명해주세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -187,13 +180,13 @@ export default function SubmitPage({
             )}
           <InputPair
             textArea
-            label="How it works"
-            description="How your product works"
+            label="작동 방식"
+            description="제품의 사용 방법이나 작동 원리를 설명하세요"
             id="how_it_works"
             name="how_it_works"
             required
             type="text"
-            placeholder="How your product works"
+            placeholder="제품을 어떻게 사용하는지, 어떤 방식으로 작동하는지 설명해주세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -203,11 +196,11 @@ export default function SubmitPage({
               </p>
             )}
           <SelectPair
-            label="Category"
-            description="The category of your product"
+            label="카테고리"
+            description="제품의 카테고리를 선택하세요"
             name="category"
             required
-            placeholder="Select a category"
+            placeholder="카테고리 선택"
             options={loaderData.categories.map((category) => ({
               label: category.name,
               value: category.category_id.toString(),
@@ -229,9 +222,9 @@ export default function SubmitPage({
             ) : null}
           </div>
           <Label className="flex flex-col gap-1">
-            Picture
+            제품 이미지
             <small className="text-muted-foreground">
-              This is the picture of your product
+              제품의 대표 이미지를 업로드하세요
             </small>
           </Label>
           <Input
@@ -242,13 +235,9 @@ export default function SubmitPage({
             name="picture"
           />
           <div className="test-xs flex flex-col">
-            <span className="text-muted-foreground">
-              Recommended size: 128x128px
-            </span>
-            <span className="text-muted-foreground">
-              Allowed formats: PNG, JPEG
-            </span>
-            <span className="text-muted-foreground">Max file size: 1MB</span>
+            <span className="text-muted-foreground">권장 크기: 128x128px</span>
+            <span className="text-muted-foreground">허용 형식: PNG, JPEG</span>
+            <span className="text-muted-foreground">최대 파일 크기: 1MB</span>
           </div>
         </div>
       </Form>

@@ -15,7 +15,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   const { error } = await client
     .from("notifications")
     .delete()
-    .eq("notification_id", notificationId)
+    .eq("notification_id", parseInt(notificationId))
     .eq("target_id", userId);
 
   if (error) {

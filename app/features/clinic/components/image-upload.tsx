@@ -1,10 +1,17 @@
-import { useState, useRef } from "react";
+import { Image as ImageIcon, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
+
 import { Button } from "~/core/components/ui/button";
 import { Input } from "~/core/components/ui/input";
 import { Label } from "~/core/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/core/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/core/components/ui/select";
 import { Textarea } from "~/core/components/ui/textarea";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
 
 interface ImageUploadProps {
   clinicId: number;
@@ -12,12 +19,18 @@ interface ImageUploadProps {
   onUploadError: (error: string) => void;
 }
 
-export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: ImageUploadProps) {
+export function ImageUpload({
+  clinicId,
+  onUploadComplete,
+  onUploadError,
+}: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [photoType, setPhotoType] = useState<'exterior' | 'interior' | 'equipment' | 'staff' | 'other'>('exterior');
-  const [photoTitle, setPhotoTitle] = useState('');
-  const [photoDescription, setPhotoDescription] = useState('');
+  const [photoType, setPhotoType] = useState<
+    "logo" | "exterior" | "interior" | "equipment" | "staff" | "other"
+  >("exterior");
+  const [photoTitle, setPhotoTitle] = useState("");
+  const [photoDescription, setPhotoDescription] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,19 +39,19 @@ export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: Image
     const file = event.target.files?.[0];
     if (file) {
       // 이미지 파일 검증
-      if (!file.type.startsWith('image/')) {
-        onUploadError('이미지 파일만 업로드 가능합니다.');
+      if (!file.type.startsWith("image/")) {
+        onUploadError("이미지 파일만 업로드 가능합니다.");
         return;
       }
 
       // 파일 크기 검증 (10MB 제한)
       if (file.size > 10 * 1024 * 1024) {
-        onUploadError('파일 크기는 10MB 이하여야 합니다.');
+        onUploadError("파일 크기는 10MB 이하여야 합니다.");
         return;
       }
 
       setSelectedFile(file);
-      
+
       // 미리보기 생성
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -50,7 +63,7 @@ export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: Image
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      onUploadError('업로드할 파일을 선택해주세요.');
+      onUploadError("업로드할 파일을 선택해주세요.");
       return;
     }
 
@@ -58,38 +71,46 @@ export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: Image
     try {
       // FormData 생성
       const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('clinicId', clinicId.toString());
-      formData.append('photoType', photoType);
-      formData.append('photoTitle', photoTitle);
-      formData.append('photoDescription', photoDescription);
-      formData.append('isPrimary', isPrimary.toString());
-      
+      formData.append("file", selectedFile);
+      formData.append("clinicId", clinicId.toString());
+      formData.append("photoType", photoType);
+      formData.append("photoTitle", photoTitle);
+      formData.append("photoDescription", photoDescription);
+      formData.append("isPrimary", isPrimary.toString());
+
       // API 엔드포인트로 업로드
-      const response = await fetch('/api/clinic/upload-photo', {
-        method: 'POST',
-        body: formData
+      const response = await fetch("/api/clinic/upload-photo", {
+        method: "POST",
+        body: formData,
+        credentials: "include", // 쿠키 포함하여 인증 정보 전달
       });
-      
-      const result = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(result.error || '업로드에 실패했습니다.');
+        const result = await response.json().catch(() => ({
+          error: "업로드에 실패했습니다.",
+        }));
+        throw new Error(result.error || "업로드에 실패했습니다.");
       }
-      
+
+      const result = await response.json();
+
       onUploadComplete(result.photo);
-      
+
       // 폼 초기화
       setSelectedFile(null);
-      setPhotoTitle('');
-      setPhotoDescription('');
+      setPhotoTitle("");
+      setPhotoDescription("");
       setIsPrimary(false);
       setPreviewUrl(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     } catch (error) {
-      onUploadError(error instanceof Error ? error.message : '업로드 중 오류가 발생했습니다.');
+      onUploadError(
+        error instanceof Error
+          ? error.message
+          : "업로드 중 오류가 발생했습니다.",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -99,19 +120,23 @@ export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: Image
     setSelectedFile(null);
     setPreviewUrl(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg">
+    <div className="space-y-4 rounded-lg border p-4">
       <div className="space-y-2">
         <Label htmlFor="photo-type">사진 타입</Label>
-        <Select value={photoType} onValueChange={(value: any) => setPhotoType(value)}>
+        <Select
+          value={photoType}
+          onValueChange={(value: any) => setPhotoType(value)}
+        >
           <SelectTrigger>
             <SelectValue placeholder="사진 타입을 선택하세요" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="logo">로고</SelectItem>
             <SelectItem value="exterior">외부 사진</SelectItem>
             <SelectItem value="interior">내부 사진</SelectItem>
             <SelectItem value="equipment">장비 사진</SelectItem>
@@ -185,11 +210,11 @@ export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: Image
       {previewUrl && (
         <div className="space-y-2">
           <Label>미리보기</Label>
-          <div className="relative w-full h-48 border rounded-lg overflow-hidden">
+          <div className="relative h-48 w-full overflow-hidden rounded-lg border">
             <img
               src={previewUrl}
               alt="미리보기"
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
           </div>
         </div>
@@ -202,16 +227,16 @@ export function ImageUpload({ clinicId, onUploadComplete, onUploadError }: Image
       >
         {isUploading ? (
           <>
-            <Upload className="h-4 w-4 mr-2 animate-spin" />
+            <Upload className="mr-2 h-4 w-4 animate-spin" />
             업로드 중...
           </>
         ) : (
           <>
-            <ImageIcon className="h-4 w-4 mr-2" />
+            <ImageIcon className="mr-2 h-4 w-4" />
             사진 업로드
           </>
         )}
       </Button>
     </div>
   );
-} 
+}

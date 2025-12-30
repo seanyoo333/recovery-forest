@@ -30,10 +30,15 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
-async function getAccessTokenFromServiceAccount(sa: GoogleServiceAccount): Promise<string> {
+async function getAccessTokenFromServiceAccount(
+  sa: GoogleServiceAccount,
+): Promise<string> {
   const header = {
     alg: "RS256",
     typ: "JWT",
@@ -74,7 +79,11 @@ async function getAccessTokenFromServiceAccount(sa: GoogleServiceAccount): Promi
     ["sign"],
   );
 
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(unsignedToken));
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    encoder.encode(unsignedToken),
+  );
 
   const signedJwt = `${unsignedToken}.${base64UrlEncode(signature)}`;
 
@@ -106,10 +115,13 @@ Deno.serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Authorization header is required" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Authorization header is required" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     const token = authHeader.replace("Bearer ", "").trim();
@@ -130,7 +142,8 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 토큰으로 사용자 확인
-    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    const { data: userData, error: authError } =
+      await supabase.auth.getUser(token);
 
     if (authError) {
       console.error("Auth error:", authError);
@@ -153,10 +166,13 @@ Deno.serve(async (req: Request) => {
     const { imageBase64, imageHash }: OcrRequestPayload = await req.json();
 
     if (!imageBase64) {
-      return new Response(JSON.stringify({ error: "imageBase64 is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "imageBase64 is required" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     // 🔹 해시 기반 캐시 (blood_test_images + blood_test_results 사용)
@@ -322,7 +338,9 @@ Deno.serve(async (req: Request) => {
     const serviceAccount = JSON.parse(saJson) as GoogleServiceAccount;
     const accessToken = await getAccessTokenFromServiceAccount(serviceAccount);
     // data:image/...;base64, 이런 prefix가 있으면 정리
-    const cleanedBase64 = imageBase64.includes(",") ? imageBase64.split(",")[1] : imageBase64;
+    const cleanedBase64 = imageBase64.includes(",")
+      ? imageBase64.split(",")[1]
+      : imageBase64;
 
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openaiKey) {
@@ -331,29 +349,76 @@ Deno.serve(async (req: Request) => {
 
     // 검사 항목 variations 정의
     const metricVariations: Record<string, string[]> = {
-      wbc: ["wbc", "WBC", "백혈구", "백혈구수", "Leukocyte", "White Blood Cell Count"],
+      wbc: [
+        "wbc",
+        "WBC",
+        "백혈구",
+        "백혈구수",
+        "Leukocyte",
+        "White Blood Cell Count",
+      ],
       rbc: ["rbc", "RBC", "적혈구", "적혈구수", "Red Blood Cell Count"],
       hgb: ["hgb", "Hb", "HGB", "헤모글로빈", "혈색소", "Hemoglobin"],
       hct: ["hct", "HCT", "헤마토크릿", "적혈구용적률", "Hematocrit"],
       mcv: ["mcv", "MCV", "평균적혈구용적", "Mean Corpuscular Volume"],
-      mchc: ["mchc", "MCHC", "평균적혈구혈색소농도", "Mean Corpuscular Hemoglobin Concentration"],
-      platelet: ["platelet", "PLT", "platelets", "혈소판", "혈소판수", "Platelet Count"],
+      mchc: [
+        "mchc",
+        "MCHC",
+        "평균적혈구혈색소농도",
+        "Mean Corpuscular Hemoglobin Concentration",
+      ],
+      platelet: [
+        "platelet",
+        "PLT",
+        "platelets",
+        "혈소판",
+        "혈소판수",
+        "Platelet Count",
+      ],
       rdw: ["rdw", "RDW", "적혈구분포폭", "Red Cell Distribution Width"],
       pdw: ["pdw", "PDW", "혈소판분포폭", "Platelet Distribution Width"],
-      neutrophil: ["neutrophil", "NEUT", "NE%", "중성구", "호중구", "Neutrophils", "Neutro"],
+      neutrophil: [
+        "neutrophil",
+        "NEUT",
+        "NE%",
+        "중성구",
+        "호중구",
+        "Neutrophils",
+        "Neutro",
+      ],
       lymphocyte: ["lymphocyte", "LYM", "LY%", "림프구", "Lymphocyte", "Lymph"],
       monocyte: ["monocyte", "MONO", "MO%", "단핵구", "Monocyte"],
       eosinophil: ["eosinophil", "EOS", "EO%", "호산구", "Eosinophil"],
       basophil: ["basophil", "BASO", "BA%", "호염구", "Basophil"],
-      totalBilirubin: ["total_bilirubin", "T-bilirubin", "TBIL", "총빌리루빈", "Total Bilirubin"],
+      totalBilirubin: [
+        "total_bilirubin",
+        "T-bilirubin",
+        "TBIL",
+        "총빌리루빈",
+        "Total Bilirubin",
+      ],
       ast: ["ast", "AST", "GOT", "아스파테이트아미노전달효소", "간수치AST"],
       alt: ["alt", "ALT", "GPT", "알라닌아미노전달효소", "간수치ALT"],
       gtp: ["gtp", "GGT", "γ-GTP", "Gamma-GTP", "감마지티피", "GTP"],
       bun: ["bun", "BUN", "혈중요소질소", "Blood Urea Nitrogen"],
       creatinine: ["creatinine", "CRE", "Cr", "크레아티닌", "Creatinine"],
-      egfr: ["egfr", "eGFR", "추정사구체여과율", "사구체여과율", "Glomerular Filtration Rate"],
+      egfr: [
+        "egfr",
+        "eGFR",
+        "추정사구체여과율",
+        "사구체여과율",
+        "Glomerular Filtration Rate",
+      ],
       uricAcid: ["uric_acid", "UA", "요산", "Uric Acid"],
-      glucose: ["glucose", "GLU", "혈당", "포도당", "Glucose", "FBS", "공복혈당"],
+      glucose: [
+        "glucose",
+        "GLU",
+        "혈당",
+        "포도당",
+        "Glucose",
+        "FBS",
+        "공복혈당",
+      ],
       triglyceride: ["triglyceride", "TG", "중성지방", "Triglycerides"],
       hdl: ["hdl", "HDL", "HDL-C", "고밀도지단백", "HDL콜레스테롤"],
       ldl: ["ldl", "LDL", "LDL-C", "저밀도지단백", "LDL콜레스테롤"],
@@ -361,13 +426,38 @@ Deno.serve(async (req: Request) => {
       freeT4: ["free_t4", "Free T4", "FT4", "자유T4"],
       tsh: ["tsh", "TSH", "갑상선자극호르몬", "Thyroid Stimulating Hormone"],
       homocysteine: ["homocysteine", "Hcy", "Homocysteine", "호모시스테인"],
-      vitaminD: ["vitamin_d", "VitD", "Vitamin D3", "25-OH Vitamin D", "비타민D", "D3", "25(OH)D"],
+      vitaminD: [
+        "vitamin_d",
+        "VitD",
+        "Vitamin D3",
+        "25-OH Vitamin D",
+        "비타민D",
+        "D3",
+        "25(OH)D",
+      ],
       hgbA1c: ["hgba1c", "HbA1c", "당화혈색소", "Glycated Hemoglobin", "A1c"],
-      scc: ["scc", "SCC", "편평상피세포암항원", "Squamous Cell Carcinoma Antigen"],
+      scc: [
+        "scc",
+        "SCC",
+        "편평상피세포암항원",
+        "Squamous Cell Carcinoma Antigen",
+      ],
       cea: ["cea", "CEA", "Carcinoembryonic Antigen", "암태아항원"],
-      ca199: ["ca199", "CA19-9", "Ca19-9", "췌담도암표지자", "Carbohydrate Antigen 19-9"],
+      ca199: [
+        "ca199",
+        "CA19-9",
+        "Ca19-9",
+        "췌담도암표지자",
+        "Carbohydrate Antigen 19-9",
+      ],
       ca125: ["ca125", "CA125", "Ca125", "난소암표지자", "Cancer Antigen 125"],
-      ca153: ["ca153", "CA15-3", "Ca153", "유방암표지자", "Cancer Antigen 15-3"],
+      ca153: [
+        "ca153",
+        "CA15-3",
+        "Ca153",
+        "유방암표지자",
+        "Cancer Antigen 15-3",
+      ],
       psa: ["psa", "PSA", "전립선특이항원", "Prostate Specific Antigen"],
       afp: ["afp", "AFP", "알파태아단백", "Alpha-Fetoprotein"],
       ca724: ["ca724", "CA72-4", "Ca724", "위암표지자", "Cancer Antigen 72-4"],
@@ -375,29 +465,38 @@ Deno.serve(async (req: Request) => {
       lmr: ["lmr", "LMR", "Lymphocyte/Monocyte Ratio", "림프구대단핵구비"],
       nlr: ["nlr", "NLR", "Neutrophil/Lymphocyte Ratio", "호중구대림프구비"],
       crp: ["crp", "CRP", "C-Reactive Protein", "C반응단백", "염증수치"],
-      cholesterol: ["cholesterol", "TC", "총콜레스테롤", "Chol", "Total Cholesterol"],
+      cholesterol: [
+        "cholesterol",
+        "TC",
+        "총콜레스테롤",
+        "Chol",
+        "Total Cholesterol",
+      ],
       ldh: ["ldh", "LDH", "젖산탈수소효소", "Lactate Dehydrogenase"],
       testDate: ["testDate", "Test Date", "검사일자", "Test Date"],
     };
 
     // 🔹 1) Google Vision OCR
-    const ocrRes = await fetch("https://vision.googleapis.com/v1/images:annotate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        requests: [
-          {
-            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-            image: {
-              content: cleanedBase64,
+    const ocrRes = await fetch(
+      "https://vision.googleapis.com/v1/images:annotate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          requests: [
+            {
+              features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+              image: {
+                content: cleanedBase64,
+              },
             },
-          },
-        ],
-      }),
-    });
+          ],
+        }),
+      },
+    );
     if (!ocrRes.ok) {
       const errText = await ocrRes.text();
       console.error("Vision API error:", errText);
@@ -405,7 +504,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const ocrJson = await ocrRes.json();
-    const text: string = ocrJson?.responses?.[0]?.fullTextAnnotation?.text ?? "";
+    const text: string =
+      ocrJson?.responses?.[0]?.fullTextAnnotation?.text ?? "";
 
     // 🔹 2) OpenAI로 구조화
     const openai = new OpenAI({ apiKey: openaiKey });
@@ -559,10 +659,13 @@ ${text}`;
       };
     }
 
-    return new Response(JSON.stringify({ structured, rawText: text, cached: false }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ structured, rawText: text, cached: false }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("OCR function error:", error);
     return new Response(JSON.stringify({ error: String(error) }), {

@@ -41,10 +41,17 @@ export async function loader({ request }: Route.LoaderArgs) {
   await requireAuthentication(client);
   await requireAdminRole(client);
 
-  return {};
+  // 병원 개수 가져오기
+  const { count: clinicCount } = await client
+    .from("clinics")
+    .select("*", { count: "exact", head: true });
+
+  return { clinicCount: clinicCount || 0 };
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
+  const { clinicCount } = loaderData;
+
   // 관리자 기능 카드들
   const adminFeatures = [
     {
@@ -59,9 +66,10 @@ export default function AdminDashboard() {
       title: "병원 관리",
       description: "병원 등록, 수정, 승인 관리",
       icon: Building2,
-      href: "/clinic/submit",
+      href: "/my/admin-dashboard/clinics",
+      submitHref: "/clinic/submit",
       color: "bg-green-500",
-      stats: "56개",
+      stats: `${clinicCount}개`,
     },
     {
       title: "제품 관리",

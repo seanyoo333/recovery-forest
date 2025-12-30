@@ -197,11 +197,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 id={product.product_id.toString()}
                 name={product.name}
                 description={product.tagline}
-                reviewsCount={Number(product.stats?.reviews) || 0}
-                viewsCount={Number(product.stats?.views) || 0}
+                reviewsCount={(product.stats as { reviews: number }).reviews}
+                viewsCount={(product.stats as { views: number }).views}
                 promotedFrom={product.promoted_from}
-                isUpvoted={product.is_upvoted}
-                votesCount={Number(product.stats?.upvotes) || 0}
+                isUpvoted={
+                  (product.stats as { is_upvoted: boolean }).is_upvoted
+                }
+                votesCount={(product.stats as { upvotes: number }).upvotes}
               />
             ))}
           </div>

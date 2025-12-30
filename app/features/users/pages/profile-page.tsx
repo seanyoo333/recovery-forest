@@ -39,7 +39,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
     event_data: {
       username: params.username,
     },
-    profile_id: user?.id || null,
+    profile_id: user?.id as string,
   });
   return {};
 };

@@ -45,6 +45,9 @@ test.describe("User Login UI", () => {
   // Navigate to the login page before each test
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
+    // Wait for page to load
+    await page.waitForLoadState("networkidle");
+    await page.waitForSelector("#email", { state: "visible" });
   });
 
   /**
@@ -56,9 +59,19 @@ test.describe("User Login UI", () => {
    * - Password input field
    */
   test("should display login form", async ({ page }) => {
-    await expect(page.getByText("Sign into your account")).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    // CardTitle은 div로 렌더링되므로 data-slot 속성 또는 클래스를 이용해 찾기
+    // 방법 1: data-slot 속성 사용 (가장 안정적)
+    await expect(
+      page.locator('[data-slot="card-title"]').filter({ hasText: "로그인" }),
+    ).toBeVisible({ timeout: 10000 });
+    
+    // 방법 2: 또는 CardTitle의 클래스를 이용
+    // await expect(
+    //   page.locator(".text-2xl.font-semibold").filter({ hasText: "로그인" }),
+    // ).toBeVisible({ timeout: 10000 });
+    
+    await expect(page.getByLabel("이메일")).toBeVisible();
+    await expect(page.getByLabel("비밀번호")).toBeVisible();
   });
 
   /**
@@ -66,14 +79,20 @@ test.describe("User Login UI", () => {
    * 
    * This ensures that users have multiple authentication options beyond
    * the traditional email/password approach, including:
-   * - Social logins (GitHub, Kakao)
-   * - Passwordless options (OTP, Magic Link)
+   * - Social logins (Google, GitHub, Kakao)
+   * 
+   * Note: OTP and Magic Link are currently disabled in the UI
    */
   test("should show alternative login methods", async ({ page }) => {
-    await expect(page.getByText("Continue with GitHub")).toBeVisible();
+    // 실제 표시되는 소셜 로그인 버튼들만 확인
+    await expect(page.getByText("Continue with Google")).toBeVisible();
+    await expect(page.getByText("Continue with Github")).toBeVisible(); // 소문자 'h'
     await expect(page.getByText("Continue with Kakao")).toBeVisible();
-    await expect(page.getByText("Continue with OTP")).toBeVisible();
-    await expect(page.getByText("Continue with Magic Link")).toBeVisible();
+    
+    // OTP와 Magic Link는 현재 주석 처리되어 있으므로 테스트에서 제외
+    // 만약 나중에 활성화되면 아래 주석을 해제하세요:
+    // await expect(page.getByText("Continue with OTP")).toBeVisible();
+    // await expect(page.getByText("Continue with Magic Link")).toBeVisible();
   });
 
   /**
@@ -83,9 +102,16 @@ test.describe("User Login UI", () => {
    * if they've forgotten their password, improving the user experience
    */
   test("should have a link to forgot password page", async ({ page }) => {
-    const link = page.getByText("Forgot your password?", { exact: true });
+    // 실제 한국어 텍스트로 수정
+    const link = page.getByText("비밀번호 찾기", { exact: true });
     await expect(link).toBeVisible();
-    await link.click();
+    
+    // viewTransition을 고려한 네비게이션 대기
+    await Promise.all([
+      page.waitForURL("/auth/forgot-password/reset", { timeout: 10000 }),
+      link.click(),
+    ]);
+    
     await expect(page).toHaveURL("/auth/forgot-password/reset");
   });
 
@@ -96,8 +122,9 @@ test.describe("User Login UI", () => {
    * if they don't have an account yet, improving the user experience
    */
   test("should have a link to sign in page", async ({ page }) => {
+    // 실제 한국어 텍스트로 수정
     await expect(
-      page.getByText("Don't have an account? Sign up", { exact: true }),
+      page.getByText("계정이 없으신가요?", { exact: false }),
     ).toBeVisible();
     await page.getByTestId("form-signup-link").click();
     await expect(page).toHaveURL("/join");
@@ -112,7 +139,7 @@ test.describe("User Login UI", () => {
   test("should show error for short password", async ({ page }) => {
     await page.locator("#email").fill("john.doe@example.com");
     await page.locator("#password").fill("short"); // Too short password
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.getByRole("button", { name: "로그인" }).click();
     await expect(
       page.getByText("Password must be at least 8 characters long", {
         exact: true,
@@ -129,7 +156,7 @@ test.describe("User Login UI", () => {
   test("should show error when submitting with empty fields", async ({
     page,
   }) => {
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.getByRole("button", { name: "로그인" }).click();
     await checkInvalidField(page, "email");
     await checkInvalidField(page, "password");
   });
@@ -147,7 +174,7 @@ test.describe("User Login UI", () => {
       .locator("#email")
       .fill("thisuserdoesnotexist@seriouslyimsure.com"); // Non-existent email
     await page.locator("#password").fill("password");
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.getByRole("button", { name: "로그인" }).click();
     await expect(
       page.getByText("Invalid login credentials", { exact: true }),
     ).toBeVisible();
@@ -174,11 +201,35 @@ test.describe.serial("User Login Flow", () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    /*
-     * Create a test user that is not confirmed to test the email confirmation alert
-     */
-    await registerUser(page, TEST_EMAIL, "password");
-    await context.close();
+    try {
+      /*
+       * Create a test user that is not confirmed to test the email confirmation alert
+       */
+      await registerUser(page, TEST_EMAIL, "password");
+      
+      // 성공 메시지가 완전히 표시될 때까지 대기
+      await page.waitForSelector("text=계정 생성 완료!", { 
+        state: "visible",
+        timeout: 10000 
+      });
+      
+      // 네트워크 요청이 완료될 때까지 대기
+      await page.waitForLoadState("networkidle");
+      
+      // 서버 처리 시간 고려한 추가 대기
+      await page.waitForTimeout(1000);
+    } catch (error) {
+      console.error("Failed to register test user:", error);
+      // 에러 발생 시 스크린샷 저장 (디버깅용)
+      await page.screenshot({ 
+        path: `test-results/register-error-${Date.now()}.png`,
+        fullPage: true 
+      });
+      throw error;
+    } finally {
+      // 컨텍스트를 안전하게 닫기
+      await context.close();
+    }
   });
 
   /**
@@ -196,6 +247,9 @@ test.describe.serial("User Login Flow", () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
+    // Wait for page to load
+    await page.waitForLoadState("networkidle");
+    await page.waitForSelector("#email", { state: "visible" });
   });
 
   /**
@@ -214,12 +268,13 @@ test.describe.serial("User Login Flow", () => {
     await test.step("should show email confirmation alert when email is unverified", async () => {
       await page.locator("#email").fill(TEST_EMAIL);
       await page.locator("#password").fill("password");
-      await page.getByRole("button", { name: "Log in" }).click();
+      await page.getByRole("button", { name: "로그인" }).click();
       
       // Verify the alert appears with an extended timeout
       // This allows time for the server to process the login attempt
+      // 실제 한국어 텍스트로 수정
       await expect(
-        page.getByText("Email not confirmed", {
+        page.getByText("이메일 인증이 필요합니다.", {
           exact: true,
         }),
       ).toBeVisible({
@@ -234,7 +289,8 @@ test.describe.serial("User Login Flow", () => {
      * indicating that the system is processing the request
      */
     await test.step("should be able to resend confirmation email", async () => {
-      await page.getByText("Resend confirmation email").click();
+      // 실제 한국어 텍스트로 수정
+      await page.getByText("이메일 인증 메일 재발송").click();
       await expect(
         page.getByTestId("resend-confirmation-email-spinner"),
       ).toBeVisible();

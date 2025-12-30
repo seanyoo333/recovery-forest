@@ -187,16 +187,7 @@ export default [
       layout(
         "core/layouts/private.layout.tsx",
         { id: "private-admin-clinic" },
-        [
-          ...prefix("/submit", [
-            index("features/clinic/pages/submit-clinic-page.tsx"),
-            route(
-              "/success",
-              "features/clinic/pages/submit-clinic-success.tsx",
-            ),
-            route("/fail", "features/clinic/pages/submit-clinic-fail.tsx"),
-          ]),
-        ],
+        [route("/submit", "features/clinic/pages/submit-clinic-page.tsx")],
       ),
     ]),
 
@@ -274,11 +265,6 @@ export default [
             "/bookmarks/:bookmarkId/question",
             "features/users/dashboard/pages/bookmark-question-page.tsx",
           ),
-          route("/cart", "features/users/screens/dashboard-cart.tsx"),
-          route(
-            "/products/:productId",
-            "features/users/screens/dashboard-product.tsx",
-          ),
         ]),
 
         ...prefix("/messages", [
@@ -322,6 +308,15 @@ export default [
         route(
           "/admin-dashboard/products/:productId",
           "features/admin/pages/admin-product-detail.tsx",
+        ),
+        // 관리자 병원 관리 페이지들
+        route(
+          "/admin-dashboard/clinics",
+          "features/admin/pages/admin-clinic-list.tsx",
+        ),
+        route(
+          "/admin-dashboard/clinics/:clinicId",
+          "features/admin/pages/admin-clinic-detail.tsx",
         ),
         // 관리자 블로그 관리 페이지
         route(

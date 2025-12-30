@@ -9,7 +9,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
   const { error, data } = await adminClient
     .from("products")
     .select("url")
-    .eq("product_id", params.productId)
+    .eq("product_id", Number(params.productId))
     .single();
   if (data) {
     // 현재 로그인한 사용자 정보 가져오기
@@ -23,7 +23,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
       event_data: {
         product_id: params.productId,
       },
-      profile_id: user?.id || null,
+      profile_id: user?.id as string,
     });
     return redirect(data.url);
   }

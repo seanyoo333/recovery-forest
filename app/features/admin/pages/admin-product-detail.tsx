@@ -1,4 +1,4 @@
-import type { Route } from "../../users/screens/+types/admin-product-detail";
+import type { Route } from "./+types/admin-product-detail";
 
 import { Form, redirect } from "react-router";
 import z from "zod";
@@ -38,7 +38,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     .select(
       "product_id, name, tagline, description, how_it_works, url, category_id, stats",
     )
-    .eq("product_id", params.productId)
+    .eq("product_id", Number(params.productId))
     .single();
 
   if (error || !product) {
@@ -49,7 +49,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
   const { data: statsData, error: rpcError } = await client.rpc(
     "get_product_stats",
     {
-      product_id: params.productId,
+      product_id: Number(params.productId),
     },
   );
 
@@ -90,7 +90,7 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
       .select(
         "product_id, name, tagline, description, how_it_works, url, category_id, stats",
       )
-      .eq("product_id", params.productId)
+      .eq("product_id", Number(params.productId))
       .single();
 
     return {

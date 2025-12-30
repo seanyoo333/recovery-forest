@@ -83,7 +83,7 @@ export default function ProfileLayout({
               <>
                 <FollowButton
                   username={params.username}
-                  isFollowing={loaderData.user.is_following}
+                  isFollowing={loaderData.user.is_following as boolean}
                   variant="secondary"
                 />
                 <Dialog>
