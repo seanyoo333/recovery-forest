@@ -194,6 +194,7 @@ export default [
     ...prefix("payments", [
       route("/checkout", "features/payments/screens/checkout.tsx"),
       layout("core/layouts/private.layout.tsx", { id: "private-payments" }, [
+        route("/", "features/payments/screens/payments.tsx"),
         route("/success", "features/payments/screens/success.tsx"),
         route("/failure", "features/payments/screens/failure.tsx"),
       ]),
@@ -278,6 +279,10 @@ export default [
             "/:messageRoomId/hide",
             "features/users/api/hide-message-room-page.tsx",
           ),
+          route(
+            "/:messageId/delete",
+            "features/users/api/delete-messageroom-card.tsx",
+          ),
         ]),
         ...prefix("/profile", [
           route("/", "features/users/api/my/profile/my-profile-page.tsx"),
@@ -303,6 +308,10 @@ export default [
         // 관리자 제품 관리 페이지들
         route(
           "/admin-dashboard/products",
+          "features/admin/pages/admin-products-list.tsx",
+        ),
+        route(
+          "/admin-dashboard/products/chart",
           "features/admin/pages/admin-product-chart.tsx",
         ),
         route(

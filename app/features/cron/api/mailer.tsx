@@ -81,31 +81,61 @@ export async function action({ request }: Route.LoaderArgs) {
   }
 
   // Process the message if one was retrieved from the queue
-  if (message) {
-    // Extract email details from the message
-    const {
-      message: { to, data: emailData, template },
-    } = message as { message: EmailMessage };
+  if (message && typeof message === "object" && "message" in message) {
+    const messageData = message.message as unknown;
 
-    // Process different email templates
-    if (template === "welcome") {
-      // Send welcome email using the Resend client
-      const { error } = await resendClient.emails.send({
-        // Make sure this domain is the Resend domain.
-        from: "Supaplate <hello@supaplate.com>",
-        to: [to],
-        subject: "Welcome to Supaplate!",
-        react: WelcomeEmail({ profile: JSON.stringify(emailData, null, 2) }),
-      });
+    // 타입 가드: EmailMessage 형식인지 확인
+    if (
+      typeof messageData === "object" &&
+      messageData !== null &&
+      "to" in messageData &&
+      "data" in messageData &&
+      "template" in messageData
+    ) {
+      const { to, data: emailData, template } = messageData as EmailMessage;
 
-      // Log any errors that occur during email sending
-      if (error) {
-        Sentry.captureException(
-          error instanceof Error ? error : new Error(String(error)),
-        );
+      // Process different email templates
+      if (template === "welcome") {
+        // emailData가 올바른 형식인지 확인
+        const profileData =
+          typeof emailData === "object" && emailData !== null
+            ? (emailData as Record<string, unknown>)
+            : {};
+
+        // Send welcome email using the Resend client
+        const { error } = await resendClient.emails.send({
+          // Make sure this domain is the Resend domain.
+          from: "Supaplate <hello@supaplate.com>",
+          to: [to],
+          subject: "Welcome to Supaplate!",
+          react: WelcomeEmail({
+            profile: {
+              name:
+                typeof profileData.name === "string"
+                  ? profileData.name
+                  : "사용자",
+              email: typeof to === "string" ? to : "",
+              username:
+                typeof profileData.username === "string"
+                  ? profileData.username
+                  : undefined,
+              avatar:
+                typeof profileData.avatar === "string"
+                  ? profileData.avatar
+                  : undefined,
+            },
+          }),
+        });
+
+        // Log any errors that occur during email sending
+        if (error) {
+          Sentry.captureException(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
       }
+      // Additional templates can be handled here with more if/else conditions
     }
-    // Additional templates can be handled here with more if/else conditions
   }
 
   // Return success response

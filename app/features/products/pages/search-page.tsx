@@ -12,6 +12,7 @@ import makeServerClient from "~/core/lib/supa-client.server";
 
 import { ProductCard } from "../components/product-card";
 import { getPagesBySearch, getProductBySearch } from "../queries";
+import { getProductStats } from "../utils/product-stats";
 
 export const meta: Route.MetaFunction = () => {
   return [
@@ -73,19 +74,22 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         <Button type="submit">검색하기</Button>
       </Form>
       <div className="mx-auto w-full max-w-screen-md space-y-5">
-        {loaderData.products.map((product) => (
-          <ProductCard
-            key={product.product_id}
-            id={product.product_id}
-            name={product.name}
-            description={product.tagline}
-            reviewsCount={product.stats.reviews}
-            viewsCount={product.stats.views}
-            votesCount={product.stats.upvotes}
-            promotedFrom={product.promoted_from}
-            isUpvoted={product.is_upvoted}
-          />
-        ))}
+        {loaderData.products.map((product) => {
+          const stats = getProductStats(product.stats);
+          return (
+            <ProductCard
+              key={product.product_id}
+              id={product.product_id}
+              name={product.name}
+              description={product.tagline}
+              reviewsCount={stats.reviews}
+              viewsCount={stats.views}
+              votesCount={stats.upvotes}
+              isUpvoted={stats.is_upvoted}
+              promotedFrom={product.promoted_from}
+            />
+          );
+        })}
         {query && loaderData.products.length === 0 && (
           <div className="col-span-full">
             <p className="text-muted-foreground text-center font-semibold">

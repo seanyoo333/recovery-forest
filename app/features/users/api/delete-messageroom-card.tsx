@@ -11,12 +11,16 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   const [client] = makeServerClient(request);
   const userId = await getLoggedInUserId(client);
 
-  // deleteNotification 함수를 직접 구현
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 메시지를 삭제 (본인이 보낸 메시지만 삭제 가능)
   const { error } = await client
     .from("messages")
     .delete()
-    .eq("message_id", messageId)
-    .eq("target_id", userId);
+    .eq("message_id", Number.parseInt(messageId, 10))
+    .eq("sender_id", userId);
 
   if (error) {
     throw error;

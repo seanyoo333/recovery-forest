@@ -45,21 +45,11 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     throw redirect("/my/admin-dashboard");
   }
 
-  // 제품 통계 데이터 가져오기
-  const { data: statsData, error: rpcError } = await client.rpc(
-    "get_product_stats",
-    {
-      product_id: Number(params.productId),
-    },
-  );
-
-  if (rpcError) {
-    console.error("Error fetching product stats:", rpcError);
-  }
-
+  // 제품 통계 데이터는 현재 사용 불가 (RPC 함수가 user_id를 받음)
+  // TODO: 제품별 통계를 위한 새로운 RPC 함수 생성 필요
   return {
     product,
-    chartData: statsData || [],
+    chartData: [],
     formErrors: null,
   };
 };
@@ -85,13 +75,17 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
     const { fieldErrors } = parseResult.error.flatten();
 
     // 기존 제품 정보는 그대로 다시 로드
-    const { data: product } = await client
+    const { data: product, error: productError } = await client
       .from("products")
       .select(
         "product_id, name, tagline, description, how_it_works, url, category_id, stats",
       )
       .eq("product_id", Number(params.productId))
       .single();
+
+    if (productError || !product) {
+      throw redirect("/my/admin-dashboard");
+    }
 
     return {
       product,
@@ -127,6 +121,19 @@ const chartConfig = {
   },
 };
 
+// product.stats 타입 가드 함수
+function getProductStats(stats: unknown) {
+  if (!stats || typeof stats !== "object" || Array.isArray(stats)) {
+    return { views: 0, reviews: 0, upvotes: 0 };
+  }
+  const statsObj = stats as Record<string, unknown>;
+  return {
+    views: typeof statsObj.views === "number" ? statsObj.views : 0,
+    reviews: typeof statsObj.reviews === "number" ? statsObj.reviews : 0,
+    upvotes: typeof statsObj.upvotes === "number" ? statsObj.upvotes : 0,
+  };
+}
+
 // 월별 데이터 생성 (실제 데이터가 없을 경우)
 function generateYearlyData() {
   const months = [
@@ -155,11 +162,12 @@ export default function AdminProductDetailPage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const data = (actionData || loaderData) as typeof loaderData & {
-    formErrors?: Record<string, string[] | undefined> | null;
-  };
-
+  const data = actionData || loaderData;
   const { product, chartData, formErrors } = data;
+
+  if (!product) {
+    return null;
+  }
 
   // 실제 데이터가 있으면 사용, 없으면 샘플 데이터 생성
   const displayData = chartData.length > 0 ? chartData : generateYearlyData();
@@ -271,24 +279,37 @@ export default function AdminProductDetailPage({
           </Form>
 
           <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {product.stats?.views || 0}
-              </div>
-              <div className="text-muted-foreground text-sm">총 조회수</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {product.stats?.reviews || 0}
-              </div>
-              <div className="text-muted-foreground text-sm">총 리뷰수</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {product.stats?.upvotes || 0}
-              </div>
-              <div className="text-muted-foreground text-sm">총 업보트</div>
-            </div>
+            {(() => {
+              const stats = getProductStats(product.stats);
+              return (
+                <>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {stats.views}
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                      총 조회수
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {stats.reviews}
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                      총 리뷰수
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {stats.upvotes}
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                      총 업보트
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>

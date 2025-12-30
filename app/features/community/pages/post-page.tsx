@@ -60,11 +60,8 @@ import { createReply, deletePost, deleteReply } from "../mutations";
 import { getPostById, getPostCountByProfileId, getReplies } from "../queries";
 
 export const meta: Route.MetaFunction = ({ data }) => {
-  const metaTags = [
-    {
-      title: `${data.post.title} on ${data.post.topic_name} | Evidence Base`,
-    },
-  ];
+  // loader에서 계산한 baseUrl 사용 (서버 사이드에서만 실행됨)
+  const baseUrl = data.baseUrl || "http://localhost:5173";
 
   // MD 파일인 경우 OG 이미지 추가
   if (data.post.is_markdown && data.mdContent) {
@@ -78,26 +75,35 @@ export const meta: Route.MetaFunction = ({ data }) => {
       : null;
 
     if (slug) {
-      metaTags.push({
-        property: "og:image",
-        content: `${process.env.SITE_URL}/community/api/og?slug=${slug}`,
-      });
-      metaTags.push({
-        property: "og:image:width",
-        content: "1200",
-      });
-      metaTags.push({
-        property: "og:image:height",
-        content: "630",
-      });
-      metaTags.push({
-        property: "og:type",
-        content: "article",
-      });
+      return [
+        {
+          title: `${data.post.title} on ${data.post.topic_name} | Evidence Base`,
+        },
+        {
+          name: "og:image",
+          content: `${baseUrl}/api/blog/og?slug=${slug}`,
+        },
+        {
+          name: "og:image:width",
+          content: "1200",
+        },
+        {
+          name: "og:image:height",
+          content: "630",
+        },
+        {
+          name: "og:type",
+          content: "article",
+        },
+      ];
     }
   }
 
-  return metaTags;
+  return [
+    {
+      title: `${data.post.title} on ${data.post.topic_name} | Evidence Base`,
+    },
+  ];
 };
 
 export const loader = async ({ request, params }: Route.LoaderArgs) => {
@@ -142,7 +148,11 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     }
   }
 
-  return { post, replies, mdContent, postCount };
+  // Calculate base URL from request (for OG image generation)
+  const url = new URL(request.url);
+  const baseUrl = `${url.protocol}//${url.host}`;
+
+  return { post, replies, mdContent, postCount, baseUrl };
 };
 
 const formSchema = z.object({

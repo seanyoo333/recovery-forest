@@ -174,6 +174,18 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   // Record the verified payment in the database
+  const { data: profile } = await adminClient
+    .from("profiles")
+    .select("profile_id")
+    .eq("profile_id", user!.id)
+    .single();
+
+  if (!profile) {
+    throw redirect(
+      `/payments/failure?code=${encodeURIComponent("profile-error")}&message=${encodeURIComponent("Profile not found")}`,
+    );
+  }
+
   await adminClient.from("payments").insert({
     payment_key: paymentResponse.data.paymentKey,
     order_id: paymentResponse.data.orderId,
@@ -185,7 +197,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     requested_at: paymentResponse.data.requestedAt,
     metadata: paymentResponse.data.metadata,
     raw_data: data,
-    user_id: user!.id,
+    profile_id: profile.profile_id,
   });
 
   // Return payment data for the success page

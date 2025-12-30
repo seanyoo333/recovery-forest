@@ -19,18 +19,26 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
   const formData = await request.formData();
   const [client] = makeServerClient(request);
   const fromUserId = await getLoggedInUserId(client);
-  const { profile_id: toUserId } = await getUserProfile(client, {
+
+  if (!fromUserId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userProfile = await getUserProfile(client, {
     username: params.username,
   });
 
-  console.log("1", toUserId);
-  console.log("2", fromUserId);
+  if (!userProfile?.profile_id) {
+    return Response.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const toUserId = userProfile.profile_id;
 
   const messageRoomId = await sendMessage(adminClient, {
     fromUserId,
     toUserId,
     content: formData.get("content") as string,
   });
-  console.log(messageRoomId);
+
   return redirect(`/my/messages/${messageRoomId}`);
 };

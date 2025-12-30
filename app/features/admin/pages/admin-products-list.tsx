@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "~/core/components/ui/card";
 import makeServerClient from "~/core/lib/supa-client.server";
+import { getProductStats } from "~/features/products/utils/product-stats";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 export const meta: Route.MetaFunction = () => {
@@ -58,7 +59,7 @@ export default function AdminProductsListPage({
 
       {/* 제품 목록 */}
       <div className="grid gap-4">
-        {products.map((product) => (
+        {products.map((product: (typeof products)[0]) => (
           <Card
             key={product.product_id}
             className="transition-shadow hover:shadow-md"
@@ -72,24 +73,31 @@ export default function AdminProductsListPage({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <div className="text-muted-foreground text-sm">조회수</div>
-                    <div className="font-semibold">
-                      {product.stats?.views || 0}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-muted-foreground text-sm">리뷰</div>
-                    <div className="font-semibold">
-                      {product.stats?.reviews || 0}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-muted-foreground text-sm">업보트</div>
-                    <div className="font-semibold">
-                      {product.stats?.upvotes || 0}
-                    </div>
-                  </div>
+                  {(() => {
+                    const stats = getProductStats(product.stats);
+                    return (
+                      <>
+                        <div className="text-right">
+                          <div className="text-muted-foreground text-sm">
+                            조회수
+                          </div>
+                          <div className="font-semibold">{stats.views}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-muted-foreground text-sm">
+                            리뷰
+                          </div>
+                          <div className="font-semibold">{stats.reviews}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-muted-foreground text-sm">
+                            업보트
+                          </div>
+                          <div className="font-semibold">{stats.upvotes}</div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </CardHeader>

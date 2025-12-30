@@ -137,7 +137,7 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
 
             {/* Table body with payment records */}
             <TableBody>
-              {payments.map((payment) => (
+              {payments.map((payment: (typeof payments)[0]) => (
                 <TableRow key={payment.payment_id}>
                   {/* Order ID column */}
                   <TableCell className="font-medium">

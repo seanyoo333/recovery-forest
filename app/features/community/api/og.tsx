@@ -15,8 +15,6 @@
  * This enhances social sharing of community news content by providing consistent,
  * branded preview images across platforms like Twitter, Facebook, and LinkedIn.
  */
-import type { Route } from "./+types/og";
-
 import { ImageResponse } from "@vercel/og";
 import { bundleMDX } from "mdx-bundler";
 import path from "node:path";
@@ -53,7 +51,7 @@ const paramsSchema = z.object({
  * @param request - The incoming HTTP request with query parameters
  * @returns An ImageResponse containing the generated OG image
  */
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: { request: Request }) {
   // Extract and parse URL search parameters
   const url = new URL(request.url);
   const {

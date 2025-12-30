@@ -11,6 +11,7 @@ import {
   getCategoryPages,
   getProductsByCategory,
 } from "~/features/products/queries";
+import { getProductStats } from "~/features/products/utils/product-stats";
 
 export const meta = ({ params }: Route.MetaArgs) => {
   return [
@@ -63,19 +64,22 @@ export default function CategoryPage({ loaderData }: Route.ComponentProps) {
       />
 
       <div className="mx-auto w-full max-w-screen-md space-y-5">
-        {loaderData.products.map((product) => (
-          <ProductCard
-            key={product.product_id}
-            id={product.product_id}
-            name={product.name}
-            description={product.tagline}
-            reviewsCount={product.stats.reviews}
-            viewsCount={product.stats.views}
-            votesCount={product.stats.upvotes}
-            isUpvoted={product.is_upvoted}
-            promotedFrom={product.promoted_from}
-          />
-        ))}
+        {loaderData.products.map((product) => {
+          const stats = getProductStats(product.stats);
+          return (
+            <ProductCard
+              key={product.product_id}
+              id={product.product_id}
+              name={product.name}
+              description={product.tagline}
+              reviewsCount={stats.reviews}
+              viewsCount={stats.views}
+              votesCount={stats.upvotes}
+              isUpvoted={stats.is_upvoted}
+              promotedFrom={product.promoted_from}
+            />
+          );
+        })}
       </div>
       <ProductPagination totalPages={loaderData.totalPages} />
     </div>
