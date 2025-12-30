@@ -15,7 +15,7 @@ const urls = (
   await readdir(path.join(process.cwd(), "app", "features", "blog", "docs"))
 )
   .filter((file) => file.endsWith(".mdx"))
-  .map((file) => `/blog-posts/${file.replace(".mdx", "")}`);
+  .map((file) => `/blog/${file.replace(".mdx", "")}`);
 
 export default {
   ssr: true,
@@ -23,7 +23,7 @@ export default {
     return [
       "/legal/terms-of-service",
       "/legal/privacy-policy",
-      "/blog-posts",
+      "/blog",
       "/sitemap.xml",
       "/robots.txt",
       ...urls,
