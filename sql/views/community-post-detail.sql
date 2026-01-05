@@ -8,6 +8,7 @@ SELECT
     posts.upvotes,
     posts.created_at,
     posts.is_markdown,
+    posts.reference,
     topics.topic_id,
     topics.name as topic_name,
     topics.slug as topic_slug,
@@ -25,5 +26,5 @@ FROM posts
 INNER JOIN topics USING (topic_id)
 LEFT JOIN post_replies USING (post_id)
 INNER JOIN profiles ON (profiles.profile_id = posts.profile_id)
-GROUP BY posts.post_id, posts.title, posts.content, posts.upvotes, posts.created_at, posts.is_markdown, topics.topic_id, topics.name, topics.slug, profiles.name, profiles.username, profiles.avatar, profiles.role, profiles.created_at, profiles.profile_id;
+GROUP BY posts.post_id, posts.title, posts.content, posts.upvotes, posts.created_at, posts.is_markdown, posts.reference, topics.topic_id, topics.name, topics.slug, profiles.name, profiles.username, profiles.avatar, profiles.role, profiles.created_at, profiles.profile_id;
 

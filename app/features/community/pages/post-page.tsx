@@ -413,6 +413,20 @@ export default function PostPage({
                     </p>
                   )}
                 </div>
+
+                {/* 출처 링크 */}
+                {loaderData.post.reference && (
+                  <div className="w-full md:w-3/4">
+                    <Link
+                      to={loaderData.post.reference}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground text-sm underline"
+                    >
+                      출처: {loaderData.post.reference}
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* 댓글 기능 */}

@@ -582,6 +582,13 @@
       "when": 1767086777386,
       "tag": "0082_curly_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1767580123525,
+      "tag": "0083_shocking_liz_osborn",
+      "breakpoints": true
     }
   ]
 }

@@ -96,6 +96,7 @@ export const posts = pgTable(
         onDelete: "cascade",
       })
       .notNull(),
+    reference: text(),
     profile_id: uuid()
       .references(() => profiles.profile_id, {
         onDelete: "cascade",
