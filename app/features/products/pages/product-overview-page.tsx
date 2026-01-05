@@ -6,7 +6,7 @@ import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 
 export const loader = async ({ params, request }: Route.LoaderArgs) => {
-  // 먼저 제품 정보를 조회
+  // 먼저 천연물질 정보를 조회
   const { error, data } = await adminClient
     .from("products")
     .select("product_id")
@@ -20,7 +20,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
       data: { user },
     } = await client.auth.getUser();
 
-    // 제품이 존재하는 경우에만 트리거 실행
+    // 천연물질이 존재하는 경우에만 트리거 실행
     await adminClient.rpc("track_event", {
       event_type: "product_view",
       event_data: {
@@ -41,7 +41,7 @@ export default function ProductOverviewPage() {
   return (
     <div className="space-y-10">
       <div className="space-y-1">
-        <h3 className="text-lg font-bold">이 제품은 무엇인가요?</h3>
+        <h3 className="text-lg font-bold">이 천연물질은 무엇인가요?</h3>
         <p className="text-muted-foreground">{description}</p>
       </div>
       <div className="space-y-1">

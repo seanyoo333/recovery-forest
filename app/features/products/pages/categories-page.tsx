@@ -7,7 +7,7 @@ import { getCategories } from "~/features/products/queries";
 
 export const meta: Route.MetaFunction = () => [
   { title: "Categories | Evidence Base" },
-  { name: "description", content: "Browse products by category" },
+  { name: "description", content: "Browse natural products by category" },
 ];
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
@@ -21,7 +21,7 @@ export default function CategoriesPage({ loaderData }: Route.ComponentProps) {
     <div className="space-y-10">
       <Hero
         title="카테고리"
-        subtitle="표적 관련 연구가 있는 제품 목록을 확인해보세요"
+        subtitle="표적 관련 연구가 있는 천연물질(Natural Products) 목록을 확인해보세요"
       />
       <small className="block font-bold text-red-500">
         * 카테고리별 분류는 대표 기전에 의해 연구 논문을 근거로 임의로

@@ -36,7 +36,7 @@ export function BlogCard({
     <Link to={`/blog-posts/${slug}`} className="block h-full">
       <Card
         className={cn(
-          "hover:bg-card/50 h-full bg-transparent transition-colors",
+          "neon-card !bg-background h-full cursor-pointer border transition-colors",
           expanded
             ? "flex flex-row flex-wrap items-center justify-between"
             : "",

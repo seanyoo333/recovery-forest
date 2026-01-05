@@ -179,15 +179,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2.5 text-center md:space-y-0 md:text-left">
               <h2 className="text-3xl leading-10 font-bold tracking-tight md:text-5xl md:leading-tight">
-                오늘의 추천 제품
+                오늘의 천연물질
               </h2>
               <p className="text-foreground text-lg font-light md:text-xl">
-                <span className="font-bold">Evidence Base</span>가 추천하는
-                오늘의 추천 제품을 확인해보세요.
+                <span className="font-bold">Evidence Base</span>에서 주목받고
+                있는 천연물질
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
                 <Link to="/products/leaderboards">
-                  Explore all products &rarr;
+                  Explore all natural products &rarr;
                 </Link>
               </Button>
             </div>
@@ -215,8 +215,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 오늘의 추천 블로그
               </h2>
               <p className="text-foreground max-w-2xl font-light md:text-xl">
-                <span className="font-bold">Evidence Base</span>의 최신 블로그
-                글을 확인해보세요.
+                <span className="font-bold">Evidence Base</span>의 최신 프리미엄
+                블로그 포스트
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
                 <Link to="/blog-posts"> Explore all blog posts &rarr;</Link>
@@ -239,11 +239,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2.5 text-center md:space-y-0 md:text-left">
               <h2 className="text-3xl leading-10 font-bold tracking-tight md:text-5xl md:leading-tight">
-                핫 이슈 토픽
+                오늘의 핫 이슈
               </h2>
               <p className="text-foreground text-lg font-light md:text-xl">
-                <span className="font-bold">Evidence Base</span>의 최근 토론
-                내용을 확인해보세요.
+                <span className="font-bold">Evidence Base</span>의 최근 핫 이슈
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
                 <Link to="/community" className="pl-0">

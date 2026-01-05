@@ -193,3 +193,57 @@ export const clinicPhotos = pgTable(
     }),
   ],
 );
+
+export const clinicReviews = pgTable(
+  "clinic_reviews",
+  {
+    review_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    clinic_id: bigint({ mode: "number" })
+      .notNull()
+      .references(() => clinics.clinic_id, { onDelete: "cascade" }),
+    profile_id: uuid()
+      .notNull()
+      .references(() => profiles.profile_id, { onDelete: "cascade" }),
+    rating: bigint({ mode: "number" }).notNull(),
+    review: text().notNull(),
+    patient_friendliness: bigint({ mode: "number" }).notNull().default(5),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+    updated_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+  },
+  (table) => [
+    // 모든 사용자가 리뷰를 조회할 수 있음
+    pgPolicy("clinic-reviews-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    // 로그인된 사용자는 리뷰를 작성할 수 있음
+    pgPolicy("clinic-reviews-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = profile_id`,
+    }),
+    // 본인이 작성한 리뷰만 수정/삭제할 수 있음
+    pgPolicy("clinic-reviews-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = profile_id`,
+      withCheck: sql`${authUid} = profile_id`,
+    }),
+    pgPolicy("clinic-reviews-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = profile_id`,
+    }),
+  ],
+);

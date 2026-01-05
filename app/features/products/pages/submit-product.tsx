@@ -22,8 +22,8 @@ import { getCategories } from "../queries";
 
 export const meta: Route.MetaFunction = () => {
   return [
-    { title: "Submit Product | Evidence Base" },
-    { name: "description", content: "Submit your product" },
+    { title: "Submit Natural Product | Evidence Base" },
+    { name: "description", content: "Submit your natural product" },
   ];
 };
 
@@ -112,7 +112,10 @@ export default function SubmitPage({
   };
   return (
     <div>
-      <Hero title="제품 등록" subtitle="제품을 등록하여 매출을 올려보세요" />
+      <Hero
+        title="천연물질 등록"
+        subtitle="천연물질(Natural Products)을 등록하여 매출을 올려보세요"
+      />
       <Form
         method="post"
         encType="multipart/form-data"
@@ -120,13 +123,13 @@ export default function SubmitPage({
       >
         <div className="space-y-5">
           <InputPair
-            label="제품명"
-            description="등록할 제품의 이름을 입력하세요"
+            label="천연물질명"
+            description="등록할 천연물질의 이름을 입력하세요"
             id="name"
             name="name"
             type="text"
             required
-            placeholder="제품 이름을 입력하세요"
+            placeholder="천연물질 이름을 입력하세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -140,7 +143,7 @@ export default function SubmitPage({
             name="tagline"
             required
             type="text"
-            placeholder="제품에 대한 간단한 설명을 입력하세요"
+            placeholder="천연물질에 대한 간단한 설명을 입력하세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -149,7 +152,7 @@ export default function SubmitPage({
             )}
           <InputPair
             label="URL"
-            description="제품의 웹사이트 URL을 입력하세요"
+            description="천연물질의 웹사이트 URL을 입력하세요"
             id="url"
             name="url"
             required
@@ -164,12 +167,12 @@ export default function SubmitPage({
           <InputPair
             textArea
             label="설명"
-            description="제품에 대한 상세한 설명을 입력하세요"
+            description="천연물질에 대한 상세한 설명을 입력하세요"
             id="description"
             name="description"
             required
             type="text"
-            placeholder="제품의 기능, 특징, 장점 등을 자세히 설명해주세요"
+            placeholder="천연물질의 기능, 특징, 장점 등을 자세히 설명해주세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -181,12 +184,12 @@ export default function SubmitPage({
           <InputPair
             textArea
             label="작동 방식"
-            description="제품의 사용 방법이나 작동 원리를 설명하세요"
+            description="천연물질의 사용 방법이나 작동 원리를 설명하세요"
             id="how_it_works"
             name="how_it_works"
             required
             type="text"
-            placeholder="제품을 어떻게 사용하는지, 어떤 방식으로 작동하는지 설명해주세요"
+            placeholder="천연물질을 어떻게 사용하는지, 어떤 방식으로 작동하는지 설명해주세요"
           />
           {actionData &&
             "formErrors" in actionData &&
@@ -197,7 +200,7 @@ export default function SubmitPage({
             )}
           <SelectPair
             label="카테고리"
-            description="제품의 카테고리를 선택하세요"
+            description="천연물질의 카테고리를 선택하세요"
             name="category"
             required
             placeholder="카테고리 선택"
@@ -212,7 +215,7 @@ export default function SubmitPage({
               <p className="text-red-500">{actionData.formErrors.category}</p>
             )}
           <Button type="submit" className="w-full" size="lg">
-            제품 등록
+            천연물질 등록
           </Button>
         </div>
         <div className="flex flex-col space-y-2">
@@ -222,9 +225,9 @@ export default function SubmitPage({
             ) : null}
           </div>
           <Label className="flex flex-col gap-1">
-            제품 이미지
+            천연물질 이미지
             <small className="text-muted-foreground">
-              제품의 대표 이미지를 업로드하세요
+              천연물질의 대표 이미지를 업로드하세요
             </small>
           </Label>
           <Input

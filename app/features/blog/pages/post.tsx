@@ -28,10 +28,20 @@ import {
   TypographyOrderedList,
   TypographyP,
 } from "~/core/components/mdx-typography1";
-import { Alert, AlertDescription, AlertTitle } from "~/core/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "~/core/components/ui/alert";
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/core/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/core/components/ui/card";
 import { Separator } from "~/core/components/ui/separator";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
@@ -101,7 +111,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   }
 
   // Construct the file path to the MDX file
-  const filePath = path.join(process.cwd(), "app", "features", "blog", "docs", `${params.slug}.mdx`);
+  const filePath = path.join(
+    process.cwd(),
+    "app",
+    "features",
+    "blog",
+    "docs",
+    `${params.slug}.mdx`,
+  );
 
   try {
     // Process the MDX file to extract code and frontmatter
@@ -179,14 +196,21 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 /**
  * Blog Post Component
  */
-export default function Post({ loaderData: { frontmatter, code, postId, upvotes, is_upvoted } }: Route.ComponentProps) {
+export default function Post({
+  loaderData: { frontmatter, code, postId, upvotes, is_upvoted },
+}: Route.ComponentProps) {
   const MDXContent = getMDXComponent(code);
   const fetcher = useFetcher();
 
   // Optimistic updates for upvote
   const optimisticUpvotes =
-    fetcher.state === "idle" ? upvotes || 0 : is_upvoted ? (upvotes || 0) - 1 : (upvotes || 0) + 1;
-  const optimisticIsUpvoted = fetcher.state === "idle" ? is_upvoted || false : !is_upvoted;
+    fetcher.state === "idle"
+      ? upvotes || 0
+      : is_upvoted
+        ? (upvotes || 0) - 1
+        : (upvotes || 0) + 1;
+  const optimisticIsUpvoted =
+    fetcher.state === "idle" ? is_upvoted || false : !is_upvoted;
 
   const handleUpvoteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -209,7 +233,8 @@ export default function Post({ loaderData: { frontmatter, code, postId, upvotes,
         </div>
         <div className="flex items-center justify-between gap-4">
           <span className="text-muted-foreground">
-            {frontmatter.author} on {new Date(frontmatter.date).toLocaleDateString("ko-KR")}
+            {frontmatter.author} on{" "}
+            {new Date(frontmatter.date).toLocaleDateString("ko-KR")}
           </span>
           {/* Upvote button */}
           {postId && (
@@ -238,7 +263,9 @@ export default function Post({ loaderData: { frontmatter, code, postId, upvotes,
             onError={(e) => {
               const img = e.currentTarget;
               img.style.display = "none";
-              const placeholder = img.closest("div")?.querySelector(".bg-muted") as HTMLElement;
+              const placeholder = img
+                .closest("div")
+                ?.querySelector(".bg-muted") as HTMLElement;
               if (placeholder) {
                 placeholder.style.display = "flex";
               }
@@ -293,7 +320,9 @@ export default function Post({ loaderData: { frontmatter, code, postId, upvotes,
         <Card className="bg-muted/50">
           <CardHeader>
             <CardTitle className="text-xl">관련 제품 찾아보기</CardTitle>
-            <CardDescription>이 글과 관련된 제품을 카테고리별로 찾아보실 수 있습니다.</CardDescription>
+            <CardDescription>
+              이 글과 관련된 제품을 카테고리별로 찾아보실 수 있습니다.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Link to="/products/categories">

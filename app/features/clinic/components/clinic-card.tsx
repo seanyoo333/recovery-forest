@@ -35,9 +35,9 @@ export function ClinicCard({
   createdAt,
 }: ClinicCardProps) {
   return (
-    <Link to={`/clinic/${id}`} className="block w-full">
-      <Card className="hover:bg-card/50 w-full bg-transparent transition-colors">
-        <CardHeader>
+    <Link to={`/clinic/${id}`} className="relative z-10 block w-full">
+      <Card className="neon-card !bg-background w-full cursor-pointer border !shadow-none transition-colors">
+        <CardHeader className="relative z-10">
           <div className="mb-4 flex items-center gap-4">
             <img
               src={clinicLogoUrl}
@@ -55,7 +55,7 @@ export function ClinicCard({
           </div>
           <CardTitle>{overview}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative z-10">
           <Badge variant="outline" className="capitalize">
             {clinicType}
           </Badge>
@@ -63,7 +63,7 @@ export function ClinicCard({
             {location}
           </Badge>
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="relative z-10 flex justify-between">
           <div className="flex flex-col">
             <span className="text-muted-foreground text-sm font-medium">
               {clinicLevel}

@@ -72,8 +72,8 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
       stats: `${clinicCount}개`,
     },
     {
-      title: "제품 관리",
-      description: "제품 등록, 수정, 승인 관리",
+      title: "천연물질 관리",
+      description: "천연물질(Natural Products) 등록, 수정, 승인 관리",
       icon: Package,
       href: "/my/admin-dashboard/products",
       submitHref: "/products/submit",
@@ -123,7 +123,7 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
     {
       id: 3,
       type: "product_submitted",
-      message: "새 제품이 등록되었습니다: AI 진단 시스템",
+      message: "새 천연물질이 등록되었습니다: AI 진단 시스템",
       time: "1시간 전",
     },
     {
@@ -240,7 +240,9 @@ export default function AdminDashboard({ loaderData }: Route.ComponentProps) {
               </div>
               <div className="rounded-lg bg-purple-50 p-4 text-center">
                 <div className="text-2xl font-bold text-purple-600">89</div>
-                <div className="text-muted-foreground text-sm">등록된 제품</div>
+                <div className="text-muted-foreground text-sm">
+                  등록된 천연물질
+                </div>
               </div>
               <div className="rounded-lg bg-orange-50 p-4 text-center">
                 <div className="text-2xl font-bold text-orange-600">23</div>

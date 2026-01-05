@@ -550,7 +550,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           "근거 기반 블로그를 통해 논문 내용을 더 이해하기 쉽게 요약한 글을 읽어 보세요.",
           "커뮤니티 토론에 참여해 다양한 관점과 실제 경험을 들어보세요.",
           "AI 챗봇을 통해 궁금한 개념·용어를 질문하고, 이해를 넓혀 보세요.",
-          "제품·프로그램 소개 페이지에서 참고 문헌·출처를 같이 확인해 보세요.",
+          "천연물질·프로그램 소개 페이지에서 참고 문헌·출처를 같이 확인해 보세요.",
           "직접 실천해 본 생활습관 변화를 기록하고, 어떤 점이 나에게 맞았는지 돌아보세요.",
         ],
       },
@@ -586,7 +586,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
       question:
         "현재 항암·표적치료·면역치료 중인데, 영양 보조제를 함께 써도 되나요?",
       answer:
-        "Evidence Base는 통합의학·기능의학 영역에서 논의되는 연구·자료를 정리해 드리지만, 개별 제품의 병용 여부나 용량 조정은 반드시 통합의학 의료진이나 담당 의료진과 상의 후 결정하셔야 합니다. 플랫폼의 정보는 상담 전 질문을 정리하는 ‘참고용 자료’이며, 치료 변경·중단의 근거로 사용될 수 없습니다.",
+        "Evidence Base는 통합의학·기능의학 영역에서 논의되는 연구·자료를 정리해 드리지만, 개별 천연물질의 병용 여부나 용량 조정은 반드시 통합의학 의료진이나 담당 의료진과 상의 후 결정하셔야 합니다. 플랫폼의 정보는 상담 전 질문을 정리하는 '참고용 자료'이며, 치료 변경·중단의 근거로 사용될 수 없습니다.",
     },
     {
       question: "Evidence Base에서 의사 처방이나 진단을 대신해 주나요?",
@@ -894,7 +894,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                     근거 기반 콘텐츠 탐색
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    블로그·커뮤니티·제품 페이지에서, 연구·근거와 함께 정리된
+                    블로그·커뮤니티·천연물질 페이지에서, 연구·근거와 함께 정리된
                     콘텐츠를 찾고 묻고 답해보세요.
                   </p>
                 </CardContent>
@@ -1065,7 +1065,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </Link>
           </BlurFade>
 
-          {/* Products Overview */}
+          {/* Natural Products Overview */}
           <BlurFade delay={0.4} duration={0.6} inView>
             <Link to="/products" className="block">
               <Card className="rainbow-card mb-8 cursor-pointer">
@@ -1100,7 +1100,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
                       <span>
-                        나의 건강 상태와 생활습관을 고려해 어떤 제품을
+                        나의 건강 상태와 생활습관을 고려해 어떤 천연물질을
                         우선적으로 검토할지 참고 가능
                       </span>
                     </li>
@@ -1188,7 +1188,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
 
           <div className="grid gap-10 md:grid-cols-2 md:items-center">
             <BlurFade delay={0.3} duration={0.6} inView>
-              <Card className="h-full">
+              <Card className="neon-card cursor-pointer !bg-background h-full border">
                 <CardHeader>
                   <Badge variant="secondary" className="mb-3 w-fit">
                     대표 오퍼 (예정)

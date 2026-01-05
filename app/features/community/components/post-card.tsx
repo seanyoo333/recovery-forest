@@ -71,16 +71,16 @@ export function PostCard({
   };
 
   return (
-    <Link to={`/community/${id}`} className="block h-full">
+    <Link to={`/community/${id}`} className="relative z-10 block h-full">
       <Card
         className={cn(
-          "hover:bg-card/50 h-full bg-transparent transition-colors",
+          "neon-card !bg-background h-full cursor-pointer border transition-colors !shadow-none",
           expanded
             ? "flex flex-row flex-wrap items-center justify-between"
             : "",
         )}
       >
-        <CardHeader className="flex min-w-0 flex-1 flex-row items-start gap-2">
+        <CardHeader className="relative z-10 flex min-w-0 flex-1 flex-row items-start gap-2">
           <Avatar className="size-14">
             <AvatarFallback>{author?.[0] || "?"}</AvatarFallback>
             {authorAvatarUrl && <AvatarImage src={authorAvatarUrl} />}
@@ -110,12 +110,12 @@ export function PostCard({
           </div>
         </CardHeader>
         {!expanded && (
-          <CardFooter className="flex justify-end">
+          <CardFooter className="relative z-10 flex justify-end">
             <Button variant="link">Reply &rarr;</Button>
           </CardFooter>
         )}
         {expanded && (
-          <CardFooter className="flex justify-end md:pb-0">
+          <CardFooter className="relative z-10 flex justify-end md:pb-0">
             <Button
               onClick={absorbClick}
               variant="outline"

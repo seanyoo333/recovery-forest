@@ -222,3 +222,31 @@ export const updateClinicPhoto = async (
 
   return data;
 };
+
+export const createClinicReview = async (
+  client: SupabaseClient<Database>,
+  {
+    clinicId,
+    review,
+    rating,
+    patientFriendliness,
+    userId,
+  }: {
+    clinicId: string;
+    review: string;
+    rating: number;
+    patientFriendliness: number;
+    userId: string;
+  },
+) => {
+  const { error } = await client.from("clinic_reviews").insert({
+    clinic_id: +clinicId,
+    review,
+    rating,
+    patient_friendliness: patientFriendliness,
+    profile_id: userId,
+  });
+  if (error) {
+    throw error;
+  }
+};

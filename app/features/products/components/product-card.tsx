@@ -63,11 +63,10 @@ export function ProductCard({
     <Link to={`/products/${id}`} className="relative z-10 block">
       <Card
         className={cn(
-          "flex w-full flex-row items-center justify-between",
-          promotedFrom ? "" : "hover:bg-card/50 bg-transparent",
+          "neon-card !bg-background flex w-full cursor-pointer flex-row items-center justify-between border",
         )}
       >
-        <CardHeader className="w-full">
+        <CardHeader className="relative z-10 w-full">
           <CardTitle className="flex w-full flex-wrap items-center justify-between gap-2 text-2xl leading-none font-semibold tracking-tight">
             {name}{" "}
             {promotedFrom ? <Badge variant={"outline"}>Promoted</Badge> : null}
@@ -86,7 +85,7 @@ export function ProductCard({
             </div>
           </div>
         </CardHeader>
-        <CardFooter className="py-0">
+        <CardFooter className="relative z-10 py-0">
           <Button
             variant="outline"
             className={cn(

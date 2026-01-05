@@ -16,8 +16,8 @@ import { getProductStats } from "../utils/product-stats";
 
 export const meta: Route.MetaFunction = () => {
   return [
-    { title: "Search Products | Evidence Base" },
-    { name: "description", content: "Search for products" },
+    { title: "Search Natural Products | Evidence Base" },
+    { name: "description", content: "Search for natural products" },
   ];
 };
 
@@ -63,12 +63,15 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="space-y-10">
-      <Hero title="검색" subtitle="생각나는 키워드로 제품을 검색하세요" />
+      <Hero
+        title="검색"
+        subtitle="생각나는 키워드로 천연물질(Natural Products)을 검색하세요"
+      />
       <Form className="mx-auto flex h-14 max-w-screen-sm items-center justify-center gap-2">
         <Input
           ref={inputRef}
           name="query"
-          placeholder="Search for products"
+          placeholder="Search for natural products"
           className="text-lg"
         />
         <Button type="submit">검색하기</Button>

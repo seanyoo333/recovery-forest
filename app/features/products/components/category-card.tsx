@@ -74,7 +74,11 @@ export function CategoryCard({
 
   return (
     <Link to={`/products/categories/${id}`} className="block">
-      <Card className={cn("hover:bg-card/50 transition")}>
+      <Card
+        className={cn(
+          "neon-card !bg-background cursor-pointer border transition",
+        )}
+      >
         <CardHeader className="space-y-3">
           <CardTitle className="flex w-full flex-wrap items-center justify-between gap-2 text-2xl leading-none font-semibold tracking-tight">
             <div className="flex min-w-0 flex-nowrap items-center gap-2">

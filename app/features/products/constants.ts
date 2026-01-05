@@ -3,4 +3,4 @@
  */
 
 // Number of items per page for pagination
-export const PAGE_SIZE = 2;
+export const PAGE_SIZE = 10;

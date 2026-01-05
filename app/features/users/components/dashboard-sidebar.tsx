@@ -83,20 +83,20 @@ const data = {
       ],
     },
     {
-      title: "Products",
+      title: "천연물질",
       url: "#",
       icon: LineChartIcon,
       items: [
         {
-          title: "관련제품 카트",
+          title: "관련 천연물질 카트",
           url: "#",
         },
         {
-          title: "관련제품 검색",
+          title: "관련 천연물질 검색",
           url: "#",
         },
         {
-          title: "EV AI 제품 추천",
+          title: "EV AI 천연물질 추천",
           url: "#",
         },
       ],
@@ -181,7 +181,9 @@ export default function DashboardSidebar({
         {/* <SidebarProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <div className="text-muted-foreground px-3 py-4 text-xs">Evidence Base © {new Date().getFullYear()}</div>
+        <div className="text-muted-foreground px-3 py-4 text-xs">
+          Evidence Base © {new Date().getFullYear()}
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

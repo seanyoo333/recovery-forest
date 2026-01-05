@@ -15,8 +15,8 @@ import { getLoggedInUserId } from "~/features/users/queries";
 
 export const meta: Route.MetaFunction = () => {
   return [
-    { title: "제품 관리 - 관리자 | Evidence Base" },
-    { name: "description", content: "제품 관리 및 통계" },
+    { title: "천연물질 관리 - 관리자 | Evidence Base" },
+    { name: "description", content: "천연물질(Natural Products) 관리 및 통계" },
   ];
 };
 
@@ -24,7 +24,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   const [client] = makeServerClient(request);
   const userId = await getLoggedInUserId(client);
 
-  // 모든 제품 정보 가져오기
+  // 모든 천연물질 정보 가져오기
   const { data: products, error } = await client
     .from("products")
     .select("product_id, name, tagline, description, stats, created_at")
@@ -47,17 +47,17 @@ export default function AdminProductsListPage({
     <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">제품 관리</h1>
+          <h1 className="text-3xl font-bold">천연물질 관리</h1>
           <p className="text-muted-foreground mt-2">
-            등록된 제품 목록 및 통계 확인
+            등록된 천연물질(Natural Products) 목록 및 통계 확인
           </p>
         </div>
         <Button asChild className="bg-blue-600 text-white hover:bg-blue-700">
-          <Link to="/products/submit">+ 새 제품 등록</Link>
+          <Link to="/products/submit">+ 새 천연물질 등록</Link>
         </Button>
       </div>
 
-      {/* 제품 목록 */}
+      {/* 천연물질 목록 */}
       <div className="grid gap-4">
         {products.map((product: (typeof products)[0]) => (
           <Card
@@ -124,13 +124,13 @@ export default function AdminProductsListPage({
           <CardContent className="flex items-center justify-center py-12">
             <div className="text-center">
               <p className="text-muted-foreground mb-4">
-                등록된 제품이 없습니다.
+                등록된 천연물질이 없습니다.
               </p>
               <Button
                 asChild
                 className="bg-blue-600 text-white hover:bg-blue-700"
               >
-                <Link to="/products/submit">+ 첫 번째 제품 등록하기</Link>
+                <Link to="/products/submit">+ 첫 번째 천연물질 등록하기</Link>
               </Button>
             </div>
           </CardContent>

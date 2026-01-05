@@ -14,7 +14,10 @@ import { getProductById } from "../queries";
 export function meta({ data }: Route.MetaArgs) {
   return [
     { title: `${data.product.name} Overview | Evidence Base` },
-    { name: "description", content: "View product details and information" },
+    {
+      name: "description",
+      content: "View natural product details and information",
+    },
   ];
 }
 
@@ -68,7 +71,7 @@ export default function ProductOverviewLayout({
                 ))}
               </div>
               <span className="text-muted-foreground">
-                리뷰 {loaderData.product.reviews}개
+                경험 공유 {loaderData.product.reviews}개
               </span>
             </div>
           </div>
@@ -81,7 +84,7 @@ export default function ProductOverviewLayout({
             className="h-10 w-full px-10 md:h-14 md:w-auto md:text-lg"
           >
             <Link to={`/products/${loaderData.product.product_id}/visit`}>
-              제품 사이트
+              관련 제품 사이트
             </Link>
           </Button>
           <fetcher.Form

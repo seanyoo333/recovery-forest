@@ -62,9 +62,9 @@ export function TeamCard({
   targets,
 }: TeamCardProps) {
   return (
-    <Link to={`/teams/${id}`} className="block h-full">
-      <Card className="hover:bg-card/50 h-full bg-transparent transition-colors">
-        <CardHeader className="flex min-w-0 flex-1 flex-row items-start gap-2">
+    <Link to={`/teams/${id}`} className="relative z-10 block h-full">
+      <Card className="neon-card !bg-background h-full cursor-pointer border !shadow-none transition-colors">
+        <CardHeader className="relative z-10 flex min-w-0 flex-1 flex-row items-start gap-2">
           <Avatar className="size-14">
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {leaderUsername?.[0]?.toUpperCase() || "?"}
@@ -98,7 +98,7 @@ export function TeamCard({
             </div>
           </div>
         </CardHeader>
-        <CardFooter className="flex justify-end">
+        <CardFooter className="relative z-10 flex justify-end">
           <Button variant="link">팀 참여하기 &rarr;</Button>
         </CardFooter>
       </Card>

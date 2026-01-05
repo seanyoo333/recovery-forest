@@ -13,7 +13,7 @@ import { Calendar } from "~/core/components/ui/calendar";
 import { Label } from "~/core/components/ui/label";
 
 export const meta: Route.MetaFunction = () => {
-  return [{ name: "description", content: "Promote your product" }];
+  return [{ name: "description", content: "Promote your natural product" }];
 };
 
 export default function PromotePage() {
@@ -30,15 +30,15 @@ export default function PromotePage() {
   return (
     <div>
       <Hero
-        title="Promote Your Product"
-        subtitle="Boost your product's visibility."
+        title="천연물질 홍보하기"
+        subtitle="천연물질(Natural Products)의 가시성을 높이세요."
       />
       <Form className="mx-auto flex max-w-sm flex-col items-center gap-10">
         <SelectPair
-          label="Select a product"
-          description="Select a product to promote"
+          label="천연물질 선택"
+          description="홍보할 천연물질을 선택하세요"
           name="product"
-          placeholder="Select a product"
+          placeholder="천연물질 선택"
           options={[
             {
               label: "Green Tea Extract",

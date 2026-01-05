@@ -30,7 +30,7 @@ export const meta: Route.MetaFunction = ({ params }) => {
     .setLocale("ko");
   return [
     {
-      title: `The best products of ${date.toLocaleString(
+      title: `The best natural products of ${date.toLocaleString(
         DateTime.DATE_MED,
       )} | Evidence Base`,
     },
@@ -112,7 +112,7 @@ export default function DailyLeaderboardPage({
   return (
     <div className="space-y-10">
       <Hero
-        title={`${urlDate.toLocaleString(DateTime.DATE_MED)}, 가장 인기있는 상품`}
+        title={`${urlDate.toLocaleString(DateTime.DATE_MED)}, 가장 주목받고 있는는 천연물질`}
       />
       <div className="flex items-center justify-center gap-2">
         <Button variant="secondary" asChild>

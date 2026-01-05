@@ -182,7 +182,15 @@ export default [
 
     ...prefix("clinic", [
       index("features/clinic/pages/clinics-page.tsx"),
-      route("/:clinicId", "features/clinic/pages/clinic-page.tsx"),
+      ...prefix("/:clinicId", [
+        index("features/clinic/pages/clinic-redirect-page.tsx"),
+        layout("features/clinic/layouts/clinic-overview-layout.tsx", [
+          route("/overview", "features/clinic/pages/clinic-overview-page.tsx"),
+          ...prefix("/reviews", [
+            index("features/clinic/pages/clinic-reviews-page.tsx"),
+          ]),
+        ]),
+      ]),
       // 관리자 전용 병원 등록 페이지
       layout(
         "core/layouts/private.layout.tsx",

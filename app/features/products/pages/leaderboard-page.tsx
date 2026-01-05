@@ -13,7 +13,7 @@ import { getProductsByDateRange } from "../queries";
 export const meta: Route.MetaFunction = () => {
   return [
     { title: "Leaderboard | EVASE" },
-    { name: "description", content: "Top products leaderboard" },
+    { name: "description", content: "Top natural products leaderboard" },
   ];
 };
 
@@ -48,7 +48,10 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
   return (
     <div className="space-y-20">
-      <Hero title="추천 제품" subtitle="Evidence Base가 추천합니다" />
+      <Hero
+        title="추천 천연물질"
+        subtitle="Evidence Base가 추천하는 천연물질(Natural Products)"
+      />
       {/* <div className="grid gap-4 md:grid-cols-3">
         <div>
           <h2 className="text-3xl leading-tight font-bold tracking-tight">
@@ -83,7 +86,7 @@ export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
             주간 인기 순위
           </h2>
           <p className="text-foreground text-xl font-light">
-            Evidence Base에서 가장 인기있는 제품
+            Evidence Base에서 가장 주목받고 있는 천연물질
           </p>
         </div>
         {loaderData.weeklyProducts.map((product) => (
@@ -101,7 +104,7 @@ export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
         ))}
         <Button variant="link" asChild className="self-center text-lg">
           <Link to="/products/leaderboards/weekly">
-            다른 모든 제품 보기 &rarr;
+            다른 모든 천연물질 보기 &rarr;
           </Link>
         </Button>
       </div>
@@ -111,7 +114,7 @@ export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
             월간 인기 순위
           </h2>
           <p className="text-foreground text-xl font-light">
-            Evidence Base에서 가장 인기있는 제품
+            Evidence Base에서 가장 주목받고 있는 천연물질
           </p>
         </div>
         {loaderData.monthlyProducts.map((product) => (
@@ -129,7 +132,7 @@ export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
         ))}
         <Button variant="link" asChild className="self-center text-lg">
           <Link to="/products/leaderboards/monthly">
-            다른 모든 제품 보기 &rarr;
+            다른 모든 천연물질 보기 &rarr;
           </Link>
         </Button>
       </div>
@@ -139,7 +142,7 @@ export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
             연간 인기 순위
           </h2>
           <p className="text-foreground text-xl font-light">
-            Evidence Base에서 가장 인기있는 제품
+            Evidence Base에서 가장 주목받고 있는 천연물질
           </p>
         </div>
         {loaderData.yearlyProducts.map((product) => (
@@ -157,7 +160,7 @@ export default function LeaderboardPage({ loaderData }: Route.ComponentProps) {
         ))}
         <Button variant="link" asChild className="self-center text-lg">
           <Link to="/products/leaderboards/yearly">
-            다른 모든 제품 보기 &rarr;
+            다른 모든 천연물질 보기 &rarr;
           </Link>
         </Button>
       </div>

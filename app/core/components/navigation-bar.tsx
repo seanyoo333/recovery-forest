@@ -113,22 +113,28 @@ const menus = [
     ],
   },
   {
-    name: "제품",
+    name: "천연물질",
     to: "/products",
     items: [
       {
-        name: "인기상품",
-        description: "일별, 주간, 월간 인기상품을 확인하세요",
+        name: "전체 천연물질",
+        description: "등록된 모든 천연물질(Natural Products)을 확인하세요",
+        to: "/products",
+      },
+      {
+        name: "인기 천연물질",
+        description:
+          "주간, 월간, 연간 인기 천연물질(Natural Products)을 확인하세요",
         to: "/products/leaderboards",
       },
       {
         name: "카테고리",
-        description: "각 제품의 카테고리를 확인하세요",
+        description: "각 천연물질의 카테고리를 확인하세요",
         to: "/products/categories",
       },
       {
         name: "검색",
-        description: "제품을 검색하세요",
+        description: "천연물질(Natural Products)을 검색하세요",
         to: "/products/search",
       },
     ],

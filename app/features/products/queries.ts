@@ -21,13 +21,24 @@ export const getProductsByPopularity = async (
   },
 ) => {
   const { data, error } = await client
-    .from("products")
+    .from("product_list_view")
     .select(productListSelect)
-    .order("stats->reviews", { ascending: false })
-    .order("stats->upvotes", { ascending: false })
+    .order("upvotes", { ascending: false, nullsFirst: false })
+    .order("reviews", { ascending: false, nullsFirst: false })
     .range((page - 1) * PAGE_SIZE, page * limit - 1);
   if (error) throw error;
   return data;
+};
+
+export const getProductPagesByPopularity = async (
+  client: SupabaseClient<Database>,
+) => {
+  const { count, error } = await client
+    .from("products")
+    .select(`product_id`, { count: "exact", head: true });
+  if (error) throw error;
+  if (!count) return 1;
+  return Math.ceil(count / PAGE_SIZE);
 };
 
 export const getProductsByDateRange = async (
