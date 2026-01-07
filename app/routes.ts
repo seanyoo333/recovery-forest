@@ -274,6 +274,10 @@ export default [
             "/bookmarks/:bookmarkId/question",
             "features/users/dashboard/pages/bookmark-question-page.tsx",
           ),
+          route(
+            "/health-habits",
+            "features/users/dashboard/pages/dashboard-health-habits.tsx",
+          ),
         ]),
 
         ...prefix("/messages", [

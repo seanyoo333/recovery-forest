@@ -84,6 +84,33 @@ export type Database = {
           },
         ]
       }
+      badges: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string | null
+          id: string
+          key: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          icon?: string | null
+          id?: string
+          key: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string | null
+          id?: string
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
       blog_post_upvotes: {
         Row: {
           post_id: number
@@ -857,6 +884,57 @@ export type Database = {
           },
         ]
       }
+      daily_grid_logs: {
+        Row: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at: string
+          id: string
+          log_date: string
+          option_id: string | null
+          template_id: string | null
+          time_block: Database["public"]["Enums"]["habit_time_block"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          log_date: string
+          option_id?: string | null
+          template_id?: string | null
+          time_block: Database["public"]["Enums"]["habit_time_block"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          log_date?: string
+          option_id?: string | null
+          template_id?: string | null
+          time_block?: Database["public"]["Enums"]["habit_time_block"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_grid_logs_option_id_grid_options_id_fk"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "grid_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_grid_logs_template_id_section_templates_id_fk"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "section_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -964,6 +1042,53 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      grid_options: {
+        Row: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["grid_option_kind"]
+          label: string
+          sort_order: number
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["grid_option_kind"]
+          label: string
+          sort_order?: number
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["grid_option_kind"]
+          label?: string
+          sort_order?: number
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grid_options_template_id_section_templates_id_fk"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "section_templates"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2178,6 +2303,104 @@ export type Database = {
           },
         ]
       }
+      section_items: {
+        Row: {
+          amount_num: number | null
+          amount_unit: string | null
+          created_at: string
+          id: string
+          label: string
+          meta: Json | null
+          sort_order: number
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_num?: number | null
+          amount_unit?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          meta?: Json | null
+          sort_order?: number
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_num?: number | null
+          amount_unit?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          meta?: Json | null
+          sort_order?: number
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "section_items_template_id_section_templates_id_fk"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "section_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      section_templates: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          section_type: Database["public"]["Enums"]["habit_category"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          section_type: Database["public"]["Enums"]["habit_category"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          section_type?: Database["public"]["Enums"]["habit_category"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      streaks: {
+        Row: {
+          current_streak: number
+          last_log_date: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          last_log_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          last_log_date?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       teams: {
         Row: {
           cost: number
@@ -2262,6 +2485,35 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_badges_id_fk"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -2773,6 +3025,10 @@ export type Database = {
         | "clinic_admin"
       clinic_type: "university" | "functional" | "nursing" | "traditional"
       event_type: "product_view" | "product_visit" | "profile_view"
+      grid_option_kind: "preset" | "template"
+      habit_category: "exercise" | "sleep" | "supplement" | "diet" | "therapy"
+      habit_time_block: "am" | "noon" | "pm" | "bed"
+      habit_time_slot: "am" | "noon" | "pm" | "bed"
       level: "1" | "2" | "3" | "4" | "5"
       location:
         | "seoul"
@@ -2946,6 +3202,10 @@ export const Constants = {
       ],
       clinic_type: ["university", "functional", "nursing", "traditional"],
       event_type: ["product_view", "product_visit", "profile_view"],
+      grid_option_kind: ["preset", "template"],
+      habit_category: ["exercise", "sleep", "supplement", "diet", "therapy"],
+      habit_time_block: ["am", "noon", "pm", "bed"],
+      habit_time_slot: ["am", "noon", "pm", "bed"],
       level: ["1", "2", "3", "4", "5"],
       location: [
         "seoul",

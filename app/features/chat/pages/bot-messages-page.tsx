@@ -212,32 +212,32 @@ export default function BotMessagesPage({ loaderData }: Route.ComponentProps) {
           <div className="grid gap-4">
             {rooms.map((room: any) => (
               <div key={room.id} className="relative z-10">
-                <Card
+              <Card
                   className="neon-card !bg-background cursor-pointer border !shadow-none transition-colors"
-                  onClick={() => navigate(`/chat/botmessages/${room.id}`)}
-                >
+                onClick={() => navigate(`/chat/botmessages/${room.id}`)}
+              >
                   <CardHeader className="relative z-10">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{room.name}</CardTitle>
-                      <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-xs">
-                        AI
-                      </span>
-                    </div>
-                    {room.description && (
-                      <p className="text-muted-foreground text-sm">
-                        {room.description}
-                      </p>
-                    )}
-                  </CardHeader>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">{room.name}</CardTitle>
+                    <span className="text-muted-foreground bg-muted rounded px-2 py-0.5 text-xs">
+                      AI
+                    </span>
+                  </div>
+                  {room.description && (
+                    <p className="text-muted-foreground text-sm">
+                      {room.description}
+                    </p>
+                  )}
+                </CardHeader>
                   <CardContent className="relative z-10">
-                    <div className="text-muted-foreground flex items-center justify-between text-sm">
-                      <span>생성자: {room.creator?.name || "Unknown"}</span>
-                      <span>
-                        {new Date(room.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <div className="text-muted-foreground flex items-center justify-between text-sm">
+                    <span>생성자: {room.creator?.name || "Unknown"}</span>
+                    <span>
+                      {new Date(room.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
               </div>
             ))}
           </div>

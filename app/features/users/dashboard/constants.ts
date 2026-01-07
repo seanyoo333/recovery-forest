@@ -1,8 +1,99 @@
+import type { Category, GridOptionKind } from "./types";
+
+/**
+ * Default Grid Options by Category
+ *
+ * 각 카테고리별 기본 그리드 옵션 정의
+ */
+export const DEFAULT_GRID_OPTIONS: Record<
+  Category,
+  Array<{ label: string; kind: GridOptionKind; sort_order: number }>
+> = {
+  exercise: [
+    { label: "저강도", kind: "preset", sort_order: 1 },
+    { label: "중강도", kind: "preset", sort_order: 2 },
+    { label: "고강도", kind: "preset", sort_order: 3 },
+  ],
+  sleep: [
+    { label: "불면", kind: "preset", sort_order: 1 },
+    { label: "보통", kind: "preset", sort_order: 2 },
+    { label: "숙면", kind: "preset", sort_order: 3 },
+  ],
+  supplement: [{ label: "섭취", kind: "preset", sort_order: 1 }],
+  diet: [
+    { label: "단식", kind: "preset", sort_order: 1 },
+    { label: "보통", kind: "preset", sort_order: 2 },
+    { label: "과식", kind: "preset", sort_order: 3 },
+  ],
+  therapy: [{ label: "실행", kind: "preset", sort_order: 1 }],
+};
+
+/**
+ * 카테고리별 옵션 점수 정의
+ */
+export const CATEGORY_SCORES: Record<Category, Record<string, number>> = {
+  exercise: {
+    __none__: 0,
+    저강도: 1,
+    중강도: 2,
+    고강도: 2,
+    __template__: 3, // 루틴실행
+  },
+  sleep: {
+    __none__: 0,
+    불면: -1,
+    보통: 2,
+    숙면: 3,
+    __template__: 3,
+  },
+  supplement: {
+    __none__: 0,
+    섭취: 2,
+    __template__: 3,
+  },
+  diet: {
+    __none__: 0,
+    단식: 1,
+    보통: 2,
+    과식: -1,
+    __template__: 3,
+  },
+  therapy: {
+    __none__: 0,
+    실행: 2,
+    __template__: 3,
+  },
+};
+
+/**
+ * 카테고리별 가중치 (다음 행동 추천용)
+ */
+export const CATEGORY_WEIGHTS: Record<Category, number> = {
+  sleep: 1.3,
+  diet: 1.1,
+  exercise: 1.0,
+  therapy: 0.8,
+  supplement: 0.9,
+};
+
+/**
+ * 신호등 임계값
+ */
+export const TRAFFIC_LIGHT_THRESHOLDS = {
+  GREEN: 1, // delta >= +1
+  RED: -1, // delta <= -1
+} as const;
+
+/**
+ * 기록 성공 기준
+ */
+export const RECORD_SUCCESS_THRESHOLD = 2; // filled_count >= 2
+export const GRACE_PER_WEEK = 1; // 주 1회 보호
+
 /**
  * 표준 혈액검사 항목 정의
  * 모든 standard_name은 소문자로 통일하여 관리
  */
-
 export const STANDARD_BLOOD_TEST_TYPES = [
   // 일반 메트릭
   {
@@ -160,9 +251,16 @@ export const STANDARD_BLOOD_TEST_TYPES = [
     reference_max: 40,
     clinical_significance: "정상 범위: 20-40%",
     descriptions: {
-      description: "면역반응 관여 백혈구 (T림프구- 세포성 면역, B림프구-체액성면역)",
+      description:
+        "면역반응 관여 백혈구 (T림프구- 세포성 면역, B림프구-체액성면역)",
       significance: {
-        up: ["세균성 상기도 감염", "바이러스 감염", "호르몬 질환", "결핵", "림프성 백혈병"],
+        up: [
+          "세균성 상기도 감염",
+          "바이러스 감염",
+          "호르몬 질환",
+          "결핵",
+          "림프성 백혈병",
+        ],
         down: [
           "호지킨병",
           "쿠싱증후군",

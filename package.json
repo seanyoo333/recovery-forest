@@ -40,6 +40,7 @@
     "@sentry/react-router": "^9.10.1",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.83.0",
+    "@tanstack/react-table": "^8.21.3",
     "@tosspayments/tosspayments-sdk": "^2.3.4",
     "@vercel/og": "^0.6.5",
     "@vercel/react-router": "^1.2.3",

@@ -54,8 +54,8 @@ const data = {
           url: "/my/dashboard/health",
         },
         {
-          title: "혈액검사 입력",
-          url: "/my/dashboard/health/consent",
+          title: "생활습관 관리",
+          url: "/my/dashboard/health-habits",
         },
         {
           title: "EV AI 혈액검사 분석",

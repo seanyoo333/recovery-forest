@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database as DbTypes } from "database.types";
+
+import type { Category, GridCellValue, GridOptionKind } from "./types";
 
 import type { Database } from "~/core/lib/supa-client.server";
+
+import { DEFAULT_GRID_OPTIONS } from "./constants";
 
 export const upsertPatientHealthProfile = async (
   client: SupabaseClient<Database>,
@@ -118,7 +123,10 @@ export const updateBloodTestImageTestDate = async (
     testDate: string;
   },
 ) => {
-  const { error } = await client.from("blood_test_images").update({ test_date: testDate }).eq("image_id", imageId);
+  const { error } = await client
+    .from("blood_test_images")
+    .update({ test_date: testDate })
+    .eq("image_id", imageId);
   if (error) {
     throw error;
   }
@@ -217,7 +225,9 @@ export const insertBloodTestResults = async (
       }
     } else {
       // 기존 결과가 없으면 새로 삽입
-      const { error: insertError } = await client.from("blood_test_results").insert(result);
+      const { error: insertError } = await client
+        .from("blood_test_results")
+        .insert(result);
 
       if (insertError) {
         throw insertError;
@@ -283,14 +293,16 @@ export const updateBloodTestResult = async (
     }
   } else {
     // 기존 결과가 없으면 새로 추가
-    const { error: insertError } = await client.from("blood_test_results").insert({
-      patient_id: patientId,
-      test_id: testType.test_id,
-      result_value: resultValue,
-      result_unit: null,
-      test_date: testDate,
-      image_id: null,
-    });
+    const { error: insertError } = await client
+      .from("blood_test_results")
+      .insert({
+        patient_id: patientId,
+        test_id: testType.test_id,
+        result_value: resultValue,
+        result_unit: null,
+        test_date: testDate,
+        image_id: null,
+      });
 
     if (insertError) {
       throw insertError;
@@ -318,3 +330,179 @@ export const deleteBloodTestResultsByDate = async (
     throw error;
   }
 };
+
+/**
+ * Health Habits Mutations
+ */
+
+/**
+ * 그리드 로그 upsert
+ */
+export async function upsertDailyGridLog(
+  client: SupabaseClient<Database>,
+  userId: string,
+  logDate: string,
+  payload: GridCellValue,
+) {
+  const { error } = await client.from("daily_grid_logs").upsert(
+    {
+      user_id: userId,
+      log_date: logDate,
+      time_block: payload.time_block,
+      category: payload.category,
+      option_id: payload.option_id,
+      template_id: payload.template_id,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "user_id,log_date,time_block,category",
+    },
+  );
+
+  if (error) throw error;
+}
+
+/**
+ * 그리드 옵션 생성/수정
+ */
+export async function upsertGridOption(
+  client: SupabaseClient<Database>,
+  userId: string,
+  payload: {
+    id?: string;
+    category: Category;
+    label: string;
+    kind: GridOptionKind;
+    template_id?: string | null;
+    sort_order?: number;
+  },
+) {
+  const { error } = await client.from("grid_options").upsert(
+    {
+      ...(payload.id && { id: payload.id }),
+      user_id: userId,
+      category: payload.category,
+      label: payload.label,
+      kind: payload.kind,
+      template_id: payload.template_id ?? null,
+      sort_order: payload.sort_order ?? 0,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "id",
+    },
+  );
+
+  if (error) throw error;
+}
+
+/**
+ * 섹션 템플릿 생성/수정
+ */
+export async function upsertSectionTemplate(
+  client: SupabaseClient<Database>,
+  userId: string,
+  payload: {
+    id?: string;
+    section_type: Category;
+    name: string;
+    notes?: string | null;
+  },
+) {
+  const { data, error } = await client
+    .from("section_templates")
+    .upsert(
+      {
+        ...(payload.id && { id: payload.id }),
+        user_id: userId,
+        section_type: payload.section_type,
+        name: payload.name,
+        notes: payload.notes ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "id",
+      },
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * 섹션 아이템 upsert (배치)
+ */
+export async function upsertSectionItems(
+  client: SupabaseClient<Database>,
+  templateId: string,
+  items: Array<{
+    id?: string;
+    label: string;
+    amount_num?: number | null;
+    amount_unit?: string | null;
+    sort_order: number;
+    meta?: Record<string, unknown> | null;
+  }>,
+) {
+  // 기존 아이템 삭제 후 새로 삽입
+  await client.from("section_items").delete().eq("template_id", templateId);
+
+  if (items.length === 0) return;
+
+  const { error } = await client.from("section_items").insert(
+    items.map((item) => ({
+      template_id: templateId,
+      label: item.label,
+      amount_num: item.amount_num ?? null,
+      amount_unit: item.amount_unit ?? null,
+      sort_order: item.sort_order,
+      meta: (item.meta ??
+        null) as DbTypes["public"]["Tables"]["section_items"]["Insert"]["meta"],
+    })),
+  );
+
+  if (error) throw error;
+}
+
+/**
+ * 기본 그리드 옵션 초기화
+ */
+export async function initializeDefaultGridOptions(
+  client: SupabaseClient<Database>,
+  userId: string,
+) {
+  // 각 카테고리별로 기본 옵션이 있는지 확인
+  for (const [category, defaultOptions] of Object.entries(
+    DEFAULT_GRID_OPTIONS,
+  ) as [Category, (typeof DEFAULT_GRID_OPTIONS)[Category]][]) {
+    // 해당 카테고리의 활성 옵션 확인
+    const { data: existingOptions } = await client
+      .from("grid_options")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("category", category)
+      .eq("is_active", true)
+      .limit(1);
+
+    // 기본 옵션이 없으면 생성
+    if (!existingOptions || existingOptions.length === 0) {
+      const optionsToInsert = defaultOptions.map((opt) => ({
+        user_id: userId,
+        category,
+        label: opt.label,
+        kind: opt.kind,
+        template_id: null,
+        sort_order: opt.sort_order,
+        is_active: true,
+      }));
+
+      const { error } = await client
+        .from("grid_options")
+        .insert(optionsToInsert);
+
+      if (error) throw error;
+    }
+  }
+}
