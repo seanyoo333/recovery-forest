@@ -884,57 +884,6 @@ export type Database = {
           },
         ]
       }
-      daily_grid_logs: {
-        Row: {
-          category: Database["public"]["Enums"]["habit_category"]
-          created_at: string
-          id: string
-          log_date: string
-          option_id: string | null
-          template_id: string | null
-          time_block: Database["public"]["Enums"]["habit_time_block"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          category: Database["public"]["Enums"]["habit_category"]
-          created_at?: string
-          id?: string
-          log_date: string
-          option_id?: string | null
-          template_id?: string | null
-          time_block: Database["public"]["Enums"]["habit_time_block"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["habit_category"]
-          created_at?: string
-          id?: string
-          log_date?: string
-          option_id?: string | null
-          template_id?: string | null
-          time_block?: Database["public"]["Enums"]["habit_time_block"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_grid_logs_option_id_grid_options_id_fk"
-            columns: ["option_id"]
-            isOneToOne: false
-            referencedRelation: "grid_options"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_grid_logs_template_id_section_templates_id_fk"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "section_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       events: {
         Row: {
           created_at: string
@@ -1045,53 +994,6 @@ export type Database = {
           },
         ]
       }
-      grid_options: {
-        Row: {
-          category: Database["public"]["Enums"]["habit_category"]
-          created_at: string
-          id: string
-          is_active: boolean
-          kind: Database["public"]["Enums"]["grid_option_kind"]
-          label: string
-          sort_order: number
-          template_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          category: Database["public"]["Enums"]["habit_category"]
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          kind: Database["public"]["Enums"]["grid_option_kind"]
-          label: string
-          sort_order?: number
-          template_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["habit_category"]
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          kind?: Database["public"]["Enums"]["grid_option_kind"]
-          label?: string
-          sort_order?: number
-          template_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grid_options_template_id_section_templates_id_fk"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "section_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       health_bookmarks: {
         Row: {
           bookmark_id: number
@@ -1147,6 +1049,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      ingredient_target_evidence: {
+        Row: {
+          evidence_level: string
+          id: string
+          ingredient_id: string
+          notes: string | null
+          pmids: string[] | null
+          strength: number
+          target_id: string
+        }
+        Insert: {
+          evidence_level?: string
+          id?: string
+          ingredient_id: string
+          notes?: string | null
+          pmids?: string[] | null
+          strength?: number
+          target_id: string
+        }
+        Update: {
+          evidence_level?: string
+          id?: string
+          ingredient_id?: string
+          notes?: string | null
+          pmids?: string[] | null
+          strength?: number
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_target_evidence_ingredient_id_natural_ingredients_id"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "natural_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_target_evidence_target_id_natural_targets_id_fk"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "natural_targets"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1273,6 +1220,60 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
         ]
+      }
+      natural_ingredients: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          slug: string
+          synonyms: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          slug: string
+          synonyms?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          slug?: string
+          synonyms?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      natural_targets: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -1857,6 +1858,59 @@ export type Database = {
           },
         ]
       }
+      product_ingredients: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          product_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          product_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          product_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ingredients_ingredient_id_natural_ingredients_id_fk"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "natural_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_id_products_product_id_fk"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_list_view"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_id_products_product_id_fk"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_overview_view"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_id_products_product_id_fk"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
       product_orders: {
         Row: {
           buyer: string | null
@@ -2303,12 +2357,150 @@ export type Database = {
           },
         ]
       }
-      section_items: {
+      routine_daily_grid_logs: {
+        Row: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at: string
+          id: string
+          log_date: string
+          option_id: string | null
+          template_id: string | null
+          time_block: Database["public"]["Enums"]["habit_time_block"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          log_date: string
+          option_id?: string | null
+          template_id?: string | null
+          time_block: Database["public"]["Enums"]["habit_time_block"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          log_date?: string
+          option_id?: string | null
+          template_id?: string | null
+          time_block?: Database["public"]["Enums"]["habit_time_block"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_daily_grid_logs_option_id_routine_grid_options_id_fk"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "routine_grid_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_daily_grid_logs_template_id_routine_templates_id_fk"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "routine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_grid_option_ingredients: {
+        Row: {
+          created_at: string
+          grid_option_id: string
+          id: string
+          ingredient_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grid_option_id: string
+          id?: string
+          ingredient_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grid_option_id?: string
+          id?: string
+          ingredient_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_grid_option_ingredients_grid_option_id_routine_grid_opt"
+            columns: ["grid_option_id"]
+            isOneToOne: false
+            referencedRelation: "routine_grid_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_grid_option_ingredients_ingredient_id_natural_ingredien"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "natural_ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_grid_options: {
+        Row: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["grid_option_kind"]
+          label: string
+          sort_order: number
+          template_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["grid_option_kind"]
+          label: string
+          sort_order?: number
+          template_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["habit_category"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["grid_option_kind"]
+          label?: string
+          sort_order?: number
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_grid_options_template_id_routine_templates_id_fk"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "routine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_items: {
         Row: {
           amount_num: number | null
           amount_unit: string | null
           created_at: string
           id: string
+          ingredient_id: string | null
           label: string
           meta: Json | null
           sort_order: number
@@ -2320,6 +2512,7 @@ export type Database = {
           amount_unit?: string | null
           created_at?: string
           id?: string
+          ingredient_id?: string | null
           label: string
           meta?: Json | null
           sort_order?: number
@@ -2331,6 +2524,7 @@ export type Database = {
           amount_unit?: string | null
           created_at?: string
           id?: string
+          ingredient_id?: string | null
           label?: string
           meta?: Json | null
           sort_order?: number
@@ -2339,21 +2533,29 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "section_items_template_id_section_templates_id_fk"
+            foreignKeyName: "routine_items_ingredient_id_natural_ingredients_id_fk"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "natural_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_items_template_id_routine_templates_id_fk"
             columns: ["template_id"]
             isOneToOne: false
-            referencedRelation: "section_templates"
+            referencedRelation: "routine_templates"
             referencedColumns: ["id"]
           },
         ]
       }
-      section_templates: {
+      routine_templates: {
         Row: {
           created_at: string
           id: string
           name: string
           notes: string | null
           section_type: Database["public"]["Enums"]["habit_category"]
+          sort_order: number
           updated_at: string
           user_id: string
         }
@@ -2363,6 +2565,7 @@ export type Database = {
           name: string
           notes?: string | null
           section_type: Database["public"]["Enums"]["habit_category"]
+          sort_order?: number
           updated_at?: string
           user_id: string
         }
@@ -2372,6 +2575,7 @@ export type Database = {
           name?: string
           notes?: string | null
           section_type?: Database["public"]["Enums"]["habit_category"]
+          sort_order?: number
           updated_at?: string
           user_id?: string
         }
@@ -2400,6 +2604,58 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      target_tags: {
+        Row: {
+          tag_category: Database["public"]["Enums"]["target_tag_category"]
+          tag_value: string
+          target_id: string
+        }
+        Insert: {
+          tag_category: Database["public"]["Enums"]["target_tag_category"]
+          tag_value: string
+          target_id: string
+        }
+        Update: {
+          tag_category?: Database["public"]["Enums"]["target_tag_category"]
+          tag_value?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "target_tags_target_id_natural_targets_id_fk"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "natural_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      target_to_meta_axis: {
+        Row: {
+          axis_weight: number
+          meta_axis: string
+          target_id: string
+        }
+        Insert: {
+          axis_weight?: number
+          meta_axis: string
+          target_id: string
+        }
+        Update: {
+          axis_weight?: number
+          meta_axis?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "target_to_meta_axis_target_id_natural_targets_id_fk"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "natural_targets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teams: {
         Row: {
@@ -3058,6 +3314,15 @@ export type Database = {
         | "equipment"
         | "staff"
         | "other"
+      target_tag_category:
+        | "epigenetics"
+        | "metastasis"
+        | "metabolism"
+        | "inflammation"
+        | "immune"
+        | "hormone"
+        | "neuro"
+        | "recovery"
       team_position: "doctor" | "nurse" | "nutritionist" | "foresttherapist"
       user_role:
         | "healthy"
@@ -3236,6 +3501,16 @@ export const Constants = {
         "equipment",
         "staff",
         "other",
+      ],
+      target_tag_category: [
+        "epigenetics",
+        "metastasis",
+        "metabolism",
+        "inflammation",
+        "immune",
+        "hormone",
+        "neuro",
+        "recovery",
       ],
       team_position: ["doctor", "nurse", "nutritionist", "foresttherapist"],
       user_role: [

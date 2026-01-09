@@ -147,6 +147,7 @@ export function TemplateItemsTable({
       template_id: items[0]?.template_id || "",
       sort_order: items.length,
       label: "",
+      ingredient_id: null,
       amount_num: null,
       amount_unit: null,
       meta: null,

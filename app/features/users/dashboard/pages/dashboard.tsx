@@ -8,6 +8,7 @@ import { Line } from "recharts";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
@@ -19,16 +20,24 @@ import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 import { HealthHabitsAreaChart } from "../components/health-habits-area-chart";
+import { NaturalTargetRadarChart } from "../components/natural-target-radar-chart";
 import { initializeDefaultGridOptions } from "../mutations";
 import {
   getDailyGridLogs,
   getDailyGridLogsByDateRange,
   getGridOptions,
+  getTodayIngredientEvidence,
 } from "../queries";
 import {
+  calculateCategoryScore,
   calculateDailyTotal,
   calculatePeriodScores,
+  combineAxisScores,
+  computeLifestyleBaseAxisScores,
+  computeSupplementBonusAxisScores,
   countFilledCategories,
+  toRadarData,
+  topContributingIngredients,
 } from "../utils";
 
 export const meta: Route.MetaFunction = () => {
@@ -42,6 +51,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!userId) {
     return {
       healthHabitsData: null,
+      radarData: null,
     };
   }
 
@@ -53,11 +63,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     // 기본 그리드 옵션 초기화
     await initializeDefaultGridOptions(client, userId);
 
-    const [options, todayLogs, pastLogs] = await Promise.all([
-      getGridOptions(client, userId),
-      getDailyGridLogs(client, userId, today),
-      getDailyGridLogsByDateRange(client, userId, month30Start, yesterday),
-    ]);
+    const [options, todayLogs, pastLogs, ingredientEvidence] =
+      await Promise.all([
+        getGridOptions(client, userId),
+        getDailyGridLogs(client, userId, today),
+        getDailyGridLogsByDateRange(client, userId, month30Start, yesterday),
+        getTodayIngredientEvidence(client, userId, today),
+      ]);
 
     // 일별 점수 계산 (최근 30일)
     const dailyScores = [];
@@ -78,17 +90,83 @@ export async function loader({ request }: Route.LoaderArgs) {
     // 오늘 점수
     const todayTotal = calculateDailyTotal(todayLogs, options);
 
+    // 레이더 차트 데이터 계산
+    const categories: Array<
+      "exercise" | "sleep" | "supplement" | "diet" | "therapy"
+    > = ["exercise", "sleep", "supplement", "diet", "therapy"];
+    const habitScores = categories.reduce(
+      (acc, cat) => {
+        acc[cat] = calculateCategoryScore(todayLogs, cat, options);
+        return acc;
+      },
+      {} as Record<
+        "exercise" | "sleep" | "supplement" | "diet" | "therapy",
+        number
+      >,
+    );
+
+    // 생활습관 기본 점수
+    const baseAxisScores = computeLifestyleBaseAxisScores(habitScores);
+
+    // 천연물 보너스 점수
+    const bonusAxisScores = computeSupplementBonusAxisScores(
+      ingredientEvidence as any,
+    );
+
+    // 최종 레이더 점수
+    const finalAxisScores = combineAxisScores(baseAxisScores, bonusAxisScores);
+    const radarData = toRadarData(finalAxisScores);
+
+    // 상위 기여 성분
+    const topIngredients = topContributingIngredients(
+      ingredientEvidence as any,
+      2,
+    );
+
+    // 판단 문장 생성
+    const strongestAxis = radarData.reduce((max, item) =>
+      item.score > max.score ? item : max,
+    );
+    const topLine = `이번 주 가장 강한 축: ${strongestAxis.label}`;
+    const subLine =
+      topIngredients.length > 0
+        ? `천연물 기여: ${topIngredients
+            .map(
+              (ing) =>
+                `${ing.name}(${ing.axes
+                  .map((a) => {
+                    const labels: Record<string, string> = {
+                      metabolic: "대사",
+                      inflammation: "염증",
+                      immune: "면역",
+                      hormone: "호르몬",
+                      neuro: "신경",
+                      recovery: "회복",
+                    };
+                    return labels[a] || a;
+                  })
+                  .join("·")})`,
+            )
+            .join(", ")}`
+        : "천연물 기록 없음";
+
     return {
       healthHabitsData: {
         dailyScores,
         periodScores,
         todayTotal,
       },
+      radarData: {
+        data: radarData,
+        topLine,
+        subLine,
+      },
     };
   } catch (error) {
     console.error("Failed to load health habits data:", error);
     return {
       healthHabitsData: null,
+      radarData: null,
     };
   }
 }
@@ -114,7 +192,15 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
         <div className="bg-muted/50 aspect-video rounded-xl" />
         <div className="bg-muted/50 aspect-video rounded-xl" />
-        <div className="bg-muted/50 aspect-video rounded-xl" />
+        {loaderData.radarData ? (
+          <NaturalTargetRadarChart
+            radarData={loaderData.radarData.data}
+            topLine={loaderData.radarData.topLine}
+            subLine={loaderData.radarData.subLine}
+          />
+        ) : (
+          <div className="bg-muted/50 aspect-video rounded-xl" />
+        )}
       </div>
       <div className="grid auto-rows-min gap-4 md:grid-cols-2">
         {loaderData.healthHabitsData ? (

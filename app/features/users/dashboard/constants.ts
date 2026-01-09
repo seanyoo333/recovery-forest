@@ -91,6 +91,109 @@ export const RECORD_SUCCESS_THRESHOLD = 2; // filled_count >= 2
 export const GRACE_PER_WEEK = 1; // 주 1회 보호
 
 /**
+ * 레이더 차트 메타축 정의
+ */
+export const META_AXES = [
+  "metabolic", // 대사 안정
+  "inflammation", // 염증 조절
+  "immune", // 면역 균형
+  "hormone", // 호르몬·신호
+  "neuro", // 신경·스트레스 안정
+  "recovery", // 회복·장기 보호
+] as const;
+
+export type MetaAxis = (typeof META_AXES)[number];
+
+/**
+ * 메타축 라벨
+ */
+export const AXIS_LABEL: Record<MetaAxis, string> = {
+  metabolic: "대사 안정",
+  inflammation: "염증 조절",
+  immune: "면역 균형",
+  hormone: "호르몬·신호",
+  neuro: "신경·스트레스",
+  recovery: "회복·보호",
+};
+
+/**
+ * 생활습관 카테고리 → 메타축 가중치 매핑
+ */
+export const HABIT_TO_AXIS_WEIGHT: Record<
+  Category,
+  Partial<Record<MetaAxis, number>>
+> = {
+  exercise: {
+    metabolic: 1.0,
+    inflammation: 0.6,
+    immune: 0.5,
+    neuro: 0.4,
+    recovery: 0.4,
+  },
+  sleep: {
+    neuro: 1.1,
+    immune: 0.7,
+    hormone: 0.6,
+    inflammation: 0.5,
+    recovery: 0.5,
+  },
+  diet: {
+    metabolic: 1.0,
+    inflammation: 0.6,
+    hormone: 0.6,
+    immune: 0.4,
+    recovery: 0.3,
+  },
+  supplement: {
+    inflammation: 0.3,
+    immune: 0.3,
+    recovery: 0.3,
+    metabolic: 0.2,
+    hormone: 0.2,
+    neuro: 0.1,
+  },
+  therapy: {
+    neuro: 1.0,
+    inflammation: 0.4,
+    immune: 0.3,
+    hormone: 0.2,
+    recovery: 0.2,
+  },
+};
+
+/**
+ * 메타축별 최대값 (정규화용)
+ */
+export const AXIS_MAX: Record<MetaAxis, number> = {
+  metabolic: 10,
+  inflammation: 8,
+  immune: 7,
+  hormone: 6,
+  neuro: 9,
+  recovery: 7,
+};
+
+/**
+ * 근거 수준별 가중치
+ */
+export const EVIDENCE_MULT: Record<
+  "cell" | "animal" | "human" | "mixed" | "preclinical",
+  number
+> = {
+  human: 1.0,
+  mixed: 0.9,
+  animal: 0.7,
+  cell: 0.5,
+  preclinical: 0.6,
+};
+
+/**
+ * 보너스 점수 제한
+ */
+export const BONUS_CAP_TOTAL = 20; // 하루 천연물 보너스 총합 최대
+export const BONUS_CAP_PER_AXIS = 10; // 축당 보너스 최대
+
+/**
  * 표준 혈액검사 항목 정의
  * 모든 standard_name은 소문자로 통일하여 관리
  */

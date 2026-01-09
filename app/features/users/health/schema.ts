@@ -1,0 +1,514 @@
+/**
+ * Health Dashboard Schema
+ *
+ * 건강 대시보드 관련 데이터베이스 스키마 정의
+ * 생활습관 기록, 천연물 표적 프로필 등 건강 관련 기능을 위한 테이블들
+ */
+import { sql } from "drizzle-orm";
+import {
+  bigint,
+  boolean,
+  check,
+  date,
+  doublePrecision,
+  integer,
+  jsonb,
+  pgEnum,
+  pgPolicy,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+import { authUid, authUsers, authenticatedRole } from "drizzle-orm/supabase";
+
+import { timestamps } from "~/core/db/helpers.server";
+import { products } from "~/features/products/schema";
+
+/**
+ * Health Habit Enums
+ */
+export const habitCategoryEnum = pgEnum("habit_category", [
+  "exercise",
+  "sleep",
+  "supplement",
+  "diet",
+  "therapy",
+]);
+
+export const habitTimeBlockEnum = pgEnum("habit_time_block", [
+  "am",
+  "noon",
+  "pm",
+  "bed",
+]);
+
+export const gridOptionKindEnum = pgEnum("grid_option_kind", [
+  "preset",
+  "template",
+]);
+
+/**
+ * Routine Templates Table
+ *
+ * 상세 설정 템플릿 (아침 루틴1, 저강도 등)
+ */
+export const routineTemplates = pgTable(
+  "routine_templates",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    user_id: uuid()
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    section_type: habitCategoryEnum().notNull(),
+    name: text().notNull(),
+    notes: text(),
+    sort_order: integer().notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("routine-templates-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-templates-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-templates-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-templates-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+  ],
+);
+
+/**
+ * Routine Grid Options Table
+ *
+ * 그리드 셀에서 선택할 수 있는 옵션들 (저강도, 루틴1, 숙면 등)
+ */
+export const routineGridOptions = pgTable(
+  "routine_grid_options",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    user_id: uuid()
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    category: habitCategoryEnum().notNull(),
+    label: text().notNull(),
+    kind: gridOptionKindEnum().notNull(),
+    template_id: uuid().references(() => routineTemplates.id, {
+      onDelete: "set null",
+    }),
+    sort_order: integer().notNull().default(0),
+    is_active: boolean().notNull().default(true),
+    ...timestamps,
+  },
+  (table) => [
+    // Note: Partial unique indexes are created via SQL migration
+    // See: sql/migrations/0086_fix_grid_options_unique_constraint.sql
+    // - routine_grid_options_user_category_template_uidx (template_id IS NOT NULL)
+    // - routine_grid_options_user_category_label_uidx (template_id IS NULL)
+    pgPolicy("routine-grid-options-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-grid-options-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-grid-options-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-grid-options-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+  ],
+);
+
+/**
+ * Routine Items Table
+ *
+ * 템플릿의 세부 아이템들 (버버린 500mg, 커큐민 1000mg 등)
+ *
+ * label: 사용자가 입력한 표시명 (예: "MCS 버버린")
+ * ingredient_id: 전역 성분과의 연결 (선택적, 레이더 차트 계산용)
+ */
+export const routineItems = pgTable(
+  "routine_items",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    template_id: uuid()
+      .notNull()
+      .references(() => routineTemplates.id, { onDelete: "cascade" }),
+    sort_order: integer().notNull().default(0),
+    label: text().notNull(),
+    ingredient_id: uuid().references(() => naturalIngredients.id, {
+      onDelete: "set null",
+    }),
+    amount_num: doublePrecision(),
+    amount_unit: text(),
+    meta: jsonb().$type<Record<string, unknown>>(),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("routine-items-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM routine_templates
+        WHERE routine_templates.id = ${table.template_id}
+        AND routine_templates.user_id = ${authUid}
+      )`,
+    }),
+    pgPolicy("routine-items-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM routine_templates
+        WHERE routine_templates.id = ${table.template_id}
+        AND routine_templates.user_id = ${authUid}
+      )`,
+    }),
+    pgPolicy("routine-items-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM routine_templates
+        WHERE routine_templates.id = ${table.template_id}
+        AND routine_templates.user_id = ${authUid}
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM routine_templates
+        WHERE routine_templates.id = ${table.template_id}
+        AND routine_templates.user_id = ${authUid}
+      )`,
+    }),
+    pgPolicy("routine-items-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM routine_templates
+        WHERE routine_templates.id = ${table.template_id}
+        AND routine_templates.user_id = ${authUid}
+      )`,
+    }),
+  ],
+);
+
+/**
+ * Routine Daily Grid Logs Table
+ *
+ * 오늘 입력한 그리드 로그 (가볍게 저장)
+ */
+export const routineDailyGridLogs = pgTable(
+  "routine_daily_grid_logs",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    user_id: uuid()
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    log_date: date().notNull(),
+    time_block: habitTimeBlockEnum().notNull(),
+    category: habitCategoryEnum().notNull(),
+    option_id: uuid().references(() => routineGridOptions.id, {
+      onDelete: "set null",
+    }),
+    template_id: uuid().references(() => routineTemplates.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("routine_daily_grid_logs_unique_idx").on(
+      table.user_id,
+      table.log_date,
+      table.time_block,
+      table.category,
+    ),
+    pgPolicy("routine-daily-grid-logs-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-daily-grid-logs-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-daily-grid-logs-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("routine-daily-grid-logs-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+  ],
+);
+
+/**
+ * Natural Ingredients Table
+ *
+ * 천연물 성분 (커큐민, 퀘르세틴 등)
+ */
+export const naturalIngredients = pgTable("natural_ingredients", {
+  id: uuid().primaryKey().defaultRandom(),
+  slug: text().notNull().unique(),
+  display_name: text().notNull(),
+  synonyms: text().array().default([]),
+  ...timestamps,
+});
+
+/**
+ * Natural Targets Table
+ *
+ * 표적 (GLUT, NF-kB 등)
+ */
+export const naturalTargets = pgTable("natural_targets", {
+  id: uuid().primaryKey().defaultRandom(),
+  slug: text().notNull().unique(),
+  display_name: text().notNull(),
+  description: text(),
+  ...timestamps,
+});
+
+/**
+ * Target Tag Category Enum
+ *
+ * 표적 태그 카테고리 (논문 분류용)
+ */
+export const targetTagCategoryEnum = pgEnum("target_tag_category", [
+  "epigenetics", // 후성유전 (HDAC, DNMT, miRNA 등)
+  "metastasis", // 전이/침윤 (EMT, MMP, VEGF, TGF-β 등)
+  "metabolism", // 대사 (GLUT, Glutaminolysis 등)
+  "inflammation", // 염증 (NF-κB, COX-2 등)
+  "immune", // 면역 (T/NK, checkpoint 등)
+  "hormone", // 호르몬/신호전달
+  "neuro", // 신경/스트레스
+  "recovery", // 회복/보호
+]);
+
+/**
+ * Target Tags Table
+ *
+ * 표적 태그 매핑 (논문 분류 및 드릴다운용)
+ * 하나의 표적이 여러 태그를 가질 수 있음
+ */
+export const targetTags = pgTable(
+  "target_tags",
+  {
+    target_id: uuid()
+      .notNull()
+      .references(() => naturalTargets.id, { onDelete: "cascade" }),
+    tag_category: targetTagCategoryEnum().notNull(),
+    tag_value: text().notNull(), // "hdac", "dnmt", "emt", "mmp9", "nfkb" 등
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.target_id, table.tag_category, table.tag_value],
+    }),
+  ],
+);
+
+/**
+ * Target to Meta Axis Table
+ *
+ * 표적 → 메타축 매핑 (표적이 어떤 메타축에 기여하는지)
+ * 레이더 차트용 메인 분류
+ *
+ * 예시:
+ * - HDAC → hormone (후성유전은 호르몬·신호 축)
+ * - EMT/MMP → recovery (전이/침윤은 회복·보호 축)
+ */
+export const targetToMetaAxis = pgTable(
+  "target_to_meta_axis",
+  {
+    target_id: uuid()
+      .notNull()
+      .references(() => naturalTargets.id, { onDelete: "cascade" }),
+    meta_axis: text()
+      .notNull()
+      .$type<
+        | "metabolic"
+        | "inflammation"
+        | "immune"
+        | "hormone"
+        | "neuro"
+        | "recovery"
+      >(),
+    axis_weight: doublePrecision().notNull().default(1),
+  },
+  (table) => [
+    primaryKey({ columns: [table.target_id, table.meta_axis] }),
+    check("axis_weight_check", sql`axis_weight >= 0 AND axis_weight <= 2`),
+  ],
+);
+
+/**
+ * Ingredient Target Evidence Table
+ *
+ * 성분 → 표적 매핑 + 근거 (성분이 특정 표적에 얼마나 관련되는지)
+ *
+ * 사용 예시:
+ * - 커큐민 → NF-κB (meta_axis: inflammation, tags: ["inflammation", "nfkb"])
+ * - 커큐민 → HDAC (meta_axis: hormone, tags: ["epigenetics", "hdac"])
+ */
+export const ingredientTargetEvidence = pgTable(
+  "ingredient_target_evidence",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    ingredient_id: uuid()
+      .notNull()
+      .references(() => naturalIngredients.id, { onDelete: "cascade" }),
+    target_id: uuid()
+      .notNull()
+      .references(() => naturalTargets.id, { onDelete: "cascade" }),
+    strength: doublePrecision().notNull().default(1),
+    evidence_level: text()
+      .notNull()
+      .default("preclinical")
+      .$type<"cell" | "animal" | "human" | "mixed" | "preclinical">(),
+    pmids: text().array().default([]),
+    notes: text(),
+  },
+  (table) => [
+    uniqueIndex("ingredient_target_evidence_unique_idx").on(
+      table.ingredient_id,
+      table.target_id,
+    ),
+    check("strength_check", sql`strength >= 0 AND strength <= 2`),
+  ],
+);
+
+/**
+ * Product Ingredients Table
+ *
+ * Products와 Natural Ingredients 연결
+ */
+export const productIngredients = pgTable(
+  "product_ingredients",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    product_id: bigint({ mode: "number" })
+      .notNull()
+      .references(() => products.product_id, { onDelete: "cascade" }),
+    ingredient_id: uuid()
+      .notNull()
+      .references(() => naturalIngredients.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("product_ingredients_unique_idx").on(
+      table.product_id,
+      table.ingredient_id,
+    ),
+  ],
+);
+
+/**
+ * Routine Grid Option Ingredients Table
+ *
+ * 그리드 옵션과 성분 연결 (사용자가 그리드에서 선택한 보조제가 어떤 성분인지)
+ */
+export const routineGridOptionIngredients = pgTable(
+  "routine_grid_option_ingredients",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    grid_option_id: uuid()
+      .notNull()
+      .references(() => routineGridOptions.id, { onDelete: "cascade" }),
+    ingredient_id: uuid()
+      .notNull()
+      .references(() => naturalIngredients.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("routine_grid_option_ingredients_unique_idx").on(
+      table.grid_option_id,
+      table.ingredient_id,
+    ),
+    pgPolicy("routine-grid-option-ingredients-select", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM routine_grid_options
+        WHERE routine_grid_options.id = ${table.grid_option_id}
+        AND routine_grid_options.user_id = ${authUid}
+      )`,
+    }),
+    pgPolicy("routine-grid-option-ingredients-insert", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM routine_grid_options
+        WHERE routine_grid_options.id = ${table.grid_option_id}
+        AND routine_grid_options.user_id = ${authUid}
+      )`,
+    }),
+    pgPolicy("routine-grid-option-ingredients-update", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM routine_grid_options
+        WHERE routine_grid_options.id = ${table.grid_option_id}
+        AND routine_grid_options.user_id = ${authUid}
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM routine_grid_options
+        WHERE routine_grid_options.id = ${table.grid_option_id}
+        AND routine_grid_options.user_id = ${authUid}
+      )`,
+    }),
+    pgPolicy("routine-grid-option-ingredients-delete", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM routine_grid_options
+        WHERE routine_grid_options.id = ${table.grid_option_id}
+        AND routine_grid_options.user_id = ${authUid}
+      )`,
+    }),
+  ],
+);

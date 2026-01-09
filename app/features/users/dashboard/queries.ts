@@ -3,8 +3,9 @@ import type { Database } from "database.types";
 
 import type {
   Category,
-  DailyGridLog,
-  GridOption,
+  RoutineDailyGridLog,
+  RoutineGridOption,
+  RoutineTemplate,
   SectionTemplate,
 } from "./types";
 
@@ -675,15 +676,15 @@ export const getBloodTestTypesByStandardNames = async (
 };
 
 /**
- * 그리드 옵션 조회
+ * 루틴 그리드 옵션 조회
  */
-export async function getGridOptions(
+export async function getRoutineGridOptions(
   client: SupabaseClient<Database>,
   userId: string,
   category?: Category,
 ) {
   let query = client
-    .from("grid_options")
+    .from("routine_grid_options")
     .select("*")
     .eq("user_id", userId)
     .eq("is_active", true)
@@ -695,38 +696,44 @@ export async function getGridOptions(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as GridOption[];
+  return (data ?? []) as RoutineGridOption[];
 }
 
+// 하위 호환성을 위한 별칭
+export const getGridOptions = getRoutineGridOptions;
+
 /**
- * 일일 그리드 로그 조회
+ * 루틴 일일 그리드 로그 조회
  */
-export async function getDailyGridLogs(
+export async function getRoutineDailyGridLogs(
   client: SupabaseClient<Database>,
   userId: string,
   logDate: string,
 ) {
   const { data, error } = await client
-    .from("daily_grid_logs")
+    .from("routine_daily_grid_logs")
     .select("*")
     .eq("user_id", userId)
     .eq("log_date", logDate);
 
   if (error) throw error;
-  return (data ?? []) as DailyGridLog[];
+  return (data ?? []) as RoutineDailyGridLog[];
 }
+
+// 하위 호환성을 위한 별칭
+export const getDailyGridLogs = getRoutineDailyGridLogs;
 
 /**
  * 기간별 일일 그리드 로그 조회
  */
-export async function getDailyGridLogsByDateRange(
+export async function getRoutineDailyGridLogsByDateRange(
   client: SupabaseClient<Database>,
   userId: string,
   startDate: string,
   endDate: string,
 ) {
   const { data, error } = await client
-    .from("daily_grid_logs")
+    .from("routine_daily_grid_logs")
     .select("*")
     .eq("user_id", userId)
     .gte("log_date", startDate)
@@ -734,26 +741,30 @@ export async function getDailyGridLogsByDateRange(
     .order("log_date", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as DailyGridLog[];
+  return (data ?? []) as RoutineDailyGridLog[];
 }
 
+// 하위 호환성을 위한 별칭
+export const getDailyGridLogsByDateRange = getRoutineDailyGridLogsByDateRange;
+
 /**
- * 섹션 템플릿 조회 (아이템 포함)
+ * 루틴 템플릿 조회 (아이템 포함)
  */
-export async function getSectionTemplates(
+export async function getRoutineTemplates(
   client: SupabaseClient<Database>,
   userId: string,
   sectionType?: Category,
 ) {
   let query = client
-    .from("section_templates")
+    .from("routine_templates")
     .select(
       `
       *,
-      section_items (*)
+      routine_items (*)
     `,
     )
     .eq("user_id", userId)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (sectionType) {
@@ -763,9 +774,134 @@ export async function getSectionTemplates(
   const { data, error } = await query;
   if (error) throw error;
 
-  // section_items를 배열로 변환
+  // routine_items를 배열로 변환
   return (data ?? []).map((template: any) => ({
     ...template,
-    items: (template.section_items ?? []) as SectionTemplate["items"],
-  })) as SectionTemplate[];
+    items: (template.routine_items ?? []) as RoutineTemplate["items"],
+  })) as RoutineTemplate[];
+}
+
+// 하위 호환성을 위한 별칭
+export const getSectionTemplates = getRoutineTemplates;
+
+/**
+ * 오늘 복용한 천연물의 표적-메타축 매핑 데이터 조회
+ *
+ * sectionItems.ingredient_id를 직접 사용하여 성분을 찾습니다.
+ */
+export async function getTodayIngredientEvidence(
+  client: SupabaseClient<Database>,
+  userId: string,
+  logDate: string,
+) {
+  // 오늘 복용한 보조제 기록 (template_id 포함)
+  const { data: todayLogs, error: logsError } = await client
+    .from("routine_daily_grid_logs")
+    .select("template_id")
+    .eq("user_id", userId)
+    .eq("log_date", logDate)
+    .eq("category", "supplement")
+    .not("template_id", "is", null);
+
+  if (logsError) throw logsError;
+  if (!todayLogs || todayLogs.length === 0) {
+    return [];
+  }
+
+  const templateIds = todayLogs
+    .map((log) => log.template_id)
+    .filter((id): id is string => id !== null);
+
+  if (templateIds.length === 0) {
+    return [];
+  }
+
+  // 템플릿의 아이템들에서 ingredient_id 추출
+  const { data: routineItems, error: itemsError } = await client
+    .from("routine_items")
+    .select("ingredient_id")
+    .in("template_id", templateIds)
+    .not("ingredient_id", "is", null);
+
+  if (itemsError) throw itemsError;
+  if (!routineItems || routineItems.length === 0) {
+    return [];
+  }
+
+  const ingredientIds = routineItems
+    .map((item) => item.ingredient_id)
+    .filter((id): id is string => id !== null);
+
+  if (ingredientIds.length === 0) {
+    return [];
+  }
+
+  // 성분 → 표적 → 메타축 조인 쿼리
+  const { data, error } = await client
+    .from("ingredient_target_evidence")
+    .select(
+      `
+      ingredient_id,
+      natural_ingredients!inner(display_name),
+      strength,
+      evidence_level,
+      natural_targets!inner(
+        slug,
+        target_to_meta_axis(meta_axis, axis_weight)
+      )
+    `,
+    )
+    .in("ingredient_id", ingredientIds);
+
+  if (error) throw error;
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  // 데이터 변환
+  const result: Array<{
+    ingredient_id: string;
+    ingredient_name: string;
+    target_slug: string;
+    strength: number;
+    evidence_level: "cell" | "animal" | "human" | "mixed" | "preclinical";
+    meta_axis: string;
+    axis_weight: number;
+  }> = [];
+
+  for (const row of data) {
+    const ingredient = row.natural_ingredients as
+      | { display_name: string }
+      | null
+      | undefined;
+    const target = row.natural_targets as
+      | {
+          slug: string;
+          target_to_meta_axis: Array<{
+            meta_axis: string;
+            axis_weight: number;
+          }>;
+        }
+      | null
+      | undefined;
+
+    if (!ingredient || !target) continue;
+
+    const mappings = target.target_to_meta_axis;
+    if (!mappings || mappings.length === 0) continue;
+
+    for (const mapping of mappings) {
+      result.push({
+        ingredient_id: row.ingredient_id,
+        ingredient_name: ingredient.display_name,
+        target_slug: target.slug,
+        strength: row.strength,
+        evidence_level: row.evidence_level as any,
+        meta_axis: mapping.meta_axis,
+        axis_weight: mapping.axis_weight,
+      });
+    }
+  }
+
+  return result;
 }

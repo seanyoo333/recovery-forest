@@ -8,9 +8,16 @@ import type { Category, DailyGridLog, GridOption } from "./types";
 import { format, subDays } from "date-fns";
 
 import {
+  AXIS_LABEL,
+  AXIS_MAX,
+  BONUS_CAP_TOTAL,
   CATEGORY_SCORES,
   CATEGORY_WEIGHTS,
+  EVIDENCE_MULT,
   GRACE_PER_WEEK,
+  HABIT_TO_AXIS_WEIGHT,
+  META_AXES,
+  type MetaAxis,
   RECORD_SUCCESS_THRESHOLD,
   TRAFFIC_LIGHT_THRESHOLDS,
 } from "./constants";
@@ -619,4 +626,169 @@ export function calculateStreak(
     graceUsed,
     lastRecordDate,
   };
+}
+
+/**
+ * 레이더 차트 계산 유틸리티
+ */
+
+/**
+ * 숫자를 범위 내로 제한
+ */
+function clamp(n: number, a: number, b: number): number {
+  return Math.max(a, Math.min(b, n));
+}
+
+/**
+ * 생활습관 점수를 6축 기본점수로 변환
+ */
+export function computeLifestyleBaseAxisScores(
+  habitScores: Record<Category, number>,
+): Record<MetaAxis, number> {
+  // 축별 누적
+  const axisRaw: Record<MetaAxis, number> = {
+    metabolic: 0,
+    inflammation: 0,
+    immune: 0,
+    hormone: 0,
+    neuro: 0,
+    recovery: 0,
+  };
+
+  (Object.keys(habitScores) as Category[]).forEach((cat) => {
+    const s = habitScores[cat];
+    const weights = HABIT_TO_AXIS_WEIGHT[cat];
+    for (const axis of META_AXES) {
+      const w = weights[axis] ?? 0;
+      axisRaw[axis] += s * w;
+    }
+  });
+
+  // 정규화 (0~100)
+  const axisBase100: Record<MetaAxis, number> = {} as any;
+  for (const axis of META_AXES) {
+    axisBase100[axis] = clamp((axisRaw[axis] / AXIS_MAX[axis]) * 100, 0, 100);
+  }
+
+  return axisBase100;
+}
+
+/**
+ * 천연물 보너스 점수 계산
+ */
+export type JoinedEvidenceRow = {
+  ingredient_id: string;
+  ingredient_name: string;
+  target_slug: string;
+  strength: number;
+  evidence_level: "cell" | "animal" | "human" | "mixed" | "preclinical";
+  meta_axis: MetaAxis;
+  axis_weight: number;
+};
+
+export function computeSupplementBonusAxisScores(
+  rows: JoinedEvidenceRow[],
+): Record<MetaAxis, number> {
+  const bonus: Record<MetaAxis, number> = {
+    metabolic: 0,
+    inflammation: 0,
+    immune: 0,
+    hormone: 0,
+    neuro: 0,
+    recovery: 0,
+  };
+
+  for (const r of rows) {
+    const mult = EVIDENCE_MULT[r.evidence_level] ?? 0.7;
+    const contrib = r.strength * r.axis_weight * mult;
+    bonus[r.meta_axis] += contrib;
+  }
+
+  // 스케일 조정: contrib 합을 0~10 수준으로 맞추기
+  const SCALE = 5;
+  for (const axis of META_AXES) {
+    bonus[axis] = clamp(bonus[axis] * SCALE, 0, 10);
+  }
+
+  // 전체 캡: 총합이 20 넘으면 비율로 줄이기
+  const total = META_AXES.reduce((s, a) => s + bonus[a], 0);
+  if (total > BONUS_CAP_TOTAL) {
+    const ratio = BONUS_CAP_TOTAL / total;
+    for (const axis of META_AXES) {
+      bonus[axis] = Math.round(bonus[axis] * ratio * 10) / 10;
+    }
+  }
+
+  return bonus;
+}
+
+/**
+ * 최종 레이더 점수 계산 (기본점수 + 보너스)
+ */
+export function combineAxisScores(
+  base100: Record<MetaAxis, number>,
+  bonus0to10: Record<MetaAxis, number>,
+): Record<MetaAxis, number> {
+  const out: Record<MetaAxis, number> = {} as any;
+  const BONUS_SCALE_TO_20 = 2;
+
+  for (const axis of META_AXES) {
+    const bonus = clamp(bonus0to10[axis] * BONUS_SCALE_TO_20, 0, 20);
+    out[axis] = clamp(base100[axis] + bonus, 0, 100);
+  }
+
+  return out;
+}
+
+/**
+ * 레이더 차트 데이터 형식으로 변환
+ */
+export function toRadarData(scores: Record<MetaAxis, number>) {
+  return META_AXES.map((axis) => ({
+    axis,
+    label: AXIS_LABEL[axis],
+    score: Math.round(scores[axis]),
+  }));
+}
+
+/**
+ * 상위 기여 성분 추출
+ */
+export function topContributingIngredients(
+  rows: JoinedEvidenceRow[],
+  topN = 2,
+): Array<{
+  ingredient_id: string;
+  name: string;
+  score: number;
+  axes: MetaAxis[];
+}> {
+  const map = new Map<
+    string,
+    { name: string; score: number; axes: Set<MetaAxis> }
+  >();
+
+  for (const r of rows) {
+    const mult = EVIDENCE_MULT[r.evidence_level] ?? 0.7;
+    const contrib = r.strength * r.axis_weight * mult;
+    const key = r.ingredient_id;
+    const cur = map.get(key) ?? {
+      name: r.ingredient_name,
+      score: 0,
+      axes: new Set<MetaAxis>(),
+    };
+    cur.score += contrib;
+    cur.axes.add(r.meta_axis);
+    map.set(key, cur);
+  }
+
+  const arr = [...map.entries()].map(([id, v]) => ({
+    ingredient_id: id,
+    name: v.name,
+    score: v.score,
+    axes: [...v.axes],
+  }));
+
+  arr.sort((a, b) => b.score - a.score);
+  return arr.slice(0, topN);
 }

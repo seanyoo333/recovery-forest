@@ -166,6 +166,25 @@ export function TemplateDrawer({
     fetcher.submit(formDataToSubmit, { method: "post" });
   };
 
+  const handleReorderTemplates = (reorderedTemplates: SectionTemplate[]) => {
+    if (!category) return;
+
+    const formDataToSubmit = new FormData();
+    formDataToSubmit.append("intent", "reorder-routines");
+    formDataToSubmit.append("category", category);
+    formDataToSubmit.append(
+      "orders",
+      JSON.stringify(
+        reorderedTemplates.map((t, index) => ({
+          id: t.id,
+          sort_order: index,
+        })),
+      ),
+    );
+
+    fetcher.submit(formDataToSubmit, { method: "post" });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-2xl">
@@ -225,6 +244,7 @@ export function TemplateDrawer({
                     onSelectTemplate={() => {}}
                     onEditTemplate={handleEditTemplate}
                     onDeleteTemplate={handleDeleteTemplate}
+                    onReorderTemplates={handleReorderTemplates}
                   />
 
                   <div className="space-y-2">
@@ -241,12 +261,13 @@ export function TemplateDrawer({
                               <Checkbox
                                 id={`grid-option-${template.id}`}
                                 checked={isInGrid}
-                                onCheckedChange={(checked: boolean) =>
+                                onCheckedChange={(checked: boolean) => {
                                   handleToggleGridOption(
                                     template.id,
                                     checked === true,
-                                  )
-                                }
+                                  );
+                                }}
+                                onClick={(e) => e.stopPropagation()}
                               />
                               <div className="flex-1">
                                 <CardTitle className="text-lg">

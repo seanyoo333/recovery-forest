@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database as DbTypes } from "database.types";
 
-import type { Category, GridCellValue, GridOptionKind } from "./types";
+import type {
+  Category,
+  GridCellValue,
+  GridOptionKind,
+  RoutineDailyGridLog,
+  RoutineGridOption,
+} from "./types";
 
 import type { Database } from "~/core/lib/supa-client.server";
 
@@ -336,15 +342,15 @@ export const deleteBloodTestResultsByDate = async (
  */
 
 /**
- * 그리드 로그 upsert
+ * 루틴 그리드 로그 upsert
  */
-export async function upsertDailyGridLog(
+export async function upsertRoutineDailyGridLog(
   client: SupabaseClient<Database>,
   userId: string,
   logDate: string,
   payload: GridCellValue,
 ) {
-  const { error } = await client.from("daily_grid_logs").upsert(
+  const { error } = await client.from("routine_daily_grid_logs").upsert(
     {
       user_id: userId,
       log_date: logDate,
@@ -362,10 +368,13 @@ export async function upsertDailyGridLog(
   if (error) throw error;
 }
 
+// 하위 호환성을 위한 별칭
+export const upsertDailyGridLog = upsertRoutineDailyGridLog;
+
 /**
- * 그리드 옵션 생성/수정
+ * 루틴 그리드 옵션 생성/수정
  */
-export async function upsertGridOption(
+export async function upsertRoutineGridOption(
   client: SupabaseClient<Database>,
   userId: string,
   payload: {
@@ -377,7 +386,7 @@ export async function upsertGridOption(
     sort_order?: number;
   },
 ) {
-  const { error } = await client.from("grid_options").upsert(
+  const { error } = await client.from("routine_grid_options").upsert(
     {
       ...(payload.id && { id: payload.id }),
       user_id: userId,
@@ -396,10 +405,13 @@ export async function upsertGridOption(
   if (error) throw error;
 }
 
+// 하위 호환성을 위한 별칭
+export const upsertGridOption = upsertRoutineGridOption;
+
 /**
- * 섹션 템플릿 생성/수정
+ * 루틴 템플릿 생성/수정
  */
-export async function upsertSectionTemplate(
+export async function upsertRoutineTemplate(
   client: SupabaseClient<Database>,
   userId: string,
   payload: {
@@ -407,10 +419,11 @@ export async function upsertSectionTemplate(
     section_type: Category;
     name: string;
     notes?: string | null;
+    sort_order?: number;
   },
 ) {
   const { data, error } = await client
-    .from("section_templates")
+    .from("routine_templates")
     .upsert(
       {
         ...(payload.id && { id: payload.id }),
@@ -418,6 +431,7 @@ export async function upsertSectionTemplate(
         section_type: payload.section_type,
         name: payload.name,
         notes: payload.notes ?? null,
+        sort_order: payload.sort_order ?? 0,
         updated_at: new Date().toISOString(),
       },
       {
@@ -431,15 +445,19 @@ export async function upsertSectionTemplate(
   return data;
 }
 
+// 하위 호환성을 위한 별칭
+export const upsertSectionTemplate = upsertRoutineTemplate;
+
 /**
- * 섹션 아이템 upsert (배치)
+ * 루틴 아이템 upsert (배치)
  */
-export async function upsertSectionItems(
+export async function upsertRoutineItems(
   client: SupabaseClient<Database>,
   templateId: string,
   items: Array<{
     id?: string;
     label: string;
+    ingredient_id?: string | null;
     amount_num?: number | null;
     amount_unit?: string | null;
     sort_order: number;
@@ -447,29 +465,43 @@ export async function upsertSectionItems(
   }>,
 ) {
   // 기존 아이템 삭제 후 새로 삽입
-  await client.from("section_items").delete().eq("template_id", templateId);
+  const { error: deleteError } = await client
+    .from("routine_items")
+    .delete()
+    .eq("template_id", templateId);
 
-  if (items.length === 0) return;
+  if (deleteError) throw deleteError;
 
-  const { error } = await client.from("section_items").insert(
-    items.map((item) => ({
+  // 빈 label을 가진 아이템 필터링
+  const validItems = items.filter(
+    (item) => item.label && item.label.trim().length > 0,
+  );
+
+  if (validItems.length === 0) return;
+
+  const { error } = await client.from("routine_items").insert(
+    validItems.map((item) => ({
       template_id: templateId,
-      label: item.label,
+      label: item.label.trim(),
+      ingredient_id: item.ingredient_id ?? null,
       amount_num: item.amount_num ?? null,
       amount_unit: item.amount_unit ?? null,
       sort_order: item.sort_order,
       meta: (item.meta ??
-        null) as DbTypes["public"]["Tables"]["section_items"]["Insert"]["meta"],
+        null) as DbTypes["public"]["Tables"]["routine_items"]["Insert"]["meta"],
     })),
   );
 
   if (error) throw error;
 }
 
+// 하위 호환성을 위한 별칭
+export const upsertSectionItems = upsertRoutineItems;
+
 /**
- * 기본 그리드 옵션 초기화
+ * 기본 루틴 그리드 옵션 초기화
  */
-export async function initializeDefaultGridOptions(
+export async function initializeDefaultRoutineGridOptions(
   client: SupabaseClient<Database>,
   userId: string,
 ) {
@@ -479,7 +511,7 @@ export async function initializeDefaultGridOptions(
   ) as [Category, (typeof DEFAULT_GRID_OPTIONS)[Category]][]) {
     // 해당 카테고리의 활성 옵션 확인
     const { data: existingOptions } = await client
-      .from("grid_options")
+      .from("routine_grid_options")
       .select("id")
       .eq("user_id", userId)
       .eq("category", category)
@@ -499,10 +531,14 @@ export async function initializeDefaultGridOptions(
       }));
 
       const { error } = await client
-        .from("grid_options")
+        .from("routine_grid_options")
         .insert(optionsToInsert);
 
       if (error) throw error;
     }
   }
 }
+
+// 하위 호환성을 위한 별칭
+export const initializeDefaultGridOptions =
+  initializeDefaultRoutineGridOptions;

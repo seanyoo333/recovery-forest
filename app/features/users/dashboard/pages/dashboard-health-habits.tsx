@@ -27,8 +27,8 @@ import {
   initializeDefaultGridOptions,
   upsertDailyGridLog,
   upsertGridOption,
-  upsertSectionItems,
-  upsertSectionTemplate,
+  upsertRoutineItems,
+  upsertRoutineTemplate,
 } from "../mutations";
 import {
   getDailyGridLogs,
@@ -243,7 +243,7 @@ export async function action({ request }: Route.ActionArgs) {
 
       // 템플릿 정보 가져오기
       const { data: template, error: templateError } = await client
-        .from("section_templates")
+        .from("routine_templates")
         .select("*")
         .eq("id", templateId)
         .single();
@@ -254,7 +254,7 @@ export async function action({ request }: Route.ActionArgs) {
 
       // 그리드 옵션 생성/업데이트
       const { data: existingOption } = await client
-        .from("grid_options")
+        .from("routine_grid_options")
         .select("id")
         .eq("user_id", userId)
         .eq("category", category)
@@ -267,7 +267,7 @@ export async function action({ request }: Route.ActionArgs) {
       } else {
         // 새 옵션 생성
         const { data: newOption, error: optionError } = await client
-          .from("grid_options")
+          .from("routine_grid_options")
           .insert({
             user_id: userId,
             category,
@@ -324,7 +324,7 @@ export async function action({ request }: Route.ActionArgs) {
 
       if (intent === "update-template" && templateId) {
         // 템플릿 업데이트
-        await upsertSectionTemplate(client, userId, {
+        await upsertRoutineTemplate(client, userId, {
           id: templateId,
           section_type: category,
           name,
@@ -333,7 +333,7 @@ export async function action({ request }: Route.ActionArgs) {
         finalTemplateId = templateId;
       } else {
         // 템플릿 생성
-        const template = await upsertSectionTemplate(client, userId, {
+        const template = await upsertRoutineTemplate(client, userId, {
           section_type: category,
           name,
           notes: notes || null,
@@ -346,18 +346,75 @@ export async function action({ request }: Route.ActionArgs) {
         const items = JSON.parse(itemsJson) as Array<{
           id?: string;
           label: string;
+          ingredient_id?: string | null;
           amount_num?: number | null;
           amount_unit?: string | null;
           sort_order: number;
         }>;
 
-        await upsertSectionItems(client, finalTemplateId, items);
+        await upsertRoutineItems(client, finalTemplateId, items);
+      }
+
+      // 템플릿 이름 변경 시 그리드 옵션 label 업데이트
+      if (intent === "update-template" && templateId) {
+        const { data: existingOption } = await client
+          .from("routine_grid_options")
+          .select("id, label")
+          .eq("user_id", userId)
+          .eq("category", category)
+          .eq("template_id", templateId)
+          .maybeSingle();
+
+        if (existingOption && existingOption.label !== name) {
+          // 같은 이름의 프리셋이 있는지 확인 (template_id IS NULL)
+          const { data: conflictingPreset } = await client
+            .from("routine_grid_options")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("category", category)
+            .eq("label", name)
+            .is("template_id", null)
+            .maybeSingle();
+
+          if (conflictingPreset) {
+            return {
+              success: false,
+              error: `"${name}"라는 이름의 프리셋이 이미 존재합니다. 다른 이름을 사용해주세요.`,
+            };
+          }
+
+          // 그리드 옵션 label 업데이트
+          const { error: updateError } = await client
+            .from("routine_grid_options")
+            .update({ label: name })
+            .eq("id", existingOption.id);
+
+          if (updateError) {
+            console.error("[update-template] grid_options update error:", {
+              code: updateError.code,
+              message: updateError.message,
+              details: updateError.details,
+              hint: updateError.hint,
+              templateId,
+              category,
+              existingOptionId: existingOption.id,
+              error: updateError,
+            });
+            if (updateError.code === "23505") {
+              return {
+                success: false,
+                error: `"${name}"라는 이름이 이미 사용 중입니다. 다른 이름을 사용해주세요.`,
+              };
+            }
+            throw updateError;
+          }
+        }
       }
 
       // 루틴 생성 시 자동으로 그리드 옵션에 추가
       if (intent === "create-template") {
         const { data: template } = await client
-          .from("section_templates")
+          .from("routine_templates")
           .select("*")
           .eq("id", finalTemplateId)
           .single();
@@ -365,7 +422,7 @@ export async function action({ request }: Route.ActionArgs) {
         if (template) {
           // 기존 레코드 확인
           const { data: existingOption } = await client
-            .from("grid_options")
+            .from("routine_grid_options")
             .select("id")
             .eq("user_id", userId)
             .eq("category", category)
@@ -373,10 +430,10 @@ export async function action({ request }: Route.ActionArgs) {
             .maybeSingle();
 
           if (existingOption) {
-            // 이미 있으면 활성화
+            // 이미 있으면 활성화 (label은 변경하지 않음)
             const { error } = await client
-              .from("grid_options")
-              .update({ is_active: true, label: template.name })
+              .from("routine_grid_options")
+              .update({ is_active: true })
               .eq("id", existingOption.id);
 
             if (error) {
@@ -390,7 +447,6 @@ export async function action({ request }: Route.ActionArgs) {
                 existingOptionId: existingOption.id,
                 error,
               });
-              // 23505: unique constraint violation
               if (error.code === "23505") {
                 return {
                   success: false,
@@ -400,9 +456,39 @@ export async function action({ request }: Route.ActionArgs) {
               throw error;
             }
           } else {
+            // 같은 이름의 프리셋 또는 삭제된 템플릿의 그리드 옵션이 있는지 확인
+            const { data: conflictingOption } = await client
+              .from("routine_grid_options")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("category", category)
+              .eq("label", template.name)
+              .is("template_id", null)
+              .maybeSingle();
+
+            if (conflictingOption) {
+              // 삭제된 템플릿의 그리드 옵션이 있으면 삭제하고 새로 생성
+              const { error: deleteError } = await client
+                .from("routine_grid_options")
+                .delete()
+                .eq("id", conflictingOption.id);
+
+              if (deleteError) {
+                console.error("[create-template] grid_options delete error:", {
+                  code: deleteError.code,
+                  message: deleteError.message,
+                  details: deleteError.details,
+                  hint: deleteError.hint,
+                  conflictingOptionId: conflictingOption.id,
+                  error: deleteError,
+                });
+                throw deleteError;
+              }
+            }
+
             // 새로 생성 (sort_order는 0으로 고정, 나중에 drag로 정렬)
             const { error: optionError } = await client
-              .from("grid_options")
+              .from("routine_grid_options")
               .insert({
                 user_id: userId,
                 category,
@@ -424,11 +510,10 @@ export async function action({ request }: Route.ActionArgs) {
                 userId,
                 error: optionError,
               });
-              // 23505: unique constraint violation
               if (optionError.code === "23505") {
                 return {
                   success: false,
-                  error: "이미 활성화된 항목이 있거나 중복입니다.",
+                  error: `"${template.name}"라는 이름이 이미 사용 중입니다. 다른 이름을 사용해주세요.`,
                 };
               }
               throw optionError;
@@ -443,13 +528,64 @@ export async function action({ request }: Route.ActionArgs) {
     if (intent === "delete-template") {
       const templateId = formData.get("templateId") as string;
 
+      // 템플릿 삭제 전에 관련 그리드 옵션도 삭제
+      const { error: gridOptionError } = await client
+        .from("routine_grid_options")
+        .delete()
+        .eq("user_id", userId)
+        .eq("template_id", templateId);
+
+      if (gridOptionError) {
+        console.error("[delete-template] grid_options delete error:", {
+          code: gridOptionError.code,
+          message: gridOptionError.message,
+          details: gridOptionError.details,
+          hint: gridOptionError.hint,
+          templateId,
+          error: gridOptionError,
+        });
+        throw gridOptionError;
+      }
+
+      // 템플릿 삭제
       const { error } = await client
-        .from("section_templates")
+        .from("routine_templates")
         .delete()
         .eq("id", templateId)
         .eq("user_id", userId);
 
       if (error) throw error;
+
+      return { success: true };
+    }
+
+    if (intent === "reorder-routines") {
+      const category = formData.get("category") as Category;
+      const ordersJson = formData.get("orders") as string;
+      const orders = JSON.parse(ordersJson) as Array<{
+        id: string;
+        sort_order: number;
+      }>;
+
+      // 배치 업데이트
+      for (const order of orders) {
+        const { error } = await client
+          .from("routine_templates")
+          .update({ sort_order: order.sort_order })
+          .eq("id", order.id)
+          .eq("user_id", userId)
+          .eq("section_type", category);
+
+        if (error) {
+          console.error("[reorder-routines] update error:", {
+            code: error.code,
+            message: error.message,
+            templateId: order.id,
+            error,
+          });
+          throw error;
+        }
+      }
 
       return { success: true };
     }
@@ -461,7 +597,7 @@ export async function action({ request }: Route.ActionArgs) {
 
       // 템플릿 정보 가져오기
       const { data: template, error: templateError } = await client
-        .from("section_templates")
+        .from("routine_templates")
         .select("*")
         .eq("id", templateId)
         .single();
@@ -473,7 +609,7 @@ export async function action({ request }: Route.ActionArgs) {
       if (enabled) {
         // enabled=true: template_id로 기존 레코드 확인 (is_active 여부와 관계없이)
         const { data: existingOption } = await client
-          .from("grid_options")
+          .from("routine_grid_options")
           .select("id, is_active")
           .eq("user_id", userId)
           .eq("category", category)
@@ -483,7 +619,7 @@ export async function action({ request }: Route.ActionArgs) {
         if (existingOption) {
           // 기존 레코드가 있으면 활성화 (이미 활성화되어 있어도 업데이트)
           const { error } = await client
-            .from("grid_options")
+            .from("routine_grid_options")
             .update({ is_active: true, label: template.name })
             .eq("id", existingOption.id);
 
@@ -543,7 +679,7 @@ export async function action({ request }: Route.ActionArgs) {
       } else {
         // enabled=false: is_active=false로 update (없으면 그냥 성공)
         const { data: existingOption } = await client
-          .from("grid_options")
+          .from("routine_grid_options")
           .select("id")
           .eq("user_id", userId)
           .eq("category", category)
@@ -552,7 +688,7 @@ export async function action({ request }: Route.ActionArgs) {
 
         if (existingOption) {
           const { error } = await client
-            .from("grid_options")
+            .from("routine_grid_options")
             .update({ is_active: false })
             .eq("id", existingOption.id);
 

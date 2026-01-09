@@ -1,4 +1,4 @@
-import type { Category, SectionTemplate } from "../types";
+import type { Category, RoutineTemplate } from "../types";
 
 import {
   type ColumnDef,
@@ -8,6 +8,23 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Edit, GripVertical, Trash2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -32,11 +49,101 @@ const categoryLabels: Record<Category, string> = {
 };
 
 interface TemplateManagementTableProps {
-  templates: SectionTemplate[];
+  templates: RoutineTemplate[];
   category: Category;
-  onSelectTemplate: (template: SectionTemplate) => void;
-  onEditTemplate: (template: SectionTemplate) => void;
+  onSelectTemplate: (template: RoutineTemplate) => void;
+  onEditTemplate: (template: RoutineTemplate) => void;
   onDeleteTemplate: (templateId: string) => void;
+  onReorderTemplates?: (templates: RoutineTemplate[]) => void;
+}
+
+function SortableRow({
+  template,
+  onEditTemplate,
+  onDeleteTemplate,
+}: {
+  template: RoutineTemplate;
+  onEditTemplate: (template: RoutineTemplate) => void;
+  onDeleteTemplate: (templateId: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: template.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 cursor-grab active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="text-muted-foreground size-3" />
+          <span className="sr-only">Drag to reorder</span>
+        </Button>
+      </TableCell>
+      <TableCell>
+        <span className="font-medium">{template.name}</span>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">
+          {categoryLabels[template.section_type]}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <span className="text-muted-foreground text-sm">
+          {template.items.length}개
+        </span>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditTemplate(template);
+            }}
+          >
+            <Edit className="size-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (
+                confirm(`"${template.name}" 템플릿을 삭제하시겠습니까?`)
+              ) {
+                onDeleteTemplate(template.id);
+                toast.success("삭제되었습니다");
+              }
+            }}
+          >
+            <Trash2 className="size-4" />
+            <span className="sr-only">Delete</span>
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 export function TemplateManagementTable({
@@ -45,6 +152,7 @@ export function TemplateManagementTable({
   onSelectTemplate,
   onEditTemplate,
   onDeleteTemplate,
+  onReorderTemplates,
 }: TemplateManagementTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -53,17 +161,44 @@ export function TemplateManagementTable({
     [templates, category],
   );
 
-  const columns: ColumnDef<SectionTemplate>[] = React.useMemo(
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이상 이동해야 드래그 시작
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = categoryTemplates.findIndex((t) => t.id === active.id);
+    const newIndex = categoryTemplates.findIndex((t) => t.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(categoryTemplates, oldIndex, newIndex).map(
+      (template, index) => ({
+        ...template,
+        sort_order: index,
+      }),
+    );
+
+    if (onReorderTemplates) {
+      onReorderTemplates(newOrder);
+    }
+  };
+
+  const columns: ColumnDef<RoutineTemplate>[] = React.useMemo(
     () => [
       {
         id: "drag",
         header: () => null,
-        cell: () => (
-          <Button variant="ghost" size="icon" className="size-7 cursor-grab">
-            <GripVertical className="text-muted-foreground size-3" />
-            <span className="sr-only">Drag to reorder</span>
-          </Button>
-        ),
+        cell: () => null, // SortableRow에서 처리
         enableSorting: false,
       },
       {
@@ -141,44 +276,54 @@ export function TemplateManagementTable({
   });
 
   return (
-    <div className="overflow-hidden rounded-lg border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} colSpan={header.colSpan}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                </TableHead>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={categoryTemplates.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} colSpan={header.colSpan}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <SortableRow
+                    key={row.id}
+                    template={row.original}
+                    onEditTemplate={onEditTemplate}
+                    onDeleteTemplate={onDeleteTemplate}
+                  />
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    템플릿이 없습니다. 새 템플릿을 만들어보세요.
                   </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                템플릿이 없습니다. 새 템플릿을 만들어보세요.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }

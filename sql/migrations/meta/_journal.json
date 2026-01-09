@@ -603,6 +603,34 @@
       "when": 1767760681202,
       "tag": "0085_clammy_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1767931109412,
+      "tag": "0086_hard_masque",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1767932697565,
+      "tag": "0087_next_greymalkin",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1767934498654,
+      "tag": "0088_cute_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1767936222169,
+      "tag": "0089_curvy_hobgoblin",
+      "breakpoints": true
     }
   ]
 }
