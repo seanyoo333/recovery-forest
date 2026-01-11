@@ -930,6 +930,54 @@ export type Database = {
           },
         ]
       }
+      evidence_sources: {
+        Row: {
+          authors: string | null
+          created_at: string
+          doi: string | null
+          id: string
+          journal: string | null
+          pmid: string | null
+          retrieved_at: string
+          strength: number
+          study_type: string
+          title: string | null
+          updated_at: string
+          url: string | null
+          year: number | null
+        }
+        Insert: {
+          authors?: string | null
+          created_at?: string
+          doi?: string | null
+          id?: string
+          journal?: string | null
+          pmid?: string | null
+          retrieved_at?: string
+          strength?: number
+          study_type?: string
+          title?: string | null
+          updated_at?: string
+          url?: string | null
+          year?: number | null
+        }
+        Update: {
+          authors?: string | null
+          created_at?: string
+          doi?: string | null
+          id?: string
+          journal?: string | null
+          pmid?: string | null
+          retrieved_at?: string
+          strength?: number
+          study_type?: string
+          title?: string | null
+          updated_at?: string
+          url?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -1054,31 +1102,34 @@ export type Database = {
       }
       ingredient_target_evidence: {
         Row: {
-          evidence_level: string
+          created_at: string
           id: string
           ingredient_id: string
           notes: string | null
-          pmids: string[] | null
           strength: number
+          study_type: string
           target_id: string
+          updated_at: string
         }
         Insert: {
-          evidence_level?: string
+          created_at?: string
           id?: string
           ingredient_id: string
           notes?: string | null
-          pmids?: string[] | null
           strength?: number
+          study_type?: string
           target_id: string
+          updated_at?: string
         }
         Update: {
-          evidence_level?: string
+          created_at?: string
           id?: string
           ingredient_id?: string
           notes?: string | null
-          pmids?: string[] | null
           strength?: number
+          study_type?: string
           target_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1093,6 +1144,51 @@ export type Database = {
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "natural_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredient_target_evidence_sources: {
+        Row: {
+          created_at: string
+          evidence_source_id: string
+          extracted_strength_override: number | null
+          id: string
+          ingredient_target_evidence_id: string
+          is_primary: boolean
+          note: string | null
+        }
+        Insert: {
+          created_at?: string
+          evidence_source_id: string
+          extracted_strength_override?: number | null
+          id?: string
+          ingredient_target_evidence_id: string
+          is_primary?: boolean
+          note?: string | null
+        }
+        Update: {
+          created_at?: string
+          evidence_source_id?: string
+          extracted_strength_override?: number | null
+          id?: string
+          ingredient_target_evidence_id?: string
+          is_primary?: boolean
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_target_evidence_sources_evidence_source_id_evidence_"
+            columns: ["evidence_source_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_target_evidence_sources_ingredient_target_evidence_i"
+            columns: ["ingredient_target_evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_target_evidence"
             referencedColumns: ["id"]
           },
         ]

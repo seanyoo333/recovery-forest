@@ -383,13 +383,69 @@ export const targetToMetaAxis = pgTable(
 );
 
 /**
- * Ingredient Target Evidence Table
+ * Evidence Sources Table
  *
- * 성분 → 표적 매핑 + 근거 (성분이 특정 표적에 얼마나 관련되는지)
+ * 논문 단위 정보를 저장하는 테이블
+ * PubMed, Crossref 등에서 가져온 논문 정보를 중앙 관리
+ *
+ * 한 논문이 여러 ingredient-target 조합에 재사용될 수 있음
+ */
+export const evidenceSources = pgTable(
+  "evidence_sources",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    pmid: text(),
+    doi: text(),
+    url: text(),
+    title: text(),
+    journal: text(),
+    year: integer(),
+    authors: text(),
+    study_type: text()
+      .notNull()
+      .default("mechanistic")
+      .$type<
+        | "systematic_review"
+        | "rct"
+        | "human_observational"
+        | "case_report"
+        | "animal"
+        | "cell"
+        | "mechanistic"
+      >(),
+    strength: doublePrecision().notNull().default(1),
+    retrieved_at: timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("evidence_sources_pmid_unique_idx").on(table.pmid),
+    uniqueIndex("evidence_sources_doi_unique_idx").on(table.doi),
+    check(
+      "evidence_sources_pmid_or_doi_check",
+      sql`("pmid" IS NOT NULL) OR ("doi" IS NOT NULL)`,
+    ),
+    check("evidence_sources_strength_check", sql`strength >= 0 AND strength <= 2`),
+  ],
+);
+
+/**
+ * Ingredient Target Evidence Table (Aggregate)
+ *
+ * 성분 → 표적 매핑의 요약 정보
+ * 실제 논문 정보는 evidence_sources와 ingredient_target_evidence_sources를 통해 관리
+ *
+ * strength는 연결된 논문들의 max(strength)로 계산되거나 수동으로 설정 가능
+ * study_type은 연결된 논문들의 최고 study_type으로 계산
  *
  * 사용 예시:
- * - 커큐민 → NF-κB (meta_axis: inflammation, tags: ["inflammation", "nfkb"])
- * - 커큐민 → HDAC (meta_axis: hormone, tags: ["epigenetics", "hdac"])
+ * - 커큐민 → NF-κB (여러 논문이 연결될 수 있음)
  */
 export const ingredientTargetEvidence = pgTable(
   "ingredient_target_evidence",
@@ -402,19 +458,66 @@ export const ingredientTargetEvidence = pgTable(
       .notNull()
       .references(() => naturalTargets.id, { onDelete: "cascade" }),
     strength: doublePrecision().notNull().default(1),
-    evidence_level: text()
+    study_type: text()
       .notNull()
-      .default("preclinical")
-      .$type<"cell" | "animal" | "human" | "mixed" | "preclinical">(),
-    pmids: text().array().default([]),
+      .default("mechanistic")
+      .$type<
+        | "systematic_review"
+        | "rct"
+        | "human_observational"
+        | "case_report"
+        | "animal"
+        | "cell"
+        | "mechanistic"
+      >(),
     notes: text(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (table) => [
+    // unique 인덱스 제거: 같은 성분-표적 조합에 여러 행(다른 study_type) 저장 가능
+    // 대신 ingredient_id + target_id + study_type 조합으로 unique 제약 추가 가능
     uniqueIndex("ingredient_target_evidence_unique_idx").on(
       table.ingredient_id,
       table.target_id,
+      table.study_type,
     ),
     check("strength_check", sql`strength >= 0 AND strength <= 2`),
+  ],
+);
+
+/**
+ * Ingredient Target Evidence Sources Mapping Table
+ *
+ * ingredient_target_evidence와 evidence_sources를 연결하는 매핑 테이블
+ * 한 논문이 여러 ingredient-target 조합에 사용될 수 있음
+ */
+export const ingredientTargetEvidenceSources = pgTable(
+  "ingredient_target_evidence_sources",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    ingredient_target_evidence_id: uuid()
+      .notNull()
+      .references(() => ingredientTargetEvidence.id, { onDelete: "cascade" }),
+    evidence_source_id: uuid()
+      .notNull()
+      .references(() => evidenceSources.id, { onDelete: "cascade" }),
+    is_primary: boolean().notNull().default(false), // 주요 근거인지 여부
+    extracted_strength_override: doublePrecision(), // 이 매핑에서만 사용하는 strength 오버라이드 (null이면 evidence_sources.strength 사용)
+    note: text(), // 이 매핑에 대한 추가 설명
+    created_at: timestamp().notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex(
+      "ingredient_target_evidence_sources_unique_idx",
+    ).on(table.ingredient_target_evidence_id, table.evidence_source_id),
+    check(
+      "extracted_strength_override_check",
+      sql`("extracted_strength_override" IS NULL) OR ("extracted_strength_override" >= 0 AND "extracted_strength_override" <= 2)`,
+    ),
   ],
 );
 

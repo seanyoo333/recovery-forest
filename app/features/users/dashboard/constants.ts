@@ -91,15 +91,14 @@ export const RECORD_SUCCESS_THRESHOLD = 2; // filled_count >= 2
 export const GRACE_PER_WEEK = 1; // 주 1회 보호
 
 /**
- * 레이더 차트 메타축 정의
+ * 레이더 차트 메타축 정의 (5축)
  */
 export const META_AXES = [
-  "metabolic", // 대사 안정
-  "inflammation", // 염증 조절
-  "immune", // 면역 균형
-  "hormone", // 호르몬·신호
-  "neuro", // 신경·스트레스 안정
-  "recovery", // 회복·장기 보호
+  "metabolic_pressure", // 대사 안정화
+  "immune_balance", // 면역 균형
+  "abnormal_signals", // 비정상 신호조절
+  "neuro_stress", // 신경·스트레스 개입
+  "recovery", // 회복증진
 ] as const;
 
 export type MetaAxis = (typeof META_AXES)[number];
@@ -108,90 +107,101 @@ export type MetaAxis = (typeof META_AXES)[number];
  * 메타축 라벨
  */
 export const AXIS_LABEL: Record<MetaAxis, string> = {
-  metabolic: "대사 안정",
-  inflammation: "염증 조절",
-  immune: "면역 균형",
-  hormone: "호르몬·신호",
-  neuro: "신경·스트레스",
-  recovery: "회복·보호",
+  metabolic_pressure: "대사 안정화",
+  immune_balance: "면역 균형",
+  abnormal_signals: "비정상 신호조절",
+  neuro_stress: "신경·스트레스",
+  recovery: "회복증진",
 };
 
 /**
- * 생활습관 카테고리 → 메타축 가중치 매핑
+ * 생활습관 카테고리 → 메타축 가중치 매핑 (5축)
+ * 가중치는 "각 카테고리 점수가 어떤 축에 얼마나 기여하냐"를 의미
  */
 export const HABIT_TO_AXIS_WEIGHT: Record<
   Category,
   Partial<Record<MetaAxis, number>>
 > = {
   exercise: {
-    metabolic: 1.0,
-    inflammation: 0.6,
-    immune: 0.5,
-    neuro: 0.4,
-    recovery: 0.4,
+    metabolic_pressure: 0.35,
+    immune_balance: 0.30,
+    abnormal_signals: 0.10,
+    neuro_stress: 0.15,
+    recovery: 0.10,
   },
   sleep: {
-    neuro: 1.1,
-    immune: 0.7,
-    hormone: 0.6,
-    inflammation: 0.5,
-    recovery: 0.5,
+    metabolic_pressure: 0.10,
+    immune_balance: 0.25,
+    abnormal_signals: 0.10,
+    neuro_stress: 0.40,
+    recovery: 0.15,
   },
   diet: {
-    metabolic: 1.0,
-    inflammation: 0.6,
-    hormone: 0.6,
-    immune: 0.4,
-    recovery: 0.3,
-  },
-  supplement: {
-    inflammation: 0.3,
-    immune: 0.3,
-    recovery: 0.3,
-    metabolic: 0.2,
-    hormone: 0.2,
-    neuro: 0.1,
+    metabolic_pressure: 0.45,
+    immune_balance: 0.25,
+    abnormal_signals: 0.20,
+    neuro_stress: 0.05,
+    recovery: 0.05,
   },
   therapy: {
-    neuro: 1.0,
-    inflammation: 0.4,
-    immune: 0.3,
-    hormone: 0.2,
-    recovery: 0.2,
+    metabolic_pressure: 0.10,
+    immune_balance: 0.20,
+    abnormal_signals: 0.20,
+    neuro_stress: 0.40,
+    recovery: 0.10,
+  },
+  supplement: {
+    // supplement는 생활습관 점수에 포함되지 않음 (천연물 점수로만 계산)
+    metabolic_pressure: 0,
+    immune_balance: 0,
+    abnormal_signals: 0,
+    neuro_stress: 0,
+    recovery: 0,
   },
 };
 
 /**
- * 메타축별 최대값 (정규화용)
+ * 카테고리별 최대값 (정규화용)
  */
-export const AXIS_MAX: Record<MetaAxis, number> = {
-  metabolic: 10,
-  inflammation: 8,
-  immune: 7,
-  hormone: 6,
-  neuro: 9,
-  recovery: 7,
+export const CATEGORY_MAX: Record<Category, number> = {
+  exercise: 12, // 아침/점심/저녁/자기전 4칸 × 3점
+  sleep: 6, // 수면은 보통 이벤트가 적어서 max를 낮게 잡음
+  diet: 12,
+  therapy: 6,
+  supplement: 12, // 보조제는 생활습관 점수에 사용 안 함
 };
 
 /**
- * 근거 수준별 가중치
+ * 천연물 점수 계산 상수
  */
-export const EVIDENCE_MULT: Record<
-  "cell" | "animal" | "human" | "mixed" | "preclinical",
+export const SUPPLEMENT_CALCULATION_CONSTANTS = {
+  // 신뢰도 포화 상수
+  KC: 0.35, // confidence 포화 상수
+  // 복용량 포화 상수
+  KD: 0.6, // dose factor 포화 상수
+  // 롱테일 반영률
+  ALPHA: 0.25, // 롱테일 반영률 (0.15~0.30 추천)
+  // 축 포화 변환 상수
+  KS: 0.9, // rawAxis를 0~100으로 변환하는 포화 상수
+  // TopK 개수
+  TOP_K: 2, // 핵심 표적 개수
+} as const;
+
+/**
+ * 논문 strength 기본값 (study_type별)
+ */
+export const STUDY_TYPE_STRENGTH: Record<
+  "systematic_review" | "rct" | "human_observational" | "case_report" | "animal" | "cell" | "mechanistic",
   number
 > = {
-  human: 1.0,
-  mixed: 0.9,
-  animal: 0.7,
-  cell: 0.5,
-  preclinical: 0.6,
+  systematic_review: 1.0, // Systematic review / Meta-analysis
+  rct: 0.95, // RCT (인간)
+  human_observational: 0.85, // Human observational / clinical
+  case_report: 0.60, // Case report
+  animal: 0.70, // Animal in vivo
+  cell: 0.45, // Cell line / in vitro
+  mechanistic: 0.30, // Mechanistic only / hypothesis
 };
-
-/**
- * 보너스 점수 제한
- */
-export const BONUS_CAP_TOTAL = 20; // 하루 천연물 보너스 총합 최대
-export const BONUS_CAP_PER_AXIS = 10; // 축당 보너스 최대
 
 /**
  * 표준 혈액검사 항목 정의

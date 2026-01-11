@@ -9,16 +9,16 @@ import { format, subDays } from "date-fns";
 
 import {
   AXIS_LABEL,
-  AXIS_MAX,
-  BONUS_CAP_TOTAL,
+  CATEGORY_MAX,
   CATEGORY_SCORES,
   CATEGORY_WEIGHTS,
-  EVIDENCE_MULT,
   GRACE_PER_WEEK,
   HABIT_TO_AXIS_WEIGHT,
   META_AXES,
   type MetaAxis,
   RECORD_SUCCESS_THRESHOLD,
+  STUDY_TYPE_STRENGTH,
+  SUPPLEMENT_CALCULATION_CONSTANTS,
   TRAFFIC_LIGHT_THRESHOLDS,
 } from "./constants";
 
@@ -640,104 +640,225 @@ function clamp(n: number, a: number, b: number): number {
 }
 
 /**
- * 생활습관 점수를 6축 기본점수로 변환
+ * 생활습관 점수를 5축 점수로 변환
+ * 각 카테고리를 0~1로 정규화한 후 가중치를 적용
  */
-export function computeLifestyleBaseAxisScores(
+export function computeLifestyleAxisScores(
   habitScores: Record<Category, number>,
 ): Record<MetaAxis, number> {
-  // 축별 누적
-  const axisRaw: Record<MetaAxis, number> = {
-    metabolic: 0,
-    inflammation: 0,
-    immune: 0,
-    hormone: 0,
-    neuro: 0,
+  // 1. 각 카테고리를 0~1로 정규화
+  const normalizedScores: Record<Category, number> = {} as any;
+  (Object.keys(habitScores) as Category[]).forEach((cat) => {
+    const raw = habitScores[cat];
+    const max = CATEGORY_MAX[cat];
+    normalizedScores[cat] = Math.min(raw / max, 1.0);
+  });
+
+  // 2. 축별 생활습관 점수 계산
+  const axisScores: Record<MetaAxis, number> = {
+    metabolic_pressure: 0,
+    immune_balance: 0,
+    abnormal_signals: 0,
+    neuro_stress: 0,
     recovery: 0,
   };
 
-  (Object.keys(habitScores) as Category[]).forEach((cat) => {
-    const s = habitScores[cat];
+  const axisWeights: Record<MetaAxis, number> = {
+    metabolic_pressure: 0,
+    immune_balance: 0,
+    abnormal_signals: 0,
+    neuro_stress: 0,
+    recovery: 0,
+  };
+
+  // 각 카테고리별로 축에 가중치 적용
+  (Object.keys(normalizedScores) as Category[]).forEach((cat) => {
+    const normValue = normalizedScores[cat];
     const weights = HABIT_TO_AXIS_WEIGHT[cat];
+    
     for (const axis of META_AXES) {
       const w = weights[axis] ?? 0;
-      axisRaw[axis] += s * w;
+      axisScores[axis] += normValue * w;
+      axisWeights[axis] += w;
     }
   });
 
-  // 정규화 (0~100)
-  const axisBase100: Record<MetaAxis, number> = {} as any;
+  // 3. 가중 평균 계산 (분모로 나눠서 0~100 유지)
+  const result: Record<MetaAxis, number> = {} as any;
   for (const axis of META_AXES) {
-    axisBase100[axis] = clamp((axisRaw[axis] / AXIS_MAX[axis]) * 100, 0, 100);
+    const totalWeight = axisWeights[axis];
+    if (totalWeight > 0) {
+      result[axis] = clamp((axisScores[axis] / totalWeight) * 100, 0, 100);
+    } else {
+      result[axis] = 0;
+    }
   }
 
-  return axisBase100;
+  return result;
 }
 
 /**
- * 천연물 보너스 점수 계산
+ * 천연물 점수 계산 (5축 새로운 공식)
  */
 export type JoinedEvidenceRow = {
   ingredient_id: string;
   ingredient_name: string;
   target_slug: string;
   strength: number;
-  evidence_level: "cell" | "animal" | "human" | "mixed" | "preclinical";
+  study_type:
+    | "systematic_review"
+    | "rct"
+    | "human_observational"
+    | "case_report"
+    | "animal"
+    | "cell"
+    | "mechanistic";
   meta_axis: MetaAxis;
   axis_weight: number;
+  dose_count: number;
 };
 
-export function computeSupplementBonusAxisScores(
-  rows: JoinedEvidenceRow[],
-): Record<MetaAxis, number> {
-  const bonus: Record<MetaAxis, number> = {
-    metabolic: 0,
-    inflammation: 0,
-    immune: 0,
-    hormone: 0,
-    neuro: 0,
-    recovery: 0,
-  };
-
-  for (const r of rows) {
-    const mult = EVIDENCE_MULT[r.evidence_level] ?? 0.7;
-    const contrib = r.strength * r.axis_weight * mult;
-    bonus[r.meta_axis] += contrib;
-  }
-
-  // 스케일 조정: contrib 합을 0~10 수준으로 맞추기
-  const SCALE = 5;
-  for (const axis of META_AXES) {
-    bonus[axis] = clamp(bonus[axis] * SCALE, 0, 10);
-  }
-
-  // 전체 캡: 총합이 20 넘으면 비율로 줄이기
-  const total = META_AXES.reduce((s, a) => s + bonus[a], 0);
-  if (total > BONUS_CAP_TOTAL) {
-    const ratio = BONUS_CAP_TOTAL / total;
-    for (const axis of META_AXES) {
-      bonus[axis] = Math.round(bonus[axis] * ratio * 10) / 10;
-    }
-  }
-
-  return bonus;
+/**
+ * 포화 함수: 1 - e^(-k * x)
+ */
+function saturationFunction(x: number, k: number): number {
+  return 1 - Math.exp(-k * x);
 }
 
 /**
- * 최종 레이더 점수 계산 (기본점수 + 보너스)
+ * 천연물 축 점수 계산 (새로운 5축 공식)
  */
-export function combineAxisScores(
-  base100: Record<MetaAxis, number>,
-  bonus0to10: Record<MetaAxis, number>,
+export function computeSupplementAxisScores(
+  rows: JoinedEvidenceRow[],
 ): Record<MetaAxis, number> {
-  const out: Record<MetaAxis, number> = {} as any;
-  const BONUS_SCALE_TO_20 = 2;
+  const { KC, KD, ALPHA, KS, TOP_K } = SUPPLEMENT_CALCULATION_CONSTANTS;
 
-  for (const axis of META_AXES) {
-    const bonus = clamp(bonus0to10[axis] * BONUS_SCALE_TO_20, 0, 20);
-    out[axis] = clamp(base100[axis] + bonus, 0, 100);
+  // 1. 같은 성분-표적의 효과는 최고 근거 효과만 채택
+  const ingredientTargetEffect = new Map<string, number>();
+  const ingredientTargetConfidence = new Map<string, number>();
+  const ingredientTargetCount = new Map<string, number>();
+  const ingredientDoseCount = new Map<string, number>();
+
+  for (const row of rows) {
+    const key = `${row.ingredient_id}:${row.target_slug}`;
+    
+    // strength는 이미 최고값으로 처리되어 있다고 가정
+    // 만약 아니라면 여기서 max 처리
+    const currentEffect = ingredientTargetEffect.get(key) ?? 0;
+    ingredientTargetEffect.set(key, Math.max(currentEffect, row.strength));
+
+    // confidence는 논문 수로 계산 (포화 함수)
+    const currentCount = ingredientTargetCount.get(key) ?? 0;
+    ingredientTargetCount.set(key, currentCount + 1);
+    
+    // dose_count 저장
+    ingredientDoseCount.set(row.ingredient_id, row.dose_count);
   }
 
-  return out;
+  // confidence 계산 (포화 함수)
+  ingredientTargetCount.forEach((count, key) => {
+    const confidence = saturationFunction(count, KC);
+    ingredientTargetConfidence.set(key, confidence);
+  });
+
+  // 2. 단일 성분-표적 점수 계산
+  const ingredientTargetScores = new Map<string, number>();
+  ingredientTargetEffect.forEach((effect, key) => {
+    const confidence = ingredientTargetConfidence.get(key) ?? 0;
+    const [ingredientId] = key.split(":");
+    const doseCount = ingredientDoseCount.get(ingredientId) ?? 0;
+    const doseFactor = saturationFunction(doseCount, KD);
+    
+    const score = effect * confidence * doseFactor;
+    ingredientTargetScores.set(key, score);
+  });
+
+  // 3. 같은 표적을 여러 성분이 때리면 포화 합성
+  const targetScores = new Map<string, number>();
+  const targetToIngredientTargets = new Map<string, string[]>();
+
+  for (const row of rows) {
+    const key = `${row.ingredient_id}:${row.target_slug}`;
+    if (!targetToIngredientTargets.has(row.target_slug)) {
+      targetToIngredientTargets.set(row.target_slug, []);
+    }
+    targetToIngredientTargets.get(row.target_slug)!.push(key);
+  }
+
+  targetToIngredientTargets.forEach((ingredientTargetKeys, targetSlug) => {
+    // 포화 합성: 1 - ∏(1 - score)
+    let product = 1;
+    for (const key of ingredientTargetKeys) {
+      const score = ingredientTargetScores.get(key) ?? 0;
+      product *= 1 - score;
+    }
+    const targetTotal = 1 - product;
+    targetScores.set(targetSlug, targetTotal);
+  });
+
+  // 4. 표적을 축별로 그룹화
+  const axisToTargets = new Map<MetaAxis, Array<{ target: string; score: number }>>();
+  for (const row of rows) {
+    const targetScore = targetScores.get(row.target_slug) ?? 0;
+    if (!axisToTargets.has(row.meta_axis)) {
+      axisToTargets.set(row.meta_axis, []);
+    }
+    const targets = axisToTargets.get(row.meta_axis)!;
+    // 중복 제거
+    if (!targets.find((t) => t.target === row.target_slug)) {
+      targets.push({ target: row.target_slug, score: targetScore });
+    }
+  }
+
+  // 5. 축별 점수 계산 (상위 2개 핵심 + 나머지 롱테일)
+  const rawAxisScores: Record<MetaAxis, number> = {
+    metabolic_pressure: 0,
+    immune_balance: 0,
+    abnormal_signals: 0,
+    neuro_stress: 0,
+    recovery: 0,
+  };
+
+  axisToTargets.forEach((targets, axis) => {
+    // 내림차순 정렬
+    targets.sort((a, b) => b.score - a.score);
+    
+    // 상위 TOP_K개는 핵심
+    const core = targets.slice(0, TOP_K).reduce((sum, t) => sum + t.score, 0);
+    
+    // 나머지는 롱테일
+    const tail = targets.slice(TOP_K).reduce((sum, t) => sum + t.score, 0);
+    
+    // rawAxis = core + α * tail
+    rawAxisScores[axis] = core + ALPHA * tail;
+  });
+
+  // 6. 축의 rawAxis를 0~100으로 포화 변환
+  const suppAxisScores: Record<MetaAxis, number> = {} as any;
+  for (const axis of META_AXES) {
+    const rawAxis = rawAxisScores[axis];
+    suppAxisScores[axis] = 100 * saturationFunction(rawAxis, KS);
+  }
+
+  return suppAxisScores;
+}
+
+/**
+ * 최종 레이더 점수 계산 (80% 천연물 + 20% 생활습관)
+ */
+export function combineAxisScores(
+  suppAxisScores: Record<MetaAxis, number>,
+  lifeAxisScores: Record<MetaAxis, number>,
+): Record<MetaAxis, number> {
+  const finalScores: Record<MetaAxis, number> = {} as any;
+
+  for (const axis of META_AXES) {
+    // 가중 평균: 0.8 * 천연물 + 0.2 * 생활습관
+    const final = 0.8 * suppAxisScores[axis] + 0.2 * lifeAxisScores[axis];
+    finalScores[axis] = clamp(final, 0, 100);
+  }
+
+  return finalScores;
 }
 
 /**
@@ -752,7 +873,7 @@ export function toRadarData(scores: Record<MetaAxis, number>) {
 }
 
 /**
- * 상위 기여 성분 추출
+ * 상위 기여 성분 추출 (새로운 계산식 기반)
  */
 export function topContributingIngredients(
   rows: JoinedEvidenceRow[],
@@ -763,26 +884,62 @@ export function topContributingIngredients(
   score: number;
   axes: MetaAxis[];
 }> {
-  const map = new Map<
+  const { KC, KD } = SUPPLEMENT_CALCULATION_CONSTANTS;
+  
+  // 성분별로 점수 집계
+  const ingredientScores = new Map<
     string,
     { name: string; score: number; axes: Set<MetaAxis> }
   >();
 
-  for (const r of rows) {
-    const mult = EVIDENCE_MULT[r.evidence_level] ?? 0.7;
-    const contrib = r.strength * r.axis_weight * mult;
-    const key = r.ingredient_id;
-    const cur = map.get(key) ?? {
-      name: r.ingredient_name,
+  // 같은 성분-표적의 최고 효과만 사용
+  const ingredientTargetEffect = new Map<string, number>();
+  const ingredientTargetConfidence = new Map<string, number>();
+  const ingredientTargetCount = new Map<string, number>();
+  const ingredientDoseCount = new Map<string, number>();
+
+  for (const row of rows) {
+    const key = `${row.ingredient_id}:${row.target_slug}`;
+    
+    const currentEffect = ingredientTargetEffect.get(key) ?? 0;
+    ingredientTargetEffect.set(key, Math.max(currentEffect, row.strength));
+
+    const currentCount = ingredientTargetCount.get(key) ?? 0;
+    ingredientTargetCount.set(key, currentCount + 1);
+    
+    ingredientDoseCount.set(row.ingredient_id, row.dose_count);
+  }
+
+  // confidence 계산
+  ingredientTargetCount.forEach((count, key) => {
+    const confidence = saturationFunction(count, KC);
+    ingredientTargetConfidence.set(key, confidence);
+  });
+
+  // 성분별 점수 계산
+  ingredientTargetEffect.forEach((effect, key) => {
+    const [ingredientId] = key.split(":");
+    const confidence = ingredientTargetConfidence.get(key) ?? 0;
+    const doseCount = ingredientDoseCount.get(ingredientId) ?? 0;
+    const doseFactor = saturationFunction(doseCount, KD);
+    
+    const score = effect * confidence * doseFactor;
+    
+    const ingredient = rows.find((r) => r.ingredient_id === ingredientId);
+    if (!ingredient) return;
+
+    const current = ingredientScores.get(ingredientId) ?? {
+      name: ingredient.ingredient_name,
       score: 0,
       axes: new Set<MetaAxis>(),
     };
-    cur.score += contrib;
-    cur.axes.add(r.meta_axis);
-    map.set(key, cur);
-  }
+    
+    current.score += score;
+    current.axes.add(ingredient.meta_axis);
+    ingredientScores.set(ingredientId, current);
+  });
 
-  const arr = [...map.entries()].map(([id, v]) => ({
+  const arr = [...ingredientScores.entries()].map(([id, v]) => ({
     ingredient_id: id,
     name: v.name,
     score: v.score,

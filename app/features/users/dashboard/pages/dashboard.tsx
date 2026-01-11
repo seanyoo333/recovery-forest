@@ -33,8 +33,8 @@ import {
   calculateDailyTotal,
   calculatePeriodScores,
   combineAxisScores,
-  computeLifestyleBaseAxisScores,
-  computeSupplementBonusAxisScores,
+  computeLifestyleAxisScores,
+  computeSupplementAxisScores,
   countFilledCategories,
   toRadarData,
   topContributingIngredients,
@@ -90,7 +90,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     // 오늘 점수
     const todayTotal = calculateDailyTotal(todayLogs, options);
 
-    // 레이더 차트 데이터 계산
+    // 레이더 차트 데이터 계산 (5축)
     const categories: Array<
       "exercise" | "sleep" | "supplement" | "diet" | "therapy"
     > = ["exercise", "sleep", "supplement", "diet", "therapy"];
@@ -105,16 +105,16 @@ export async function loader({ request }: Route.LoaderArgs) {
       >,
     );
 
-    // 생활습관 기본 점수
-    const baseAxisScores = computeLifestyleBaseAxisScores(habitScores);
+    // 생활습관 점수 (5축)
+    const lifeAxisScores = computeLifestyleAxisScores(habitScores);
 
-    // 천연물 보너스 점수
-    const bonusAxisScores = computeSupplementBonusAxisScores(
+    // 천연물 점수 (5축, 새로운 계산식)
+    const suppAxisScores = computeSupplementAxisScores(
       ingredientEvidence as any,
     );
 
-    // 최종 레이더 점수
-    const finalAxisScores = combineAxisScores(baseAxisScores, bonusAxisScores);
+    // 최종 레이더 점수 (80% 천연물 + 20% 생활습관)
+    const finalAxisScores = combineAxisScores(suppAxisScores, lifeAxisScores);
     const radarData = toRadarData(finalAxisScores);
 
     // 상위 기여 성분
@@ -136,12 +136,11 @@ export async function loader({ request }: Route.LoaderArgs) {
                 `${ing.name}(${ing.axes
                   .map((a) => {
                     const labels: Record<string, string> = {
-                      metabolic: "대사",
-                      inflammation: "염증",
-                      immune: "면역",
-                      hormone: "호르몬",
-                      neuro: "신경",
-                      recovery: "회복",
+                      metabolic_pressure: "대사안정화",
+                      immune_balance: "면역균형",
+                      abnormal_signals: "신호조절",
+                      neuro_stress: "신경스트레스",
+                      recovery: "회복증진",
                     };
                     return labels[a] || a;
                   })

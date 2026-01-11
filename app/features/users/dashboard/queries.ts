@@ -786,18 +786,17 @@ export const getSectionTemplates = getRoutineTemplates;
 
 /**
  * 오늘 복용한 천연물의 표적-메타축 매핑 데이터 조회
- *
- * sectionItems.ingredient_id를 직접 사용하여 성분을 찾습니다.
+ * dose_count (하루 복용 이벤트 수) 포함
  */
 export async function getTodayIngredientEvidence(
   client: SupabaseClient<Database>,
   userId: string,
   logDate: string,
 ) {
-  // 오늘 복용한 보조제 기록 (template_id 포함)
+  // 오늘 복용한 보조제 기록 (template_id와 time_block 포함)
   const { data: todayLogs, error: logsError } = await client
     .from("routine_daily_grid_logs")
-    .select("template_id")
+    .select("template_id, time_block")
     .eq("user_id", userId)
     .eq("log_date", logDate)
     .eq("category", "supplement")
@@ -819,7 +818,7 @@ export async function getTodayIngredientEvidence(
   // 템플릿의 아이템들에서 ingredient_id 추출
   const { data: routineItems, error: itemsError } = await client
     .from("routine_items")
-    .select("ingredient_id")
+    .select("ingredient_id, template_id")
     .in("template_id", templateIds)
     .not("ingredient_id", "is", null);
 
@@ -828,9 +827,31 @@ export async function getTodayIngredientEvidence(
     return [];
   }
 
-  const ingredientIds = routineItems
-    .map((item) => item.ingredient_id)
-    .filter((id): id is string => id !== null);
+  // ingredient별로 dose_count 계산 (아침/점심/저녁/자기전 중 실제 등장 횟수)
+  const ingredientDoseCount = new Map<string, number>();
+  
+  for (const item of routineItems) {
+    if (!item.ingredient_id) continue;
+    
+    // 이 ingredient가 포함된 template들이 오늘 몇 번 복용되었는지 계산
+    const templateIdsWithIngredient = routineItems
+      .filter((ri) => ri.ingredient_id === item.ingredient_id)
+      .map((ri) => ri.template_id);
+    
+    const timeBlocks = new Set<string>();
+    todayLogs.forEach((log) => {
+      if (log.template_id && templateIdsWithIngredient.includes(log.template_id)) {
+        if (log.time_block) {
+          timeBlocks.add(log.time_block);
+        }
+      }
+    });
+    
+    const currentCount = ingredientDoseCount.get(item.ingredient_id) ?? 0;
+    ingredientDoseCount.set(item.ingredient_id, Math.max(currentCount, timeBlocks.size));
+  }
+
+  const ingredientIds = Array.from(ingredientDoseCount.keys());
 
   if (ingredientIds.length === 0) {
     return [];
@@ -844,7 +865,7 @@ export async function getTodayIngredientEvidence(
       ingredient_id,
       natural_ingredients!inner(display_name),
       strength,
-      evidence_level,
+      study_type,
       natural_targets!inner(
         slug,
         target_to_meta_axis(meta_axis, axis_weight)
@@ -858,15 +879,23 @@ export async function getTodayIngredientEvidence(
     return [];
   }
 
-  // 데이터 변환
+  // 데이터 변환 (dose_count 포함)
   const result: Array<{
     ingredient_id: string;
     ingredient_name: string;
     target_slug: string;
     strength: number;
-    evidence_level: "cell" | "animal" | "human" | "mixed" | "preclinical";
+    study_type:
+      | "systematic_review"
+      | "rct"
+      | "human_observational"
+      | "case_report"
+      | "animal"
+      | "cell"
+      | "mechanistic";
     meta_axis: string;
     axis_weight: number;
+    dose_count: number;
   }> = [];
 
   for (const row of data) {
@@ -890,15 +919,25 @@ export async function getTodayIngredientEvidence(
     const mappings = target.target_to_meta_axis;
     if (!mappings || mappings.length === 0) continue;
 
+    const doseCount = ingredientDoseCount.get(row.ingredient_id) ?? 0;
+
     for (const mapping of mappings) {
       result.push({
         ingredient_id: row.ingredient_id,
         ingredient_name: ingredient.display_name,
         target_slug: target.slug,
         strength: row.strength,
-        evidence_level: row.evidence_level as any,
+        study_type: row.study_type as
+          | "systematic_review"
+          | "rct"
+          | "human_observational"
+          | "case_report"
+          | "animal"
+          | "cell"
+          | "mechanistic",
         meta_axis: mapping.meta_axis,
         axis_weight: mapping.axis_weight,
+        dose_count: doseCount,
       });
     }
   }
