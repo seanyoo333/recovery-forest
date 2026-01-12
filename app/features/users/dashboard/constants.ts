@@ -1,4 +1,17 @@
-import type { Category, GridOptionKind } from "./types";
+import type { Category, GridOptionKind, TimeBlock } from "./types";
+
+/**
+ * 카테고리별 허용 시간대 정의
+ *
+ * 각 카테고리에서 UI에 표시할 시간대를 제한
+ */
+export const CATEGORY_ALLOWED_TIME_BLOCKS: Record<Category, TimeBlock[]> = {
+  exercise: ["am", "noon", "pm"], // 운동: 아침, 점심, 저녁만
+  sleep: ["bed"], // 수면: 자기전만
+  supplement: ["am", "noon", "pm", "bed"], // 보조제: 모든 시간대
+  diet: ["am", "noon", "pm"], // 식단: 아침, 점심, 저녁만
+  therapy: ["am", "noon", "pm", "bed"], // 보조요법: 모든 시간대
+};
 
 /**
  * Default Grid Options by Category
@@ -10,22 +23,30 @@ export const DEFAULT_GRID_OPTIONS: Record<
   Array<{ label: string; kind: GridOptionKind; sort_order: number }>
 > = {
   exercise: [
+    { label: "없음", kind: "preset", sort_order: 0 },
     { label: "저강도", kind: "preset", sort_order: 1 },
     { label: "중강도", kind: "preset", sort_order: 2 },
     { label: "고강도", kind: "preset", sort_order: 3 },
   ],
   sleep: [
+    { label: "없음", kind: "preset", sort_order: 0 },
     { label: "불면", kind: "preset", sort_order: 1 },
     { label: "보통", kind: "preset", sort_order: 2 },
     { label: "숙면", kind: "preset", sort_order: 3 },
   ],
-  supplement: [{ label: "섭취", kind: "preset", sort_order: 1 }],
-  diet: [
-    { label: "단식", kind: "preset", sort_order: 1 },
-    { label: "보통", kind: "preset", sort_order: 2 },
-    { label: "과식", kind: "preset", sort_order: 3 },
+  supplement: [
+    { label: "없음", kind: "preset", sort_order: 0 },
+    { label: "섭취", kind: "preset", sort_order: 1 },
   ],
-  therapy: [{ label: "실행", kind: "preset", sort_order: 1 }],
+  diet: [
+    { label: "없음", kind: "preset", sort_order: 0 },
+    { label: "보통", kind: "preset", sort_order: 1 },
+    { label: "과식", kind: "preset", sort_order: 2 },
+  ],
+  therapy: [
+    { label: "없음", kind: "preset", sort_order: 0 },
+    { label: "실행", kind: "preset", sort_order: 1 },
+  ],
 };
 
 /**
@@ -37,31 +58,30 @@ export const CATEGORY_SCORES: Record<Category, Record<string, number>> = {
     저강도: 1,
     중강도: 2,
     고강도: 2,
-    __template__: 3, // 루틴실행
+    __template__: 3, // 최저 0, 최고 9
   },
   sleep: {
-    __none__: 0,
+    __none__: -1, // 수면의 "없음"은 -1점
     불면: -1,
     보통: 2,
     숙면: 3,
-    __template__: 3,
+    __template__: 3, // 최저 -1, 최고 3
   },
   supplement: {
     __none__: 0,
     섭취: 2,
-    __template__: 3,
+    __template__: 3, // 최저 0, 최고 12
   },
   diet: {
     __none__: 0,
-    단식: 1,
     보통: 2,
     과식: -1,
-    __template__: 3,
+    __template__: 3, // 최저 -3, 최고 9
   },
   therapy: {
     __none__: 0,
     실행: 2,
-    __template__: 3,
+    __template__: 3, // 최저 0, 최고 12
   },
 };
 
@@ -124,31 +144,31 @@ export const HABIT_TO_AXIS_WEIGHT: Record<
 > = {
   exercise: {
     metabolic_pressure: 0.35,
-    immune_balance: 0.30,
-    abnormal_signals: 0.10,
+    immune_balance: 0.3,
+    abnormal_signals: 0.1,
     neuro_stress: 0.15,
-    recovery: 0.10,
+    recovery: 0.1,
   },
   sleep: {
-    metabolic_pressure: 0.10,
+    metabolic_pressure: 0.1,
     immune_balance: 0.25,
-    abnormal_signals: 0.10,
-    neuro_stress: 0.40,
+    abnormal_signals: 0.1,
+    neuro_stress: 0.4,
     recovery: 0.15,
   },
   diet: {
     metabolic_pressure: 0.45,
     immune_balance: 0.25,
-    abnormal_signals: 0.20,
+    abnormal_signals: 0.2,
     neuro_stress: 0.05,
     recovery: 0.05,
   },
   therapy: {
-    metabolic_pressure: 0.10,
-    immune_balance: 0.20,
-    abnormal_signals: 0.20,
-    neuro_stress: 0.40,
-    recovery: 0.10,
+    metabolic_pressure: 0.1,
+    immune_balance: 0.2,
+    abnormal_signals: 0.2,
+    neuro_stress: 0.4,
+    recovery: 0.1,
   },
   supplement: {
     // supplement는 생활습관 점수에 포함되지 않음 (천연물 점수로만 계산)
@@ -164,10 +184,10 @@ export const HABIT_TO_AXIS_WEIGHT: Record<
  * 카테고리별 최대값 (정규화용)
  */
 export const CATEGORY_MAX: Record<Category, number> = {
-  exercise: 12, // 아침/점심/저녁/자기전 4칸 × 3점
-  sleep: 6, // 수면은 보통 이벤트가 적어서 max를 낮게 잡음
-  diet: 12,
-  therapy: 6,
+  exercise: 9, // 아침/점심/저녁 3칸 × 3점
+  sleep: 3, // 최저 -1 최고 3
+  diet: 9, // 최저 -3 최고 9
+  therapy: 12, // 최저 0 최고 12
   supplement: 12, // 보조제는 생활습관 점수에 사용 안 함
 };
 
@@ -191,16 +211,22 @@ export const SUPPLEMENT_CALCULATION_CONSTANTS = {
  * 논문 strength 기본값 (study_type별)
  */
 export const STUDY_TYPE_STRENGTH: Record<
-  "systematic_review" | "rct" | "human_observational" | "case_report" | "animal" | "cell" | "mechanistic",
+  | "systematic_review"
+  | "rct"
+  | "human_observational"
+  | "case_report"
+  | "animal"
+  | "cell"
+  | "mechanistic",
   number
 > = {
   systematic_review: 1.0, // Systematic review / Meta-analysis
   rct: 0.95, // RCT (인간)
   human_observational: 0.85, // Human observational / clinical
-  case_report: 0.60, // Case report
-  animal: 0.70, // Animal in vivo
+  case_report: 0.6, // Case report
+  animal: 0.7, // Animal in vivo
   cell: 0.45, // Cell line / in vitro
-  mechanistic: 0.30, // Mechanistic only / hypothesis
+  mechanistic: 0.3, // Mechanistic only / hypothesis
 };
 
 /**

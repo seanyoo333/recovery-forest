@@ -1191,6 +1191,13 @@ export type Database = {
             referencedRelation: "ingredient_target_evidence"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ingredient_target_evidence_sources_ingredient_target_evidence_i"
+            columns: ["ingredient_target_evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_target_evidence_full_view"
+            referencedColumns: ["evidence_id"]
+          },
         ]
       }
       message_room_members: {
@@ -2504,45 +2511,6 @@ export type Database = {
           },
         ]
       }
-      routine_grid_option_ingredients: {
-        Row: {
-          created_at: string
-          grid_option_id: string
-          id: string
-          ingredient_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          grid_option_id: string
-          id?: string
-          ingredient_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          grid_option_id?: string
-          id?: string
-          ingredient_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "routine_grid_option_ingredients_grid_option_id_routine_grid_opt"
-            columns: ["grid_option_id"]
-            isOneToOne: false
-            referencedRelation: "routine_grid_options"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "routine_grid_option_ingredients_ingredient_id_natural_ingredien"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "natural_ingredients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       routine_grid_options: {
         Row: {
           category: Database["public"]["Enums"]["habit_category"]
@@ -2869,6 +2837,59 @@ export type Database = {
       }
     }
     Views: {
+      blood_test_results_summary_view: {
+        Row: {
+          clinical_significance: string | null
+          confidence: number | null
+          image_id: number | null
+          is_out_of_range: boolean | null
+          notes: string | null
+          patient_id: string | null
+          reference_max: number | null
+          reference_min: number | null
+          result_created_at: string | null
+          result_id: number | null
+          result_unit: string | null
+          result_updated_at: string | null
+          result_value: number | null
+          standard_name: string | null
+          test_date: string | null
+          test_id: number | null
+          type_descriptions: Json | null
+          type_unit: string | null
+          type_variations: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_test_results_image_id_blood_test_images_image_id_fk"
+            columns: ["image_id"]
+            isOneToOne: false
+            referencedRelation: "blood_test_images"
+            referencedColumns: ["image_id"]
+          },
+          {
+            foreignKeyName: "blood_test_results_patient_id_patient_health_profiles_patient_i"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "health_profiles_view"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "blood_test_results_patient_id_patient_health_profiles_patient_i"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_health_profiles"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "blood_test_results_test_id_blood_test_types_test_id_fk"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "blood_test_types"
+            referencedColumns: ["test_id"]
+          },
+        ]
+      }
       bot_messages_view: {
         Row: {
           avatar: string | null
@@ -2889,13 +2910,6 @@ export type Database = {
           },
           {
             foreignKeyName: "bot_message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "health_profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "bot_message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "health_profiles_view"
@@ -2905,7 +2919,7 @@ export type Database = {
             foreignKeyName: "bot_message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "health_profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
@@ -2918,13 +2932,20 @@ export type Database = {
           {
             foreignKeyName: "bot_message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "bot_message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "bot_message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
@@ -3135,6 +3156,43 @@ export type Database = {
           },
         ]
       }
+      ingredient_target_evidence_full_view: {
+        Row: {
+          axis_weight: number | null
+          evidence_count: number | null
+          evidence_created_at: string | null
+          evidence_id: string | null
+          evidence_notes: string | null
+          evidence_updated_at: string | null
+          ingredient_id: string | null
+          ingredient_name: string | null
+          ingredient_slug: string | null
+          meta_axis: string | null
+          primary_evidence_count: number | null
+          strength: number | null
+          study_type: string | null
+          target_description: string | null
+          target_id: string | null
+          target_name: string | null
+          target_slug: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_target_evidence_ingredient_id_natural_ingredients_id"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "natural_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_target_evidence_target_id_natural_targets_id_fk"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "natural_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages_view: {
         Row: {
           avatar: string | null
@@ -3156,13 +3214,6 @@ export type Database = {
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
-            isOneToOne: false
-            referencedRelation: "health_profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "health_profiles_view"
@@ -3172,7 +3223,7 @@ export type Database = {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "health_profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
@@ -3185,13 +3236,20 @@ export type Database = {
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
@@ -3308,6 +3366,19 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           views?: Json | null
+        }
+        Relationships: []
+      }
+      routine_daily_scores_view: {
+        Row: {
+          category: Database["public"]["Enums"]["habit_category"] | null
+          last_recorded_at: string | null
+          log_date: string | null
+          record_count: number | null
+          time_blocks_count: number | null
+          unique_options_count: number | null
+          unique_templates_count: number | null
+          user_id: string | null
         }
         Relationships: []
       }

@@ -3,7 +3,7 @@ import type { Route } from "./+types/dashboard-health-habits";
 
 import { format, subDays } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Filter } from "lucide-react";
+import { Filter, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFetcher } from "react-router";
 
@@ -23,18 +23,21 @@ import { HealthHeatmap } from "../components/health-heatmap";
 import { HealthStatusCard } from "../components/health-status-card";
 import { TemplateDrawer } from "../components/template-drawer";
 import { TodayGridTable } from "../components/today-grid-table";
+import { CATEGORY_ALLOWED_TIME_BLOCKS } from "../constants";
 import {
   initializeDefaultGridOptions,
   upsertDailyGridLog,
   upsertGridOption,
   upsertRoutineItems,
   upsertRoutineTemplate,
+  upsertStreak,
 } from "../mutations";
 import {
   getDailyGridLogs,
   getDailyGridLogsByDateRange,
   getGridOptions,
   getSectionTemplates,
+  getStreak,
 } from "../queries";
 import {
   calculateCategoryDeltas,
@@ -71,12 +74,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   // 기본 그리드 옵션 초기화 (없으면 생성)
   await initializeDefaultGridOptions(client, userId);
 
-  const [options, todayLogs, templates, pastLogs] = await Promise.all([
-    getGridOptions(client, userId),
-    getDailyGridLogs(client, userId, today),
-    getSectionTemplates(client, userId),
-    getDailyGridLogsByDateRange(client, userId, month30Start, yesterday),
-  ]);
+  const [options, todayLogs, templates, pastLogs, existingStreak] =
+    await Promise.all([
+      getGridOptions(client, userId),
+      getDailyGridLogs(client, userId, today),
+      getSectionTemplates(client, userId),
+      getDailyGridLogsByDateRange(client, userId, month30Start, yesterday),
+      getStreak(client, userId),
+    ]);
 
   // 일별 점수 계산 (최근 30일)
   const dailyScores = [];
@@ -120,8 +125,17 @@ export async function loader({ request }: Route.LoaderArgs) {
   // 다음 행동 추천
   const nextAction = recommendNextAction(categoryEvaluations);
 
-  // 스트릭 계산
-  const streak = calculateStreak(dailyScores, today);
+  // 스트릭 계산 (기존 longest_streak 사용)
+  const existingLongestStreak = existingStreak?.longest_streak ?? 0;
+  const streak = calculateStreak(dailyScores, today, existingLongestStreak);
+
+  // 스트릭 정보를 데이터베이스에 저장
+  await upsertStreak(client, {
+    userId,
+    currentStreak: streak.currentStreak,
+    longestStreak: streak.longestStreak,
+    lastLogDate: streak.lastRecordDate,
+  });
 
   // 히트맵 데이터 생성
   const dailyLogsByDate = new Map<string, typeof todayLogs>();
@@ -229,6 +243,29 @@ export async function action({ request }: Route.ActionArgs) {
         option_id: optionId ? String(optionId) : null,
         template_id: templateId ? String(templateId) : null,
       });
+
+      return { success: true };
+    }
+
+    if (intent === "upsert-multiple-cells") {
+      const logDate = formData.get("logDate") as string;
+      const cellsJson = formData.get("cells") as string;
+      const cells = JSON.parse(cellsJson) as Array<{
+        time_block: GridCellValue["time_block"];
+        category: Category;
+        option_id: string | null;
+        template_id: string | null;
+      }>;
+
+      // 모든 셀을 순차적으로 처리
+      for (const cell of cells) {
+        await upsertDailyGridLog(client, userId, logDate, {
+          time_block: cell.time_block,
+          category: cell.category,
+          option_id: cell.option_id,
+          template_id: cell.template_id,
+        });
+      }
 
       return { success: true };
     }
@@ -645,7 +682,7 @@ export async function action({ request }: Route.ActionArgs) {
           }
         } else {
           // 새 레코드 생성 (sort_order는 0으로 고정, 나중에 drag로 정렬)
-          const { error } = await client.from("grid_options").insert({
+          const { error } = await client.from("routine_grid_options").insert({
             user_id: userId,
             category,
             label: template.name,
@@ -806,6 +843,119 @@ export default function DashboardHealthHabits({
     fetcher.submit(formData, { method: "post" });
   };
 
+  const handleClearCategory = (category: Category) => {
+    // 특정 카테고리의 "없음" 옵션 찾기
+    const options = loaderData.optionsByCategory[category] ?? [];
+    const noneOption = options.find((opt) => opt.label === "없음");
+
+    if (!noneOption) return;
+
+    const allowedTimeBlocks = CATEGORY_ALLOWED_TIME_BLOCKS[category];
+
+    // 현재 해당 카테고리의 모든 셀이 "없음"인지 확인
+    let allAreNone = true;
+    for (const timeBlock of allowedTimeBlocks) {
+      const cellKey = `${timeBlock}:${category}` as CellKey;
+      const log = loaderData.valueMap[cellKey];
+
+      // 셀이 없거나 option_id가 null이거나 "없음" 옵션이 아니면 allAreNone = false
+      if (!log || !log.option_id || log.option_id !== noneOption.id) {
+        allAreNone = false;
+        break;
+      }
+    }
+
+    // 토글: 모든 셀이 "없음"이면 미입력(null)으로, 아니면 "없음"으로 설정
+    const shouldSetToNone = !allAreNone;
+
+    // 모든 셀을 한 번에 처리
+    const cells = allowedTimeBlocks.map((timeBlock) => ({
+      time_block: timeBlock,
+      category,
+      option_id: shouldSetToNone ? noneOption.id : null,
+      template_id: null,
+    }));
+
+    const formData = new FormData();
+    formData.append("intent", "upsert-multiple-cells");
+    formData.append("logDate", loaderData.logDate);
+    formData.append("cells", JSON.stringify(cells));
+
+    fetcher.submit(formData, { method: "post" });
+  };
+
+  const handleClearAll = () => {
+    // "없음" 옵션 ID 수집
+    const noneOptionIds = new Map<Category, string>();
+
+    visibleCategories.forEach((category) => {
+      const options = loaderData.optionsByCategory[category] ?? [];
+      const noneOption = options.find((opt) => opt.label === "없음");
+      if (noneOption) {
+        noneOptionIds.set(category, noneOption.id);
+      }
+    });
+
+    // 현재 모든 셀이 "없음"인지 확인
+    let allAreNone = true;
+    visibleCategories.forEach((category) => {
+      const noneOptionId = noneOptionIds.get(category);
+      if (!noneOptionId) {
+        allAreNone = false;
+        return;
+      }
+
+      const allowedTimeBlocks = CATEGORY_ALLOWED_TIME_BLOCKS[category];
+
+      for (const timeBlock of allowedTimeBlocks) {
+        const cellKey = `${timeBlock}:${category}` as CellKey;
+        const log = loaderData.valueMap[cellKey];
+
+        // 셀이 없거나 option_id가 null이거나 "없음" 옵션이 아니면 allAreNone = false
+        if (!log || !log.option_id || log.option_id !== noneOptionId) {
+          allAreNone = false;
+          return;
+        }
+      }
+    });
+
+    // 모든 셀을 한 번에 처리
+    const allCells: Array<{
+      time_block: GridCellValue["time_block"];
+      category: Category;
+      option_id: string | null;
+      template_id: string | null;
+    }> = [];
+
+    // 토글: 모든 셀이 "없음"이면 미입력(null)으로, 아니면 "없음"으로 설정
+    const shouldSetToNone = !allAreNone;
+
+    visibleCategories.forEach((category) => {
+      const noneOptionId = noneOptionIds.get(category);
+      if (!noneOptionId) return;
+
+      const allowedTimeBlocks = CATEGORY_ALLOWED_TIME_BLOCKS[category];
+
+      allowedTimeBlocks.forEach((timeBlock) => {
+        allCells.push({
+          time_block: timeBlock,
+          category,
+          option_id: shouldSetToNone ? noneOptionId : null,
+          template_id: null,
+        });
+      });
+    });
+
+    if (allCells.length === 0) return;
+
+    const formData = new FormData();
+    formData.append("intent", "upsert-multiple-cells");
+    formData.append("logDate", loaderData.logDate);
+    formData.append("cells", JSON.stringify(allCells));
+
+    fetcher.submit(formData, { method: "post" });
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div>
@@ -825,7 +975,15 @@ export default function DashboardHealthHabits({
       />
 
       <div className="flex items-center justify-between gap-2">
-        <div />
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={handleClearAll}
+        >
+          <X className="size-4" />
+          전체 없음
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
@@ -888,6 +1046,7 @@ export default function DashboardHealthHabits({
           setSelectedTimeBlock(timeBlock);
           setIsDrawerOpen(true);
         }}
+        onClearCategory={handleClearCategory}
       />
 
       <HealthHeatmap

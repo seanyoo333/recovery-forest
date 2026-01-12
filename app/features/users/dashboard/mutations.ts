@@ -512,13 +512,12 @@ export async function initializeDefaultRoutineGridOptions(
     // 해당 카테고리의 활성 옵션 확인
     const { data: existingOptions } = await client
       .from("routine_grid_options")
-      .select("id")
+      .select("id, label")
       .eq("user_id", userId)
       .eq("category", category)
-      .eq("is_active", true)
-      .limit(1);
+       .eq("is_active", true);
 
-    // 기본 옵션이 없으면 생성
+    // 기본 옵션이 없으면 모두 생성
     if (!existingOptions || existingOptions.length === 0) {
       const optionsToInsert = defaultOptions.map((opt) => ({
         user_id: userId,
@@ -535,6 +534,30 @@ export async function initializeDefaultRoutineGridOptions(
         .insert(optionsToInsert);
 
       if (error) throw error;
+    } else {
+      // 기존 옵션이 있으면 "없음" 옵션이 있는지 확인하고 없으면 추가
+      const hasNoneOption = existingOptions.some(
+        (opt) => opt.label === "없음",
+      );
+
+      if (!hasNoneOption) {
+        const noneOption = defaultOptions.find((opt) => opt.label === "없음");
+        if (noneOption) {
+          const { error } = await client
+            .from("routine_grid_options")
+            .insert({
+              user_id: userId,
+              category,
+              label: noneOption.label,
+              kind: noneOption.kind,
+              template_id: null,
+              sort_order: noneOption.sort_order,
+              is_active: true,
+            });
+
+          if (error) throw error;
+        }
+      }
     }
   }
 }
@@ -542,3 +565,38 @@ export async function initializeDefaultRoutineGridOptions(
 // 하위 호환성을 위한 별칭
 export const initializeDefaultGridOptions =
   initializeDefaultRoutineGridOptions;
+
+/**
+ * 스트릭 정보 업데이트 또는 생성
+ */
+export const upsertStreak = async (
+  client: SupabaseClient<Database>,
+  {
+    userId,
+    currentStreak,
+    longestStreak,
+    lastLogDate,
+  }: {
+    userId: string;
+    currentStreak: number;
+    longestStreak: number;
+    lastLogDate: string | null;
+  },
+) => {
+  const { error } = await client.from("streaks").upsert(
+    {
+      user_id: userId,
+      current_streak: currentStreak,
+      longest_streak: longestStreak,
+      last_log_date: lastLogDate,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "user_id",
+    },
+  );
+
+  if (error) {
+    throw error;
+  }
+};

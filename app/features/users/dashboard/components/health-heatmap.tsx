@@ -3,7 +3,8 @@
  *
  * 건강습관 히트맵 컴포넌트
  */
-import type { Category, HeatmapDataPoint, HeatmapInsight } from "../utils";
+import type { Category } from "../types";
+import type { HeatmapDataPoint, HeatmapInsight } from "../utils";
 
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -27,25 +28,34 @@ interface HealthHeatmapProps {
  * - 0: 회색
  * - 양수: 초록 계열
  */
+/**
+ * 점수에 따른 색상 계산
+ * - 정규화된 점수(0~100)를 구간별로 색상 매핑
+ * - 미입력: 테두리와 투명도로 구분
+ * - 없음(0점): 회색
+ * - 음수: 빨강 계열
+ * - 양수: 초록 계열 (구간별)
+ */
 function getScoreColor(score: number, filled: boolean): string {
   if (!filled) {
-    return "bg-gray-200 dark:bg-gray-800"; // 기록 없음
+    // 미입력: 테두리와 투명도로 구분
+    return "bg-gray-200 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-700 opacity-70";
   }
 
   if (score < 0) {
-    // 음수 점수: 빨강 계열 (어두운 빨강)
+    // 음수 점수: 빨강 계열 (주의)
     return "bg-red-600 dark:bg-red-800";
   } else if (score === 0) {
-    // 0점: 회색
+    // 0점: 회색 (없음 선택)
     return "bg-gray-400 dark:bg-gray-600";
-  } else if (score === 1) {
-    // 1점: 연한 초록
+  } else if (score > 0 && score < 33.33) {
+    // 0~33점: 연한 초록 (괜찮음)
     return "bg-green-300 dark:bg-green-700";
-  } else if (score === 2) {
-    // 2점: 중간 초록
+  } else if (score >= 33.33 && score < 66.67) {
+    // 33~66점: 중간 초록 (좋음)
     return "bg-green-500 dark:bg-green-600";
   } else {
-    // 3점: 진한 초록
+    // 66점 이상: 진한 초록 (매우 좋음)
     return "bg-green-700 dark:bg-green-500";
   }
 }
@@ -136,7 +146,7 @@ export function HealthHeatmap({ data, insight }: HealthHeatmapProps) {
                     <div
                       key={`${date}-${category}`}
                       className={`border-r ${getScoreColor(point.score, point.filled)}`}
-                      title={`${format(new Date(date), "yyyy-MM-dd", { locale: ko })} ${categoryLabels[category]}: ${point.score}점`}
+                      title={`${format(new Date(date), "yyyy-MM-dd", { locale: ko })} ${categoryLabels[category]}: ${Math.round(point.score)}점`}
                     >
                       <div className="aspect-square" />
                     </div>
@@ -149,18 +159,22 @@ export function HealthHeatmap({ data, insight }: HealthHeatmapProps) {
       </div>
 
       {/* 범례 */}
-      <div className="text-muted-foreground flex items-center justify-center gap-4 text-xs">
+      <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-4 text-xs">
         <div className="flex items-center gap-1">
-          <div className="size-3 rounded bg-gray-200 dark:bg-gray-800" />
-          <span>기록 없음</span>
+          <div className="size-3 rounded border border-dashed border-gray-300 bg-gray-200 opacity-70 dark:border-gray-700 dark:bg-gray-800" />
+          <span>미입력</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="size-3 rounded bg-gray-400 dark:bg-gray-600" />
+          <span>없음</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="size-3 rounded bg-red-600 dark:bg-red-800" />
-          <span>낮음</span>
+          <span>주의</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="size-3 rounded bg-green-300 dark:bg-green-700" />
-          <span>보통</span>
+          <span>괜찮음</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="size-3 rounded bg-green-500 dark:bg-green-600" />

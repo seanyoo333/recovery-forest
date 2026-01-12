@@ -668,7 +668,6 @@ export {
   naturalTargets,
   productIngredients,
   routineDailyGridLogs,
-  routineGridOptionIngredients,
   routineGridOptions,
   routineItems,
   routineTemplates,

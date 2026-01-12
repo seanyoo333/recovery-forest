@@ -23,7 +23,22 @@ import {
 } from "./constants";
 
 /**
- * 카테고리별 일일 점수 계산
+ * 카테고리별 최대 점수 per slot 계산
+ */
+function getMaxPerSlot(category: Category): number {
+  const scores = CATEGORY_SCORES[category];
+  const values = Object.values(scores).filter((v) => typeof v === "number");
+  return Math.max(...(values as number[]));
+}
+
+/**
+ * 카테고리별 일일 점수 계산 (정규화 0~100)
+ *
+ * 시간대별 점수를 합산하고, "기록한 만큼만" 점수화 방식으로 정규화
+ * Category100 = raw / (n_filled × maxPerSlot) × 100
+ *
+ * - 없음(0점)과 미기록(null)을 구별
+ * - null은 점수 계산에서 제외
  */
 export function calculateCategoryScore(
   logs: DailyGridLog[],
@@ -32,34 +47,47 @@ export function calculateCategoryScore(
 ): number {
   const categoryLogs = logs.filter((log) => log.category === category);
 
-  if (categoryLogs.length === 0) return 0;
-
-  // 각 시간대별 최고 점수만 사용 (하루에 여러 번 기록해도 최고값만)
-  const scoresByTimeBlock = new Map<string, number>();
+  // 미입력(null)은 제외하고, 없음(0점)은 포함하여 합산
+  let rawSum = 0;
+  let nFilled = 0;
 
   categoryLogs.forEach((log) => {
-    if (!log.option_id) return;
+    // option_id가 null이면 건너뛰기 (미입력 상태)
+    if (!log.option_id) {
+      return;
+    }
 
     const option = options.find((opt) => opt.id === log.option_id);
     if (!option) return;
 
-    const timeBlock = log.time_block;
-    const isTemplate = option.kind === "template";
-    const scoreKey = isTemplate ? "__template__" : option.label;
-    const score = CATEGORY_SCORES[category][scoreKey] ?? 0;
-
-    const currentScore = scoresByTimeBlock.get(timeBlock) ?? -Infinity;
-    if (score > currentScore) {
-      scoresByTimeBlock.set(timeBlock, score);
+    let score: number;
+    // label이 "없음"이면 "__none__" 점수 사용 (0점 또는 음수 가능)
+    if (option.label === "없음") {
+      score = CATEGORY_SCORES[category]["__none__"] ?? 0;
+    } else {
+      const isTemplate = option.kind === "template";
+      const scoreKey = isTemplate ? "__template__" : option.label;
+      score = CATEGORY_SCORES[category][scoreKey] ?? 0;
     }
+
+    rawSum += score;
+    nFilled += 1;
   });
 
-  // 최고 점수 반환 (하루에 여러 시간대 기록 시 최고값)
-  return Math.max(...Array.from(scoresByTimeBlock.values()), 0);
+  // 기록한 셀이 없으면 0 반환
+  if (nFilled === 0) return 0;
+
+  // 정규화: Category100 = raw / (n_filled × maxPerSlot) × 100
+  const maxPerSlot = getMaxPerSlot(category);
+  const category100 = (rawSum / (nFilled * maxPerSlot)) * 100;
+
+  // 0~100 범위로 제한
+  return Math.max(0, Math.min(100, category100));
 }
 
 /**
- * 일일 총점 계산
+ * 일일 총점 계산 (가중합 0~100)
+ * DailyScore = ∑(Category100 × weight) / ∑weight
  */
 export function calculateDailyTotal(
   logs: DailyGridLog[],
@@ -73,9 +101,19 @@ export function calculateDailyTotal(
     "therapy",
   ];
 
-  return categories.reduce((total, category) => {
-    return total + calculateCategoryScore(logs, category, options);
-  }, 0);
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  categories.forEach((category) => {
+    const category100 = calculateCategoryScore(logs, category, options);
+    const weight = CATEGORY_WEIGHTS[category];
+
+    weightedSum += category100 * weight;
+    totalWeight += weight;
+  });
+
+  // 가중 평균 계산
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
 
 /**
@@ -181,26 +219,29 @@ export function calculateTrafficLight(
     };
   }
 
-  const baseline = 0.7 * periodScores.week7Avg + 0.3 * periodScores.month30Avg;
-  const delta = todayTotal - baseline;
+  // 상대변화율 기준: baseline100 = 0.7 × avg7 + 0.3 × avg30
+  const baseline100 =
+    0.7 * periodScores.week7Avg + 0.3 * periodScores.month30Avg;
+  const delta100 = todayTotal - baseline100;
 
-  if (delta >= TRAFFIC_LIGHT_THRESHOLDS.GREEN) {
+  // 판정: delta100 ≥ +7 → good, delta100 ≤ -7 → needs_care, 그 외 ok
+  if (delta100 >= 7) {
     return {
       status: "green",
       message: "최근 평균보다 좋아요. 오늘은 유지가 목표",
       filledCount,
       todayTotal,
-      baseline,
-      delta,
+      baseline: baseline100,
+      delta: delta100,
     };
-  } else if (delta <= TRAFFIC_LIGHT_THRESHOLDS.RED) {
+  } else if (delta100 <= -7) {
     return {
       status: "red",
       message: "오늘은 낮은 날. 회복 루틴 1개만 선택하세요",
       filledCount,
       todayTotal,
-      baseline,
-      delta,
+      baseline: baseline100,
+      delta: delta100,
     };
   } else {
     return {
@@ -208,8 +249,8 @@ export function calculateTrafficLight(
       message: "평균 근처. 작은 한 가지로 '좋은 날' 만들기",
       filledCount,
       todayTotal,
-      baseline,
-      delta,
+      baseline: baseline100,
+      delta: delta100,
     };
   }
 }
@@ -374,11 +415,13 @@ export function recommendNextAction(
 
   // 카테고리별 추천 메시지
   const messages: Record<Category, string> = {
-    sleep: "오늘은 자기 전 보조요법(호흡/명상)만 체크 목표",
-    diet: "야식/과식 방지 1개만 지키기",
-    exercise: "10분 저강도만",
-    therapy: "5분 루틴",
-    supplement: "아침 루틴만",
+    sleep:
+      "오늘 밤은 8시 이후로 형광등은 피하고, 카페인 없는 따뜻한 차와 명상을 시도해 보시는게 어떨까요?",
+    diet: "건강한 식단을 위한 싸움은 식탁이 아니라, 냉장고에서 시작됩니다. 우선 냉장고 정리 부터 해볼까요?",
+    exercise:
+      "처음부터 과도한 목표나 힘든 운동을 하기보다는 신체 활동을 늘리는 것부터 시작하세요!",
+    therapy: "명상 어렵지 않아요. 3분 명상 먼저 시도해 보는게 어떨까요?",
+    supplement: "보조제는 약이 아닙니다. 꾸준한 섭취가 도움이 될 수 있습니다.",
   };
 
   return {
@@ -561,6 +604,7 @@ export function generateHeatmapInsight(
  */
 export interface StreakData {
   currentStreak: number;
+  longestStreak: number;
   graceUsed: number; // 이번 주 사용한 grace 횟수
   lastRecordDate: string | null;
 }
@@ -568,6 +612,7 @@ export interface StreakData {
 export function calculateStreak(
   dailyRecords: Array<{ date: string; filledCount: number }>,
   today: string,
+  existingLongestStreak: number = 0,
 ): StreakData {
   // 날짜순 정렬 (오래된 것부터)
   const sorted = [...dailyRecords].sort((a, b) => a.date.localeCompare(b.date));
@@ -621,8 +666,12 @@ export function calculateStreak(
     }
   }
 
+  // longest_streak는 현재 스트릭과 기존 최장 스트릭 중 큰 값
+  const longestStreak = Math.max(currentStreak, existingLongestStreak);
+
   return {
     currentStreak,
+    longestStreak,
     graceUsed,
     lastRecordDate,
   };
@@ -675,7 +724,7 @@ export function computeLifestyleAxisScores(
   (Object.keys(normalizedScores) as Category[]).forEach((cat) => {
     const normValue = normalizedScores[cat];
     const weights = HABIT_TO_AXIS_WEIGHT[cat];
-    
+
     for (const axis of META_AXES) {
       const w = weights[axis] ?? 0;
       axisScores[axis] += normValue * w;
@@ -741,7 +790,7 @@ export function computeSupplementAxisScores(
 
   for (const row of rows) {
     const key = `${row.ingredient_id}:${row.target_slug}`;
-    
+
     // strength는 이미 최고값으로 처리되어 있다고 가정
     // 만약 아니라면 여기서 max 처리
     const currentEffect = ingredientTargetEffect.get(key) ?? 0;
@@ -750,7 +799,7 @@ export function computeSupplementAxisScores(
     // confidence는 논문 수로 계산 (포화 함수)
     const currentCount = ingredientTargetCount.get(key) ?? 0;
     ingredientTargetCount.set(key, currentCount + 1);
-    
+
     // dose_count 저장
     ingredientDoseCount.set(row.ingredient_id, row.dose_count);
   }
@@ -768,7 +817,7 @@ export function computeSupplementAxisScores(
     const [ingredientId] = key.split(":");
     const doseCount = ingredientDoseCount.get(ingredientId) ?? 0;
     const doseFactor = saturationFunction(doseCount, KD);
-    
+
     const score = effect * confidence * doseFactor;
     ingredientTargetScores.set(key, score);
   });
@@ -797,7 +846,10 @@ export function computeSupplementAxisScores(
   });
 
   // 4. 표적을 축별로 그룹화
-  const axisToTargets = new Map<MetaAxis, Array<{ target: string; score: number }>>();
+  const axisToTargets = new Map<
+    MetaAxis,
+    Array<{ target: string; score: number }>
+  >();
   for (const row of rows) {
     const targetScore = targetScores.get(row.target_slug) ?? 0;
     if (!axisToTargets.has(row.meta_axis)) {
@@ -822,13 +874,13 @@ export function computeSupplementAxisScores(
   axisToTargets.forEach((targets, axis) => {
     // 내림차순 정렬
     targets.sort((a, b) => b.score - a.score);
-    
+
     // 상위 TOP_K개는 핵심
     const core = targets.slice(0, TOP_K).reduce((sum, t) => sum + t.score, 0);
-    
+
     // 나머지는 롱테일
     const tail = targets.slice(TOP_K).reduce((sum, t) => sum + t.score, 0);
-    
+
     // rawAxis = core + α * tail
     rawAxisScores[axis] = core + ALPHA * tail;
   });
@@ -885,7 +937,7 @@ export function topContributingIngredients(
   axes: MetaAxis[];
 }> {
   const { KC, KD } = SUPPLEMENT_CALCULATION_CONSTANTS;
-  
+
   // 성분별로 점수 집계
   const ingredientScores = new Map<
     string,
@@ -900,13 +952,13 @@ export function topContributingIngredients(
 
   for (const row of rows) {
     const key = `${row.ingredient_id}:${row.target_slug}`;
-    
+
     const currentEffect = ingredientTargetEffect.get(key) ?? 0;
     ingredientTargetEffect.set(key, Math.max(currentEffect, row.strength));
 
     const currentCount = ingredientTargetCount.get(key) ?? 0;
     ingredientTargetCount.set(key, currentCount + 1);
-    
+
     ingredientDoseCount.set(row.ingredient_id, row.dose_count);
   }
 
@@ -922,9 +974,9 @@ export function topContributingIngredients(
     const confidence = ingredientTargetConfidence.get(key) ?? 0;
     const doseCount = ingredientDoseCount.get(ingredientId) ?? 0;
     const doseFactor = saturationFunction(doseCount, KD);
-    
+
     const score = effect * confidence * doseFactor;
-    
+
     const ingredient = rows.find((r) => r.ingredient_id === ingredientId);
     if (!ingredient) return;
 
@@ -933,7 +985,7 @@ export function topContributingIngredients(
       score: 0,
       axes: new Set<MetaAxis>(),
     };
-    
+
     current.score += score;
     current.axes.add(ingredient.meta_axis);
     ingredientScores.set(ingredientId, current);

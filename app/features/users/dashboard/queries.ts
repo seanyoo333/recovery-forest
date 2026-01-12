@@ -226,38 +226,27 @@ export async function getBloodTestOverview(
   client: SupabaseClientType,
   userId: string,
 ): Promise<BloodTestOverview> {
-  const { data, error } = await client
-    .from("blood_test_results")
-    .select(
-      `result_id,
-       test_date,
-       result_value,
-       result_unit,
-       blood_test_types!inner(standard_name, unit, clinical_significance, reference_min, reference_max, descriptions)`,
-    )
+  // VIEW를 사용하여 중복 제거된 결과를 직접 조회
+  // Note: VIEW 타입이 database.types.ts에 추가되면 타입 단언 제거 가능
+  const { data, error } = await (client as any)
+    .from("blood_test_results_summary_view")
+    .select("*")
     .eq("patient_id", userId)
-    .order("test_date", { ascending: true })
-    .order("result_id", { ascending: false }); // 같은 날짜 내에서 최신 값 우선
+    .order("test_date", { ascending: true });
 
   if (error) {
     throw error;
   }
 
-  // 같은 날짜, 같은 메트릭에 대한 중복 제거 (result_id가 큰 값, 즉 최신 값 우선)
-  const parsedResultsWithId =
-    data?.flatMap((item: any) => {
-      const types = Array.isArray(item.blood_test_types)
-        ? item.blood_test_types
-        : item.blood_test_types
-          ? [item.blood_test_types]
-          : [];
-      const typeInfo = types[0];
-      if (!typeInfo?.standard_name) {
+  // VIEW에서 이미 중복 제거가 되어 있으므로, 데이터 변환만 수행
+  const parsedResults =
+    (data as any[])?.flatMap((item: any) => {
+      if (!item.standard_name) {
         return [];
       }
       // standard_name을 소문자로 정규화
       const metricKey = normalizeStandardName(
-        typeInfo.standard_name,
+        item.standard_name,
       ) as keyof typeof METRIC_DEFINITIONS;
       const isTumorMarker = metricKey.startsWith("tumor_marker_");
       if (isTumorMarker || metricKey in METRIC_DEFINITIONS) {
@@ -268,19 +257,18 @@ export async function getBloodTestOverview(
           return [];
         }
         const unit =
-          item.result_unit ?? typeInfo.unit ?? definition?.unit ?? null;
+          item.result_unit ?? item.type_unit ?? definition?.unit ?? null;
         return [
           {
-            result_id: item.result_id,
             test_date: item.test_date,
             metricKey,
             value: item.result_value,
             unit,
-            clinical_significance: typeInfo.clinical_significance ?? null,
-            reference_min: typeInfo.reference_min ?? null,
-            reference_max: typeInfo.reference_max ?? null,
+            clinical_significance: item.clinical_significance ?? null,
+            reference_min: item.reference_min ?? null,
+            reference_max: item.reference_max ?? null,
             descriptions:
-              (typeInfo.descriptions as {
+              (item.type_descriptions as {
                 description?: string;
                 significance?: {
                   up?: string[];
@@ -293,21 +281,7 @@ export async function getBloodTestOverview(
       return [];
     }) ?? [];
 
-  // 같은 날짜, 같은 메트릭에 대한 중복 제거 (result_id가 큰 값, 즉 최신 값 우선)
-  const uniqueResults = new Map<string, (typeof parsedResultsWithId)[0]>();
-  parsedResultsWithId.forEach((result) => {
-    const key = `${result.test_date}_${result.metricKey}`;
-    const existing = uniqueResults.get(key);
-    // 기존 값이 없거나, result_id가 더 큰 값(최신 값)으로 덮어쓰기
-    if (!existing || result.result_id > existing.result_id) {
-      uniqueResults.set(key, result);
-    }
-  });
-
-  // 중복 제거된 결과를 다시 배열로 변환 (result_id 제거)
-  const deduplicatedResults = Array.from(uniqueResults.values()).map(
-    ({ result_id, ...rest }) => rest,
-  );
+  const deduplicatedResults = parsedResults;
 
   const metricsByDate = new Map<
     string,
@@ -829,26 +803,32 @@ export async function getTodayIngredientEvidence(
 
   // ingredient별로 dose_count 계산 (아침/점심/저녁/자기전 중 실제 등장 횟수)
   const ingredientDoseCount = new Map<string, number>();
-  
+
   for (const item of routineItems) {
     if (!item.ingredient_id) continue;
-    
+
     // 이 ingredient가 포함된 template들이 오늘 몇 번 복용되었는지 계산
     const templateIdsWithIngredient = routineItems
       .filter((ri) => ri.ingredient_id === item.ingredient_id)
       .map((ri) => ri.template_id);
-    
+
     const timeBlocks = new Set<string>();
     todayLogs.forEach((log) => {
-      if (log.template_id && templateIdsWithIngredient.includes(log.template_id)) {
+      if (
+        log.template_id &&
+        templateIdsWithIngredient.includes(log.template_id)
+      ) {
         if (log.time_block) {
           timeBlocks.add(log.time_block);
         }
       }
     });
-    
+
     const currentCount = ingredientDoseCount.get(item.ingredient_id) ?? 0;
-    ingredientDoseCount.set(item.ingredient_id, Math.max(currentCount, timeBlocks.size));
+    ingredientDoseCount.set(
+      item.ingredient_id,
+      Math.max(currentCount, timeBlocks.size),
+    );
   }
 
   const ingredientIds = Array.from(ingredientDoseCount.keys());
@@ -857,21 +837,11 @@ export async function getTodayIngredientEvidence(
     return [];
   }
 
-  // 성분 → 표적 → 메타축 조인 쿼리
-  const { data, error } = await client
-    .from("ingredient_target_evidence")
-    .select(
-      `
-      ingredient_id,
-      natural_ingredients!inner(display_name),
-      strength,
-      study_type,
-      natural_targets!inner(
-        slug,
-        target_to_meta_axis(meta_axis, axis_weight)
-      )
-    `,
-    )
+  // VIEW를 사용하여 성분 → 표적 → 메타축 조인 쿼리 단순화
+  // Note: VIEW 타입이 database.types.ts에 추가되면 타입 단언 제거 가능
+  const { data, error } = await (client as any)
+    .from("ingredient_target_evidence_full_view")
+    .select("*")
     .in("ingredient_id", ingredientIds);
 
   if (error) throw error;
@@ -898,49 +868,63 @@ export async function getTodayIngredientEvidence(
     dose_count: number;
   }> = [];
 
-  for (const row of data) {
-    const ingredient = row.natural_ingredients as
-      | { display_name: string }
-      | null
-      | undefined;
-    const target = row.natural_targets as
-      | {
-          slug: string;
-          target_to_meta_axis: Array<{
-            meta_axis: string;
-            axis_weight: number;
-          }>;
-        }
-      | null
-      | undefined;
+  const viewData = data as Array<{
+    ingredient_id: string;
+    ingredient_name: string;
+    target_slug: string;
+    strength: number;
+    study_type: string;
+    meta_axis: string;
+    axis_weight: number;
+  }>;
 
-    if (!ingredient || !target) continue;
-
-    const mappings = target.target_to_meta_axis;
-    if (!mappings || mappings.length === 0) continue;
-
+  for (const row of viewData) {
     const doseCount = ingredientDoseCount.get(row.ingredient_id) ?? 0;
 
-    for (const mapping of mappings) {
-      result.push({
-        ingredient_id: row.ingredient_id,
-        ingredient_name: ingredient.display_name,
-        target_slug: target.slug,
-        strength: row.strength,
-        study_type: row.study_type as
-          | "systematic_review"
-          | "rct"
-          | "human_observational"
-          | "case_report"
-          | "animal"
-          | "cell"
-          | "mechanistic",
-        meta_axis: mapping.meta_axis,
-        axis_weight: mapping.axis_weight,
-        dose_count: doseCount,
-      });
-    }
+    result.push({
+      ingredient_id: row.ingredient_id,
+      ingredient_name: row.ingredient_name,
+      target_slug: row.target_slug,
+      strength: row.strength,
+      study_type: row.study_type as
+        | "systematic_review"
+        | "rct"
+        | "human_observational"
+        | "case_report"
+        | "animal"
+        | "cell"
+        | "mechanistic",
+      meta_axis: row.meta_axis,
+      axis_weight: row.axis_weight,
+      dose_count: doseCount,
+    });
   }
 
   return result;
+}
+
+/**
+ * 사용자의 스트릭 정보 조회
+ */
+export async function getStreak(
+  client: SupabaseClientType,
+  userId: string,
+): Promise<{
+  user_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_log_date: string | null;
+  updated_at: string;
+} | null> {
+  const { data, error } = await client
+    .from("streaks")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }

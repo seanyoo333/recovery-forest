@@ -547,71 +547,52 @@ export const productIngredients = pgTable(
 );
 
 /**
- * Routine Grid Option Ingredients Table
+ * Streaks Table
  *
- * 그리드 옵션과 성분 연결 (사용자가 그리드에서 선택한 보조제가 어떤 성분인지)
+ * 사용자의 건강습관 기록 연속 일수(스트릭) 정보
+ * current_streak: 현재 연속 기록 일수
+ * longest_streak: 최장 연속 기록 일수
+ * last_log_date: 마지막 기록 날짜
  */
-export const routineGridOptionIngredients = pgTable(
-  "routine_grid_option_ingredients",
+export const streaks = pgTable(
+  "streaks",
   {
-    id: uuid().primaryKey().defaultRandom(),
-    grid_option_id: uuid()
+    user_id: uuid()
+      .primaryKey()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    current_streak: integer().notNull().default(0),
+    longest_streak: integer().notNull().default(0),
+    last_log_date: date(),
+    updated_at: timestamp()
       .notNull()
-      .references(() => routineGridOptions.id, { onDelete: "cascade" }),
-    ingredient_id: uuid()
-      .notNull()
-      .references(() => naturalIngredients.id, { onDelete: "cascade" }),
-    ...timestamps,
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`)
+      .$onUpdate(() => new Date()),
   },
   (table) => [
-    uniqueIndex("routine_grid_option_ingredients_unique_idx").on(
-      table.grid_option_id,
-      table.ingredient_id,
-    ),
-    pgPolicy("routine-grid-option-ingredients-select", {
+    pgPolicy("streaks-select", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM routine_grid_options
-        WHERE routine_grid_options.id = ${table.grid_option_id}
-        AND routine_grid_options.user_id = ${authUid}
-      )`,
+      using: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-grid-option-ingredients-insert", {
+    pgPolicy("streaks-insert", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM routine_grid_options
-        WHERE routine_grid_options.id = ${table.grid_option_id}
-        AND routine_grid_options.user_id = ${authUid}
-      )`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-grid-option-ingredients-update", {
+    pgPolicy("streaks-update", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM routine_grid_options
-        WHERE routine_grid_options.id = ${table.grid_option_id}
-        AND routine_grid_options.user_id = ${authUid}
-      )`,
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM routine_grid_options
-        WHERE routine_grid_options.id = ${table.grid_option_id}
-        AND routine_grid_options.user_id = ${authUid}
-      )`,
+      using: sql`${authUid} = ${table.user_id}`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-grid-option-ingredients-delete", {
+    pgPolicy("streaks-delete", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
-      using: sql`EXISTS (
-        SELECT 1 FROM routine_grid_options
-        WHERE routine_grid_options.id = ${table.grid_option_id}
-        AND routine_grid_options.user_id = ${authUid}
-      )`,
+      using: sql`${authUid} = ${table.user_id}`,
     }),
   ],
 );
