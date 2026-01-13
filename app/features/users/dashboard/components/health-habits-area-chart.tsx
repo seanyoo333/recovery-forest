@@ -7,9 +7,14 @@ import type { PeriodScores } from "../utils";
 
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { Area, AreaChart, ReferenceLine } from "recharts";
 import { CartesianGrid, XAxis } from "recharts";
 
+import { Badge } from "~/core/components/ui/badge";
+import { Button } from "~/core/components/ui/button";
 import {
   Card,
   CardContent,
@@ -26,85 +31,109 @@ interface HealthHabitsAreaChartProps {
   dailyScores: Array<{ date: string; total: number }>;
   periodScores: PeriodScores;
   todayTotal: number;
+  baseline: number | null;
+  delta: number | null;
+  status: "gray" | "green" | "yellow" | "red";
+  statusMessage: string;
 }
 
 const chartConfig = {
   total: {
-    label: "하루 총 점수",
-    color: "hsl(var(--chart-1))",
+    label: "하루 총 건강 점수",
+    theme: {
+      light: "oklch(0.646 0.222 41.116)", // chart-1 light mode (밝은 주황색)
+      dark: "oklch(0.488 0.243 264.376)", // chart-1 dark mode
+    },
   },
-  week7Avg: {
-    label: "최근 7일 평균",
-    color: "hsl(var(--chart-2))",
-  },
-  week7BeforeAvg: {
-    label: "7일 전 평균",
-    color: "hsl(var(--chart-3))",
-  },
-  month30Min: {
-    label: "30일 최소",
-    color: "hsl(var(--muted))",
-  },
-  month30Max: {
-    label: "30일 최대",
-    color: "hsl(var(--muted))",
+  baseline: {
+    label: "최근 평균 기준선",
+    theme: {
+      light: "oklch(0.6 0.118 184.704)", // chart-2 light mode (청록색)
+      dark: "oklch(0.696 0.17 162.48)", // chart-2 dark mode
+    },
   },
 } satisfies ChartConfig;
 
 /**
- * 판단 문장 생성
+ * 상태별 색상 및 스타일 (신호등 판정 기준에 맞춤)
  */
-function generateInsightMessage(
-  todayTotal: number,
-  week7Avg: number | null,
-): string {
-  if (week7Avg === null) {
-    return "데이터가 부족해요. 계속 기록해주세요";
-  }
+const statusStyles = {
+  gray: {
+    badgeClassName: "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+    dot: "fill-gray-500",
+  },
+  green: {
+    badgeClassName: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    dot: "fill-green-500",
+  },
+  yellow: {
+    badgeClassName: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+    dot: "fill-yellow-500",
+  },
+  red: {
+    badgeClassName: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+    dot: "fill-red-500",
+  },
+};
 
-  if (todayTotal >= week7Avg + 1) {
-    return "최근 7일 평균보다 상승";
-  } else if (todayTotal <= week7Avg - 1) {
-    return "최근 7일 평균보다 하락";
-  } else {
-    return "평균 근처 유지";
-  }
-}
+// 명시적 색상 값 (CSS 변수 대신 직접 사용)
+const COLORS = {
+  total: {
+    light: "oklch(0.646 0.222 41.116)", // chart-1 light mode (밝은 주황색)
+    dark: "oklch(0.488 0.243 264.376)", // chart-1 dark mode
+  },
+  baseline: {
+    light: "oklch(0.6 0.118 184.704)", // chart-2 light mode (청록색)
+    dark: "oklch(0.696 0.17 162.48)", // chart-2 dark mode
+  },
+};
 
 export function HealthHabitsAreaChart({
   dailyScores,
   periodScores,
   todayTotal,
+  baseline,
+  delta,
+  status,
+  statusMessage,
 }: HealthHabitsAreaChartProps) {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const [isDark, setIsDark] = useState(false);
+  
+  // 다크 모드 감지
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+  
+  // 색상 선택
+  const totalColor = isDark ? COLORS.total.dark : COLORS.total.light;
+  const baselineColor = isDark ? COLORS.baseline.dark : COLORS.baseline.light;
+  
   // 최근 30일 데이터 (오래된 것부터)
   const chartData = [...dailyScores].reverse().map((d) => {
     const dateObj = new Date(d.date);
+    const isToday = d.date === today;
     return {
       date: format(dateObj, "MM/dd", { locale: ko }),
       dateFull: d.date,
       total: d.total,
+      isToday,
     };
   });
 
-  // 7일 전 평균 계산 (8일 전 ~ 14일 전)
-  const week7BeforeStart = chartData.length >= 14 ? 14 : chartData.length;
-  const week7BeforeEnd = chartData.length >= 7 ? 7 : 0;
-  const week7BeforeScores = chartData.slice(week7BeforeEnd, week7BeforeStart);
-  const week7BeforeAvg =
-    week7BeforeScores.length > 0
-      ? week7BeforeScores.reduce((sum, d) => sum + d.total, 0) /
-        week7BeforeScores.length
-      : null;
-
-  // 30일 최소/최대 계산
-  const totals = chartData.map((d) => d.total);
-  const month30Min = totals.length > 0 ? Math.min(...totals) : 0;
-  const month30Max = totals.length > 0 ? Math.max(...totals) : 0;
-
-  const insightMessage = generateInsightMessage(
-    todayTotal,
-    periodScores.week7Avg,
-  );
+  // 오늘 데이터 인덱스 찾기
+  const todayIndex = chartData.findIndex((d) => d.isToday);
 
   if (chartData.length === 0) {
     return (
@@ -125,13 +154,35 @@ export function HealthHabitsAreaChart({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>건강습관 추이</CardTitle>
-            <CardDescription>하루 총 습관 점수 변화</CardDescription>
+        <div className="space-y-3">
+          {/* 타이틀과 버튼 행 */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle>생활습관 건강 점수</CardTitle>
+              <CardDescription>
+                최근 평균과 오늘의 점수 비교
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link to="/my/dashboard/health-habits">
+                생활습관 입력
+                <ArrowRight className="ml-1.5 size-4" />
+              </Link>
+            </Button>
           </div>
-          <div className="bg-muted rounded-lg px-3 py-1.5 text-sm">
-            {insightMessage}
+          {/* 뱃지 행 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {delta !== null && (
+              <Badge variant="outline" className={`text-xs ${statusStyles[status].badgeClassName}`}>
+                {delta > 0 ? "+" : ""}
+                <span>평균 기준선 대비 {delta.toFixed(1)}점</span>
+              </Badge>
+            )}
+            {statusMessage && (
+              <Badge variant="outline" className={`text-xs ${statusStyles[status].badgeClassName}`}>
+                {statusMessage}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -161,8 +212,12 @@ export function HealthHabitsAreaChart({
                 <ChartTooltipContent
                   indicator="dot"
                   labelFormatter={(value, payload) => {
-                    const data = payload?.[0]?.payload;
-                    if (!data) return value;
+                    if (!payload || !Array.isArray(payload) || payload.length === 0) {
+                      return String(value);
+                    }
+                    const firstPayload = payload[0] as { payload?: { dateFull?: string } } | undefined;
+                    const data = firstPayload?.payload;
+                    if (!data?.dateFull) return String(value);
                     return format(new Date(data.dateFull), "yyyy년 MM월 dd일", {
                       locale: ko,
                     });
@@ -174,35 +229,49 @@ export function HealthHabitsAreaChart({
             <Area
               dataKey="total"
               type="natural"
-              stroke="var(--color-total)"
-              fill="var(--color-total)"
-              fillOpacity={0.3}
-              strokeWidth={2}
-              dot={false}
+              stroke={totalColor}
+              fill={totalColor}
+              fillOpacity={0.4}
+              strokeWidth={2.5}
+              dot={(props) => {
+                const { cx, cy, payload } = props;
+                if (payload && (payload as { isToday?: boolean }).isToday) {
+                  return (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={7}
+                      fill={statusStyles[status].dot}
+                      stroke="#fff"
+                      strokeWidth={2.5}
+                    />
+                  );
+                }
+                return <></>;
+              }}
+              activeDot={{
+                r: 6,
+                fill: totalColor,
+                strokeWidth: 2.5,
+                stroke: "#fff",
+              }}
             />
-            {/* 최근 7일 평균선 */}
-            {periodScores.week7Avg !== null && (
+            {/* 기준선 (신호등 로직과 동일) */}
+            {baseline !== null && !isNaN(baseline) && baseline > 0 && (
               <ReferenceLine
-                y={periodScores.week7Avg}
-                stroke="var(--color-week7Avg)"
-                strokeDasharray="5 5"
-                strokeWidth={1.5}
+                y={baseline}
+                stroke={baselineColor}
+                strokeDasharray="6 4"
+                strokeWidth={2.5}
+                strokeOpacity={0.9}
                 label={{
-                  value: "7일 평균",
+                  value: `기준선 ${baseline.toFixed(1)}`,
                   position: "right",
-                  fill: "var(--color-week7Avg)",
-                  fontSize: 10,
+                  fill: baselineColor,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  offset: 5,
                 }}
-              />
-            )}
-            {/* 7일 전 평균선 */}
-            {week7BeforeAvg !== null && (
-              <ReferenceLine
-                y={week7BeforeAvg}
-                stroke="var(--color-week7BeforeAvg)"
-                strokeDasharray="3 3"
-                strokeWidth={1}
-                strokeOpacity={0.6}
               />
             )}
           </AreaChart>

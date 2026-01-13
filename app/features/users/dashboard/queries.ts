@@ -759,6 +759,138 @@ export async function getRoutineTemplates(
 export const getSectionTemplates = getRoutineTemplates;
 
 /**
+ * 사용자 입력 label을 정규화하여 매칭에 사용
+ */
+function normalizeLabel(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/\d+/g, "") // 숫자 제거
+    .replace(/\s*(mg|g|ml|mcg|iu|%|mg\/g|mg\/ml|g\/ml)\s*/gi, "") // 단위 제거
+    .replace(/[()\[\]{}]/g, "") // 특수문자 제거
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * 두 문자열의 유사도 계산
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  const normalized1 = normalizeLabel(str1);
+  const normalized2 = normalizeLabel(str2);
+
+  // 정확한 매칭
+  if (normalized1 === normalized2) return 1.0;
+
+  // 한쪽이 다른 쪽을 포함하는 경우
+  if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) {
+    const longer = Math.max(normalized1.length, normalized2.length);
+    const shorter = Math.min(normalized1.length, normalized2.length);
+    return longer > 0 ? shorter / longer : 0;
+  }
+
+  // 공통 단어 개수 기반 유사도
+  const words1 = normalized1.split(/\s+/).filter((w) => w.length > 1);
+  const words2 = normalized2.split(/\s+/).filter((w) => w.length > 1);
+
+  if (words1.length === 0 || words2.length === 0) return 0;
+
+  const commonWords = words1.filter((w) => words2.includes(w));
+  return commonWords.length / Math.max(words1.length, words2.length);
+}
+
+/**
+ * routine_items.label을 natural_ingredients와 매칭
+ */
+async function matchLabelToIngredient(
+  client: SupabaseClient<Database>,
+  label: string,
+): Promise<string | null> {
+  const { data: ingredients, error } = await client
+    .from("natural_ingredients")
+    .select("id, display_name, slug, synonyms");
+
+  if (error || !ingredients) {
+    console.error(`[매칭] natural_ingredients 조회 실패:`, error);
+    return null;
+  }
+
+  const normalizedLabel = normalizeLabel(label);
+  let bestMatch: { id: string; score: number; matchType: string } | null =
+    null;
+
+  for (const ingredient of ingredients) {
+    // display_name 정확한 매칭
+    const displayNameNorm = normalizeLabel(ingredient.display_name || "");
+    if (displayNameNorm === normalizedLabel) {
+      return ingredient.id;
+    }
+
+    // display_name 부분 매칭
+    const displayNameScore = calculateSimilarity(
+      label,
+      ingredient.display_name || "",
+    );
+    if (
+      displayNameScore > 0.7 &&
+      (!bestMatch || displayNameScore > bestMatch.score)
+    ) {
+      bestMatch = {
+        id: ingredient.id,
+        score: displayNameScore,
+        matchType: "display_name",
+      };
+    }
+
+    // slug 매칭
+    const slugNorm = normalizeLabel(ingredient.slug || "");
+    if (slugNorm === normalizedLabel) {
+      return ingredient.id;
+    }
+    const slugScore = calculateSimilarity(label, ingredient.slug || "");
+    if (slugScore > 0.7 && (!bestMatch || slugScore > bestMatch.score)) {
+      bestMatch = { id: ingredient.id, score: slugScore, matchType: "slug" };
+    }
+
+    // synonyms 매칭
+    if (ingredient.synonyms && Array.isArray(ingredient.synonyms)) {
+      for (const synonym of ingredient.synonyms) {
+        if (!synonym) continue;
+
+        const synonymNorm = normalizeLabel(synonym);
+        if (synonymNorm === normalizedLabel) {
+          return ingredient.id;
+        }
+
+        const synonymScore = calculateSimilarity(label, synonym);
+        if (
+          synonymScore > 0.7 &&
+          (!bestMatch || synonymScore > bestMatch.score)
+        ) {
+          bestMatch = {
+            id: ingredient.id,
+            score: synonymScore,
+            matchType: "synonym",
+          };
+        }
+      }
+    }
+  }
+
+  // 최고 점수가 0.7 이상이면 매칭 성공
+  if (bestMatch && bestMatch.score >= 0.7) {
+    console.log(
+      `[매칭] "${label}" → ${bestMatch.matchType} (점수: ${bestMatch.score.toFixed(2)})`,
+    );
+    return bestMatch.id;
+  }
+
+  console.log(`[매칭] 실패: "${label}" - 매칭되는 성분 없음`);
+  return null;
+}
+
+/**
  * 오늘 복용한 천연물의 표적-메타축 매핑 데이터 조회
  * dose_count (하루 복용 이벤트 수) 포함
  */
@@ -767,6 +899,8 @@ export async function getTodayIngredientEvidence(
   userId: string,
   logDate: string,
 ) {
+  console.log(`[레이더 차트 디버깅] getTodayIngredientEvidence 시작 - userId: ${userId}, logDate: ${logDate}`);
+  
   // 오늘 복용한 보조제 기록 (template_id와 time_block 포함)
   const { data: todayLogs, error: logsError } = await client
     .from("routine_daily_grid_logs")
@@ -776,8 +910,18 @@ export async function getTodayIngredientEvidence(
     .eq("category", "supplement")
     .not("template_id", "is", null);
 
-  if (logsError) throw logsError;
+  if (logsError) {
+    console.error(`[레이더 차트 디버깅] routine_daily_grid_logs 조회 에러:`, logsError);
+    throw logsError;
+  }
+  
+  console.log(`[레이더 차트 디버깅] 1단계 - 오늘 보조제 기록:`, {
+    count: todayLogs?.length ?? 0,
+    logs: todayLogs,
+  });
+  
   if (!todayLogs || todayLogs.length === 0) {
+    console.log(`[레이더 차트 디버깅] 오늘 보조제 기록 없음 - 빈 배열 반환`);
     return [];
   }
 
@@ -785,31 +929,81 @@ export async function getTodayIngredientEvidence(
     .map((log) => log.template_id)
     .filter((id): id is string => id !== null);
 
+  console.log(`[레이더 차트 디버깅] 2단계 - 템플릿 IDs:`, {
+    count: templateIds.length,
+    templateIds,
+  });
+
   if (templateIds.length === 0) {
+    console.log(`[레이더 차트 디버깅] 템플릿 ID 없음 - 빈 배열 반환`);
     return [];
   }
 
-  // 템플릿의 아이템들에서 ingredient_id 추출
+  // 템플릿의 아이템들 조회 (label 포함, ingredient_id 필터 제거)
   const { data: routineItems, error: itemsError } = await client
     .from("routine_items")
-    .select("ingredient_id, template_id")
-    .in("template_id", templateIds)
-    .not("ingredient_id", "is", null);
+    .select("id, ingredient_id, template_id, label")
+    .in("template_id", templateIds);
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    console.error(`[레이더 차트 디버깅] routine_items 조회 에러:`, itemsError);
+    throw itemsError;
+  }
+
+  console.log(`[레이더 차트 디버깅] 3단계 - 템플릿 아이템:`, {
+    count: routineItems?.length ?? 0,
+    items: routineItems,
+  });
+
   if (!routineItems || routineItems.length === 0) {
+    console.log(`[레이더 차트 디버깅] 템플릿 아이템 없음 - 빈 배열 반환`);
     return [];
+  }
+
+  // ingredient_id가 없는 항목들을 label로 매칭
+  const labelToIngredientId = new Map<string, string>();
+  const itemsNeedingMatch = routineItems.filter((item) => !item.ingredient_id);
+
+  if (itemsNeedingMatch.length > 0) {
+    console.log(`[레이더 차트 디버깅] 3-1단계 - 매칭 필요한 항목:`, {
+      count: itemsNeedingMatch.length,
+      labels: itemsNeedingMatch.map((item) => item.label),
+    });
+
+    // 각 label을 natural_ingredients와 매칭
+    for (const item of itemsNeedingMatch) {
+      const matchedId = await matchLabelToIngredient(client, item.label);
+      if (matchedId) {
+        labelToIngredientId.set(item.label, matchedId);
+        console.log(
+          `[레이더 차트 디버깅] 매칭 성공: "${item.label}" → ${matchedId}`,
+        );
+      }
+    }
   }
 
   // ingredient별로 dose_count 계산 (아침/점심/저녁/자기전 중 실제 등장 횟수)
   const ingredientDoseCount = new Map<string, number>();
 
   for (const item of routineItems) {
-    if (!item.ingredient_id) continue;
+    // ingredient_id가 있으면 사용, 없으면 매칭 결과 사용
+    const ingredientId =
+      item.ingredient_id || labelToIngredientId.get(item.label);
+
+    if (!ingredientId) {
+      console.log(
+        `[레이더 차트 디버깅] ingredient_id를 찾을 수 없음: "${item.label}"`,
+      );
+      continue;
+    }
 
     // 이 ingredient가 포함된 template들이 오늘 몇 번 복용되었는지 계산
     const templateIdsWithIngredient = routineItems
-      .filter((ri) => ri.ingredient_id === item.ingredient_id)
+      .filter((ri) => {
+        const riIngredientId =
+          ri.ingredient_id || labelToIngredientId.get(ri.label);
+        return riIngredientId === ingredientId;
+      })
       .map((ri) => ri.template_id);
 
     const timeBlocks = new Set<string>();
@@ -824,16 +1018,22 @@ export async function getTodayIngredientEvidence(
       }
     });
 
-    const currentCount = ingredientDoseCount.get(item.ingredient_id) ?? 0;
+    const currentCount = ingredientDoseCount.get(ingredientId) ?? 0;
     ingredientDoseCount.set(
-      item.ingredient_id,
+      ingredientId,
       Math.max(currentCount, timeBlocks.size),
     );
   }
 
   const ingredientIds = Array.from(ingredientDoseCount.keys());
 
+  console.log(`[레이더 차트 디버깅] 4단계 - Ingredient IDs 및 Dose Count:`, {
+    ingredientIds,
+    doseCountMap: Object.fromEntries(ingredientDoseCount),
+  });
+
   if (ingredientIds.length === 0) {
+    console.log(`[레이더 차트 디버깅] Ingredient ID 없음 - 빈 배열 반환`);
     return [];
   }
 
@@ -844,8 +1044,21 @@ export async function getTodayIngredientEvidence(
     .select("*")
     .in("ingredient_id", ingredientIds);
 
-  if (error) throw error;
+  if (error) {
+    console.error(`[레이더 차트 디버깅] ingredient_target_evidence_full_view 조회 에러:`, error);
+    throw error;
+  }
+  
+  console.log(`[레이더 차트 디버깅] 5단계 - VIEW 조회 결과:`, {
+    count: data?.length ?? 0,
+    data: data?.slice(0, 5), // 처음 5개만 로그
+    allIngredientIds: ingredientIds,
+    foundIngredientIds: data ? [...new Set(data.map((d: any) => d.ingredient_id))] : [],
+  });
+  
   if (!data || data.length === 0) {
+    console.log(`[레이더 차트 디버깅] VIEW에서 데이터 없음 - 빈 배열 반환`);
+    console.log(`[레이더 차트 디버깅] 조회한 ingredient_ids:`, ingredientIds);
     return [];
   }
 
@@ -898,6 +1111,206 @@ export async function getTodayIngredientEvidence(
       axis_weight: row.axis_weight,
       dose_count: doseCount,
     });
+  }
+
+  console.log(`[레이더 차트 디버깅] 6단계 - 최종 결과:`, {
+    count: result.length,
+    result: result.slice(0, 10), // 처음 10개만 로그
+    summary: {
+      uniqueIngredients: [...new Set(result.map((r) => r.ingredient_name))],
+      uniqueTargets: [...new Set(result.map((r) => r.target_slug))],
+      uniqueAxes: [...new Set(result.map((r) => r.meta_axis))],
+    },
+  });
+
+  return result;
+}
+
+/**
+ * 날짜 범위로 복용한 천연물의 표적-메타축 매핑 데이터 조회
+ * 각 날짜별로 그룹화하여 반환 (기준선 계산용)
+ */
+export async function getIngredientEvidenceByDateRange(
+  client: SupabaseClient<Database>,
+  userId: string,
+  startDate: string,
+  endDate: string,
+): Promise<
+  Array<{
+    log_date: string;
+    ingredient_id: string;
+    ingredient_name: string;
+    target_slug: string;
+    strength: number;
+    study_type:
+      | "systematic_review"
+      | "rct"
+      | "human_observational"
+      | "case_report"
+      | "animal"
+      | "cell"
+      | "mechanistic";
+    meta_axis: string;
+    axis_weight: number;
+    dose_count: number;
+  }>
+> {
+  // 날짜 범위 내 보조제 기록 조회
+  const { data: logs, error: logsError } = await client
+    .from("routine_daily_grid_logs")
+    .select("template_id, time_block, log_date")
+    .eq("user_id", userId)
+    .eq("category", "supplement")
+    .gte("log_date", startDate)
+    .lte("log_date", endDate)
+    .not("template_id", "is", null);
+
+  if (logsError) throw logsError;
+  if (!logs || logs.length === 0) {
+    return [];
+  }
+
+  const templateIds = logs
+    .map((log) => log.template_id)
+    .filter((id): id is string => id !== null);
+
+  if (templateIds.length === 0) {
+    return [];
+  }
+
+  // 템플릿의 아이템들 조회 (label 포함, ingredient_id 필터 제거)
+  const { data: routineItems, error: itemsError } = await client
+    .from("routine_items")
+    .select("id, ingredient_id, template_id, label")
+    .in("template_id", templateIds);
+
+  if (itemsError) throw itemsError;
+  if (!routineItems || routineItems.length === 0) {
+    return [];
+  }
+
+  // ingredient_id가 없는 항목들을 label로 매칭
+  const labelToIngredientId = new Map<string, string>();
+  const itemsNeedingMatch = routineItems.filter((item) => !item.ingredient_id);
+
+  if (itemsNeedingMatch.length > 0) {
+    // 각 label을 natural_ingredients와 매칭
+    for (const item of itemsNeedingMatch) {
+      const matchedId = await matchLabelToIngredient(client, item.label);
+      if (matchedId) {
+        labelToIngredientId.set(item.label, matchedId);
+      }
+    }
+  }
+
+  // 날짜별, ingredient별로 dose_count 계산
+  const dateIngredientDoseCount = new Map<string, Map<string, number>>();
+
+  for (const log of logs) {
+    if (!log.template_id || !log.log_date) continue;
+
+    const date = log.log_date;
+    if (!dateIngredientDoseCount.has(date)) {
+      dateIngredientDoseCount.set(date, new Map());
+    }
+
+    const ingredientCounts = dateIngredientDoseCount.get(date)!;
+
+    // 이 날짜에 복용한 template에 포함된 ingredient들 찾기
+    const templateItems = routineItems.filter(
+      (ri) => ri.template_id === log.template_id,
+    );
+
+    for (const item of templateItems) {
+      const ingredientId =
+        item.ingredient_id || labelToIngredientId.get(item.label);
+      if (!ingredientId) continue;
+
+      const currentCount = ingredientCounts.get(ingredientId) ?? 0;
+      // 같은 날짜에 같은 ingredient가 여러 time_block에 등장하면 최대값 사용
+      ingredientCounts.set(ingredientId, Math.max(currentCount, 1));
+    }
+  }
+
+  // 모든 날짜의 ingredient ID 수집
+  const allIngredientIds = new Set<string>();
+  for (const ingredientCounts of dateIngredientDoseCount.values()) {
+    for (const ingredientId of ingredientCounts.keys()) {
+      allIngredientIds.add(ingredientId);
+    }
+  }
+
+  if (allIngredientIds.size === 0) {
+    return [];
+  }
+
+  // VIEW를 사용하여 성분 → 표적 → 메타축 조인 쿼리
+  const { data, error } = await (client as any)
+    .from("ingredient_target_evidence_full_view")
+    .select("*")
+    .in("ingredient_id", Array.from(allIngredientIds));
+
+  if (error) throw error;
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  // 결과 생성: 날짜별로 그룹화
+  const result: Array<{
+    log_date: string;
+    ingredient_id: string;
+    ingredient_name: string;
+    target_slug: string;
+    strength: number;
+    study_type:
+      | "systematic_review"
+      | "rct"
+      | "human_observational"
+      | "case_report"
+      | "animal"
+      | "cell"
+      | "mechanistic";
+    meta_axis: string;
+    axis_weight: number;
+    dose_count: number;
+  }> = [];
+
+  const viewData = data as Array<{
+    ingredient_id: string;
+    ingredient_name: string;
+    target_slug: string;
+    strength: number;
+    study_type: string;
+    meta_axis: string;
+    axis_weight: number;
+  }>;
+
+  for (const date of dateIngredientDoseCount.keys()) {
+    const ingredientCounts = dateIngredientDoseCount.get(date)!;
+
+    for (const row of viewData) {
+      const doseCount = ingredientCounts.get(row.ingredient_id) ?? 0;
+      if (doseCount === 0) continue;
+
+      result.push({
+        log_date: date,
+        ingredient_id: row.ingredient_id,
+        ingredient_name: row.ingredient_name,
+        target_slug: row.target_slug,
+        strength: row.strength,
+        study_type: row.study_type as
+          | "systematic_review"
+          | "rct"
+          | "human_observational"
+          | "case_report"
+          | "animal"
+          | "cell"
+          | "mechanistic",
+        meta_axis: row.meta_axis,
+        axis_weight: row.axis_weight,
+        dose_count: doseCount,
+      });
+    }
   }
 
   return result;

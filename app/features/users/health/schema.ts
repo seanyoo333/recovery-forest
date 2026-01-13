@@ -311,44 +311,6 @@ export const naturalTargets = pgTable("natural_targets", {
 });
 
 /**
- * Target Tag Category Enum
- *
- * 표적 태그 카테고리 (논문 분류용)
- */
-export const targetTagCategoryEnum = pgEnum("target_tag_category", [
-  "epigenetics", // 후성유전 (HDAC, DNMT, miRNA 등)
-  "metastasis", // 전이/침윤 (EMT, MMP, VEGF, TGF-β 등)
-  "metabolism", // 대사 (GLUT, Glutaminolysis 등)
-  "inflammation", // 염증 (NF-κB, COX-2 등)
-  "immune", // 면역 (T/NK, checkpoint 등)
-  "hormone", // 호르몬/신호전달
-  "neuro", // 신경/스트레스
-  "recovery", // 회복/보호
-]);
-
-/**
- * Target Tags Table
- *
- * 표적 태그 매핑 (논문 분류 및 드릴다운용)
- * 하나의 표적이 여러 태그를 가질 수 있음
- */
-export const targetTags = pgTable(
-  "target_tags",
-  {
-    target_id: uuid()
-      .notNull()
-      .references(() => naturalTargets.id, { onDelete: "cascade" }),
-    tag_category: targetTagCategoryEnum().notNull(),
-    tag_value: text().notNull(), // "hdac", "dnmt", "emt", "mmp9", "nfkb" 등
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.target_id, table.tag_category, table.tag_value],
-    }),
-  ],
-);
-
-/**
  * Target to Meta Axis Table
  *
  * 표적 → 메타축 매핑 (표적이 어떤 메타축에 기여하는지)
@@ -441,8 +403,9 @@ export const evidenceSources = pgTable(
  * 성분 → 표적 매핑의 요약 정보
  * 실제 논문 정보는 evidence_sources와 ingredient_target_evidence_sources를 통해 관리
  *
- * strength는 연결된 논문들의 max(strength)로 계산되거나 수동으로 설정 가능
- * study_type은 연결된 논문들의 최고 study_type으로 계산
+ * - 성분-표적 조합은 1행만 유지 (ingredient_id + target_id unique)
+ * - strength는 연결된 논문들의 max(strength)로 자동 계산 (트리거 사용 권장)
+ * - study_type은 연결된 논문들의 최고 study_type으로 자동 계산 (트리거 사용 권장)
  *
  * 사용 예시:
  * - 커큐민 → NF-κB (여러 논문이 연결될 수 있음)
@@ -478,12 +441,10 @@ export const ingredientTargetEvidence = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    // unique 인덱스 제거: 같은 성분-표적 조합에 여러 행(다른 study_type) 저장 가능
-    // 대신 ingredient_id + target_id + study_type 조합으로 unique 제약 추가 가능
-    uniqueIndex("ingredient_target_evidence_unique_idx").on(
+    // 성분-표적 조합은 1행만 유지 (study_type은 여러 논문 중 최고값으로 자동 계산)
+    uniqueIndex("ingredient_target_evidence_ing_target_uidx").on(
       table.ingredient_id,
       table.target_id,
-      table.study_type,
     ),
     check("strength_check", sql`strength >= 0 AND strength <= 2`),
   ],
@@ -494,6 +455,10 @@ export const ingredientTargetEvidence = pgTable(
  *
  * ingredient_target_evidence와 evidence_sources를 연결하는 매핑 테이블
  * 한 논문이 여러 ingredient-target 조합에 사용될 수 있음
+ *
+ * 제약사항:
+ * - is_primary = true인 행은 각 ingredient_target_evidence_id당 딱 1개만 존재 가능
+ * - 같은 ingredient_target_evidence_id와 evidence_source_id 조합은 중복 불가
  */
 export const ingredientTargetEvidenceSources = pgTable(
   "ingredient_target_evidence_sources",
@@ -514,6 +479,8 @@ export const ingredientTargetEvidenceSources = pgTable(
     uniqueIndex(
       "ingredient_target_evidence_sources_unique_idx",
     ).on(table.ingredient_target_evidence_id, table.evidence_source_id),
+    // is_primary = true인 행은 각 ingredient_target_evidence_id당 딱 1개만 존재
+    // Drizzle ORM에서는 partial unique index를 직접 지원하지 않으므로 마이그레이션에서 추가
     check(
       "extracted_strength_override_check",
       sql`("extracted_strength_override" IS NULL) OR ("extracted_strength_override" >= 0 AND "extracted_strength_override" <= 2)`,

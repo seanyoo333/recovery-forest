@@ -671,7 +671,5 @@ export {
   routineGridOptions,
   routineItems,
   routineTemplates,
-  targetTagCategoryEnum,
-  targetTags,
   targetToMetaAxis,
 } from "./health/schema";

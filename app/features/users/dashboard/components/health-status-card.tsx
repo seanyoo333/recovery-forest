@@ -60,7 +60,7 @@ const trafficLightMessages: Record<
 > = {
   gray: {
     title: "데이터 부족",
-    description: "오늘 1개만 더 체크하면 상태가 계산돼요",
+    description: "오늘 2개만 더 체크하면 상태가 계산돼요", // 동적 메시지는 trafficLight.message 사용
   },
   green: {
     title: "좋은 상태",
@@ -68,11 +68,11 @@ const trafficLightMessages: Record<
   },
   yellow: {
     title: "평균 근처",
-    description: "최근 평균과 비슷해요. 작은 습관 한 가지로 '건강한 날' 만들기",
+    description: "최근 평균과 비슷해요. 작은 건강습관 한 가지로 '건강한 날'을 만들어보세요",
   },
   red: {
     title: "주의 필요",
-    description: "최근 평균보다 7점 이상 낮아요. 회복 루틴 1개만 시도해 보세요",
+    description: "최근 평균보다 7점 이상 낮아요. 괜찮아요. 다시 시작할 수 있어요.",
   },
 };
 
@@ -107,7 +107,9 @@ export function HealthStatusCard({
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold">{lightMessage.title}</p>
                   <p className="text-xs whitespace-nowrap">
-                    {lightMessage.description}
+                    {trafficLight.status === "gray" && trafficLight.message
+                      ? trafficLight.message
+                      : lightMessage.description}
                   </p>
                   {trafficLight.baseline !== null &&
                     trafficLight.delta !== null && (

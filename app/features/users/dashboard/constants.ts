@@ -208,6 +208,87 @@ export const SUPPLEMENT_CALCULATION_CONSTANTS = {
 } as const;
 
 /**
+ * 타겟 슬러그 → 메타축 매핑 (5축)
+ * 
+ * 각 타겟이 어떤 메타축에 속하는지 정의
+ * - metabolic_pressure: 대사 안정화 관련 타겟
+ * - immune_balance: 면역 균형 관련 타겟
+ * - abnormal_signals: 비정상 신호조절 관련 타겟
+ * - neuro_stress: 신경·스트레스 관련 타겟 (현재 타겟 없음)
+ * - recovery: 회복증진 관련 타겟
+ */
+export const TARGET_TO_META_AXIS: Record<string, MetaAxis> = {
+  // 대사 안정화 (metabolic_pressure)
+  insulin: "metabolic_pressure",
+  igf1: "metabolic_pressure",
+  glut1: "metabolic_pressure",
+  aerobic_glycolysis: "metabolic_pressure",
+  ppp: "metabolic_pressure",
+  hexokinase2: "metabolic_pressure",
+  oxphos: "metabolic_pressure",
+  complex1: "metabolic_pressure",
+  pdh: "metabolic_pressure",
+  pdk: "metabolic_pressure",
+  ampk: "metabolic_pressure",
+  mtor: "metabolic_pressure",
+  glutaminolysis: "metabolic_pressure",
+  glutamine_transport: "metabolic_pressure",
+  glutaminase: "metabolic_pressure",
+  gdh_kgdh: "metabolic_pressure",
+  srebp1: "metabolic_pressure",
+  srebp2: "metabolic_pressure",
+  acly: "metabolic_pressure",
+  fas: "metabolic_pressure",
+  mevalonate: "metabolic_pressure",
+  fao: "metabolic_pressure",
+  ldlr: "metabolic_pressure",
+
+  // 면역 균형 (immune_balance)
+  nfkb: "immune_balance",
+  il1: "immune_balance",
+  il6: "immune_balance",
+  cox: "immune_balance",
+  pge2: "immune_balance",
+  tlr4: "immune_balance",
+  tlr9: "immune_balance",
+
+  // 비정상 신호조절 (abnormal_signals)
+  hedgehog: "abnormal_signals",
+  wnt_beta_catenin: "abnormal_signals",
+  notch: "abnormal_signals",
+  stat3: "abnormal_signals",
+  ras: "abnormal_signals",
+  akt: "abnormal_signals",
+  cmyc: "abnormal_signals",
+  cyclin_d1: "abnormal_signals",
+  mir_34a: "abnormal_signals",
+  estrogen_receptor: "abnormal_signals",
+  egfr: "abnormal_signals",
+  her2: "abnormal_signals",
+
+  // 신경·스트레스 (neuro_stress)
+  // 현재 타겟 없음 (추후 추가 가능)
+
+  // 회복증진 (recovery)
+  integrins: "recovery",
+  macropinocytosis: "recovery",
+  autophagy_nucleoside_salvage: "recovery",
+  mmp2: "recovery",
+  mmp3: "recovery",
+  mmp9: "recovery",
+  vegf: "recovery",
+  pdgf: "recovery",
+  tgfb: "recovery",
+  hif: "recovery",
+  ros: "recovery",
+  glutathione: "recovery",
+  caspases: "recovery",
+  bcl2_bax: "recovery",
+  fas_receptor: "recovery",
+  caspase3: "recovery",
+} as const;
+
+/**
  * 논문 strength 기본값 (study_type별)
  */
 export const STUDY_TYPE_STRENGTH: Record<

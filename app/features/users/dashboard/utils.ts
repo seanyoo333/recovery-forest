@@ -197,9 +197,10 @@ export function calculateTrafficLight(
 ): TrafficLightResult {
   // 데이터 품질 체크
   if (filledCount <= 1) {
+    const remainingCount = filledCount === 0 ? 2 : 1;
     return {
       status: "gray",
-      message: "오늘 1개만 더 체크하면 상태가 계산돼요",
+      message: `오늘 ${remainingCount}개만 더 체크하면 상태가 계산돼요`,
       filledCount,
       todayTotal,
       baseline: null,
@@ -421,7 +422,7 @@ export function recommendNextAction(
     exercise:
       "처음부터 과도한 목표나 힘든 운동을 하기보다는 신체 활동을 늘리는 것부터 시작하세요!",
     therapy: "명상 어렵지 않아요. 3분 명상 먼저 시도해 보는게 어떨까요?",
-    supplement: "보조제는 약이 아닙니다. 꾸준한 섭취가 도움이 될 수 있습니다.",
+    supplement: "보조제는 약이 아닌 식품입니다. 올바른 꾸준한 섭취가 도움이 될 수 있습니다.",
   };
 
   return {
@@ -780,6 +781,11 @@ function saturationFunction(x: number, k: number): number {
 export function computeSupplementAxisScores(
   rows: JoinedEvidenceRow[],
 ): Record<MetaAxis, number> {
+  console.log(`[레이더 차트 디버깅] computeSupplementAxisScores 시작:`, {
+    inputRowsCount: rows.length,
+    sampleRows: rows.slice(0, 3),
+  });
+
   const { KC, KD, ALPHA, KS, TOP_K } = SUPPLEMENT_CALCULATION_CONSTANTS;
 
   // 1. 같은 성분-표적의 효과는 최고 근거 효과만 채택
@@ -803,6 +809,12 @@ export function computeSupplementAxisScores(
     // dose_count 저장
     ingredientDoseCount.set(row.ingredient_id, row.dose_count);
   }
+
+  console.log(`[레이더 차트 디버깅] computeSupplementAxisScores 중간 결과:`, {
+    ingredientTargetEffect: Object.fromEntries(ingredientTargetEffect),
+    ingredientTargetCount: Object.fromEntries(ingredientTargetCount),
+    ingredientDoseCount: Object.fromEntries(ingredientDoseCount),
+  });
 
   // confidence 계산 (포화 함수)
   ingredientTargetCount.forEach((count, key) => {
@@ -891,6 +903,11 @@ export function computeSupplementAxisScores(
     const rawAxis = rawAxisScores[axis];
     suppAxisScores[axis] = 100 * saturationFunction(rawAxis, KS);
   }
+
+  console.log(`[레이더 차트 디버깅] computeSupplementAxisScores 최종 결과:`, {
+    rawAxisScores,
+    suppAxisScores,
+  });
 
   return suppAxisScores;
 }

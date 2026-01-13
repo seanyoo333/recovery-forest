@@ -2669,32 +2669,6 @@ export type Database = {
         }
         Relationships: []
       }
-      target_tags: {
-        Row: {
-          tag_category: Database["public"]["Enums"]["target_tag_category"]
-          tag_value: string
-          target_id: string
-        }
-        Insert: {
-          tag_category: Database["public"]["Enums"]["target_tag_category"]
-          tag_value: string
-          target_id: string
-        }
-        Update: {
-          tag_category?: Database["public"]["Enums"]["target_tag_category"]
-          tag_value?: string
-          target_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "target_tags_target_id_natural_targets_id_fk"
-            columns: ["target_id"]
-            isOneToOne: false
-            referencedRelation: "natural_targets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       target_to_meta_axis: {
         Row: {
           axis_weight: number
@@ -3430,6 +3404,11 @@ export type Database = {
         Args: { p_profile_id: string; p_room_id: number }
         Returns: boolean
       }
+      recompute_primary_for_ite: {
+        Args: { p_ite_id: string }
+        Returns: undefined
+      }
+      study_type_rank: { Args: { study_type: string }; Returns: number }
       track_event: {
         Args: {
           event_data: Json
@@ -3481,15 +3460,6 @@ export type Database = {
         | "equipment"
         | "staff"
         | "other"
-      target_tag_category:
-        | "epigenetics"
-        | "metastasis"
-        | "metabolism"
-        | "inflammation"
-        | "immune"
-        | "hormone"
-        | "neuro"
-        | "recovery"
       team_position: "doctor" | "nurse" | "nutritionist" | "foresttherapist"
       user_role:
         | "healthy"
@@ -3668,16 +3638,6 @@ export const Constants = {
         "equipment",
         "staff",
         "other",
-      ],
-      target_tag_category: [
-        "epigenetics",
-        "metastasis",
-        "metabolism",
-        "inflammation",
-        "immune",
-        "hormone",
-        "neuro",
-        "recovery",
       ],
       team_position: ["doctor", "nurse", "nutritionist", "foresttherapist"],
       user_role: [
