@@ -1,11 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from "~/core/components/ui/card";
 import type { BloodTestSummary } from "../queries";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "~/core/components/ui/card";
 
 interface BloodTestMiniChartsProps {
   latestSummary: BloodTestSummary[];
 }
 
-export function BloodTestMiniCharts({ latestSummary }: BloodTestMiniChartsProps) {
+export function BloodTestMiniCharts({
+  latestSummary,
+}: BloodTestMiniChartsProps) {
   // 종양표지자 찾기 (첫 번째 종양표지자)
   const tumorMarker = latestSummary.find((item) =>
     item.metric.startsWith("tumor_marker_"),
@@ -42,7 +50,7 @@ export function BloodTestMiniCharts({ latestSummary }: BloodTestMiniChartsProps)
         <div className="grid grid-cols-3 gap-4">
           {/* 종양표지자 */}
           <div className="flex flex-col gap-2">
-            <div className="text-sm font-medium text-muted-foreground">
+            <div className="text-muted-foreground text-sm font-medium">
               {tumorMarker?.label || "종양표지자"}
             </div>
             <div
@@ -52,24 +60,21 @@ export function BloodTestMiniCharts({ latestSummary }: BloodTestMiniChartsProps)
                 tumorMarker?.referenceMax ?? null,
               )}`}
             >
-              {formatValue(
-                tumorMarker?.value ?? null,
-                tumorMarker?.unit || "",
-              )}
+              {formatValue(tumorMarker?.value ?? null, tumorMarker?.unit || "")}
             </div>
             {tumorMarker?.testDate && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 {tumorMarker.testDate}
               </div>
             )}
             {!tumorMarker && (
-              <div className="text-xs text-muted-foreground">데이터 없음</div>
+              <div className="text-muted-foreground text-xs">데이터 없음</div>
             )}
           </div>
 
           {/* 당화혈색소 */}
           <div className="flex flex-col gap-2">
-            <div className="text-sm font-medium text-muted-foreground">
+            <div className="text-muted-foreground text-sm font-medium">
               {hba1c?.label || "당화혈색소"}
             </div>
             <div
@@ -82,18 +87,18 @@ export function BloodTestMiniCharts({ latestSummary }: BloodTestMiniChartsProps)
               {formatValue(hba1c?.value ?? null, hba1c?.unit || "")}
             </div>
             {hba1c?.testDate && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 {hba1c.testDate}
               </div>
             )}
             {!hba1c && (
-              <div className="text-xs text-muted-foreground">데이터 없음</div>
+              <div className="text-muted-foreground text-xs">데이터 없음</div>
             )}
           </div>
 
           {/* C 반응성 단백 */}
           <div className="flex flex-col gap-2">
-            <div className="text-sm font-medium text-muted-foreground">
+            <div className="text-muted-foreground text-sm font-medium">
               {crp?.label || "C 반응성 단백"}
             </div>
             <div
@@ -106,12 +111,12 @@ export function BloodTestMiniCharts({ latestSummary }: BloodTestMiniChartsProps)
               {formatValue(crp?.value ?? null, crp?.unit || "")}
             </div>
             {crp?.testDate && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 {crp.testDate}
               </div>
             )}
             {!crp && (
-              <div className="text-xs text-muted-foreground">데이터 없음</div>
+              <div className="text-muted-foreground text-xs">데이터 없음</div>
             )}
           </div>
         </div>
@@ -119,4 +124,3 @@ export function BloodTestMiniCharts({ latestSummary }: BloodTestMiniChartsProps)
     </Card>
   );
 }
-

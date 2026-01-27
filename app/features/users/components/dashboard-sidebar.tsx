@@ -88,12 +88,12 @@ const data = {
       icon: LineChartIcon,
       items: [
         {
-          title: "관련 천연물질 카트",
+          title: "표적 프로필",
           url: "#",
         },
         {
-          title: "관련 천연물질 검색",
-          url: "#",
+          title: "대사 안정화",
+          url: "/my/dashboard/metabolic-fuel",
         },
         {
           title: "EV AI 천연물질 추천",

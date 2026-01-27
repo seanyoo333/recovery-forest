@@ -278,6 +278,10 @@ export default [
             "/health-habits",
             "features/users/dashboard/pages/dashboard-health-habits.tsx",
           ),
+          route(
+            "/metabolic-fuel",
+            "features/users/dashboard/pages/dashboard-metabolic-fuel.tsx",
+          ),
         ]),
 
         ...prefix("/messages", [

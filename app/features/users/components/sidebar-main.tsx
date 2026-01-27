@@ -58,7 +58,7 @@ export default function SidebarMain({
           <SidebarMenuButton asChild>
             <Link to="/my/dashboard">
               <LayoutDashboard />
-              <span>대시보드</span>
+              <span>건강 현황</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -66,7 +66,7 @@ export default function SidebarMain({
           <SidebarMenuButton asChild>
             <Link to="/chat">
               <BotIcon />
-              <span>EVIDENCE BASE AI 챗봇</span>
+              <span>EV AI 챗봇</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -82,7 +82,7 @@ export default function SidebarMain({
           <SidebarMenuButton asChild>
             <Link to="/my/account">
               <Settings2Icon />
-              <span>설정</span>
+              <span>환경설정</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
