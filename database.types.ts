@@ -930,6 +930,89 @@ export type Database = {
           },
         ]
       }
+      evidence_figures: {
+        Row: {
+          alt_text_kr: string | null
+          axes: Json | null
+          caption_raw: string | null
+          created_at: string
+          doi_norm: string | null
+          evidence_source_id: string | null
+          figure_interpretation_kr: string | null
+          figure_no: string
+          figure_summary_kr: string | null
+          figure_type: string | null
+          groups: Json | null
+          id: string
+          image_path: string
+          image_sha256: string
+          key_numbers: Json | null
+          key_results: Json | null
+          license: string | null
+          limitations: Json | null
+          pmid_norm: string | null
+          practical_takeaways_kr: Json | null
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          alt_text_kr?: string | null
+          axes?: Json | null
+          caption_raw?: string | null
+          created_at?: string
+          doi_norm?: string | null
+          evidence_source_id?: string | null
+          figure_interpretation_kr?: string | null
+          figure_no: string
+          figure_summary_kr?: string | null
+          figure_type?: string | null
+          groups?: Json | null
+          id?: string
+          image_path: string
+          image_sha256: string
+          key_numbers?: Json | null
+          key_results?: Json | null
+          license?: string | null
+          limitations?: Json | null
+          pmid_norm?: string | null
+          practical_takeaways_kr?: Json | null
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alt_text_kr?: string | null
+          axes?: Json | null
+          caption_raw?: string | null
+          created_at?: string
+          doi_norm?: string | null
+          evidence_source_id?: string | null
+          figure_interpretation_kr?: string | null
+          figure_no?: string
+          figure_summary_kr?: string | null
+          figure_type?: string | null
+          groups?: Json | null
+          id?: string
+          image_path?: string
+          image_sha256?: string
+          key_numbers?: Json | null
+          key_results?: Json | null
+          license?: string | null
+          limitations?: Json | null
+          pmid_norm?: string | null
+          practical_takeaways_kr?: Json | null
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_figures_evidence_source_id_evidence_sources_id_fk"
+            columns: ["evidence_source_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence_sources: {
         Row: {
           authors: string | null
@@ -937,9 +1020,10 @@ export type Database = {
           cited: number | null
           created_at: string
           doi: string | null
+          doi_norm: string | null
           id: string
           journal: string | null
-          pmid: string | null
+          pmid: number | null
           retrieved_at: string
           snippet: string | null
           source: string | null
@@ -947,7 +1031,8 @@ export type Database = {
           strength: number
           study_type: string
           summary: string | null
-          title: string | null
+          title: string
+          title_year_key: string | null
           updated_at: string
           url: string | null
           year: number | null
@@ -958,9 +1043,10 @@ export type Database = {
           cited?: number | null
           created_at?: string
           doi?: string | null
+          doi_norm?: string | null
           id?: string
           journal?: string | null
-          pmid?: string | null
+          pmid?: number | null
           retrieved_at?: string
           snippet?: string | null
           source?: string | null
@@ -968,7 +1054,8 @@ export type Database = {
           strength?: number
           study_type?: string
           summary?: string | null
-          title?: string | null
+          title: string
+          title_year_key?: string | null
           updated_at?: string
           url?: string | null
           year?: number | null
@@ -979,9 +1066,10 @@ export type Database = {
           cited?: number | null
           created_at?: string
           doi?: string | null
+          doi_norm?: string | null
           id?: string
           journal?: string | null
-          pmid?: string | null
+          pmid?: number | null
           retrieved_at?: string
           snippet?: string | null
           source?: string | null
@@ -989,7 +1077,8 @@ export type Database = {
           strength?: number
           study_type?: string
           summary?: string | null
-          title?: string | null
+          title?: string
+          title_year_key?: string | null
           updated_at?: string
           url?: string | null
           year?: number | null

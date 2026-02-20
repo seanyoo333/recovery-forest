@@ -11,6 +11,7 @@ import {
   check,
   date,
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -505,6 +506,7 @@ export const evidenceSources = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     pmid: text(),
     doi: text(),
+    doi_norm: text(),
     url: text(),
     title: text(),
     journal: text(),
@@ -546,15 +548,17 @@ export const evidenceSources = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    // Partial unique indexes are created via SQL migration
-    // See: sql/migrations/0095_fix_evidence_sources_unique_indexes.sql
-    // - evidence_sources_pmid_unique_idx (WHERE pmid IS NOT NULL AND pmid != '')
-    // - evidence_sources_doi_unique_idx (WHERE doi IS NOT NULL AND doi != '')
+    // plain UNIQUE indexes (Supabase REST on_conflict 매칭용), title_year_key(generated) - SQL migration
+    // See: sql/migrations/0099_evidence_sources_unique_refactor.sql
+    // Postgres UNIQUE는 NULL 자동 중복 허용 → WHERE 없이 plain UNIQUE 사용
     check(
-      "evidence_sources_pmid_or_doi_check",
-      sql`(("pmid" IS NOT NULL AND "pmid" != '') OR ("doi" IS NOT NULL AND "doi" != ''))`,
+      "evidence_sources_identifier_check",
+      sql`(("pmid" IS NOT NULL) OR ("doi_norm" IS NOT NULL AND "doi_norm" != '') OR ("title" IS NOT NULL AND "title" != '' AND "year" IS NOT NULL))`,
     ),
-    check("evidence_sources_strength_check", sql`strength >= 0 AND strength <= 2`),
+    check(
+      "evidence_sources_strength_check",
+      sql`strength >= 0 AND strength <= 2`,
+    ),
     pgPolicy("evidence-sources-select-policy", {
       for: "select",
       to: ["public"],
@@ -590,6 +594,103 @@ export const evidenceSources = pgTable(
       )`,
     }),
     pgPolicy("evidence-sources-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+  ],
+);
+
+/**
+ * Evidence Figures Table
+ *
+ * 증거(논문) 내 도표/이미지 정보를 저장하는 테이블
+ * Storage에 저장된 도표 이미지 경로 및 메타데이터를 관리
+ * evidence_sources와 연결되어 논문 단위로 도표를 참조
+ */
+export const evidenceFigures = pgTable(
+  "evidence_figures",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    evidence_source_id: uuid().references(() => evidenceSources.id, {
+      onDelete: "cascade",
+    }),
+    doi_norm: text(),
+    pmid_norm: text(),
+    figure_no: text().notNull(),
+    source_url: text(),
+    license: text().default("unknown"),
+    image_path: text().notNull(),
+    image_sha256: text().notNull(),
+    caption_raw: text(),
+    figure_type: text(),
+    axes: jsonb().$type<Record<string, unknown>>(),
+    groups: jsonb().$type<Record<string, unknown>>(),
+    key_numbers: jsonb().$type<Record<string, unknown>>(),
+    key_results: jsonb().$type<Record<string, unknown>>(),
+    limitations: jsonb().$type<Record<string, unknown>>(),
+    figure_summary_kr: text(),
+    figure_interpretation_kr: text(),
+    practical_takeaways_kr: jsonb().$type<Record<string, unknown>[]>(),
+    alt_text_kr: text(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("evidence_figures_unique_idx").on(
+      table.doi_norm,
+      table.figure_no,
+      table.image_sha256,
+    ),
+    index("evidence_figures_doi_idx").on(table.doi_norm),
+    index("evidence_figures_pmid_idx").on(table.pmid_norm),
+    index("evidence_figures_evidence_source_id_idx").on(
+      table.evidence_source_id,
+    ),
+    pgPolicy("evidence-figures-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("evidence-figures-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("evidence-figures-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("evidence-figures-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
@@ -727,9 +828,10 @@ export const ingredientTargetEvidenceSources = pgTable(
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex(
-      "ingredient_target_evidence_sources_unique_idx",
-    ).on(table.ingredient_target_evidence_id, table.evidence_source_id),
+    uniqueIndex("ingredient_target_evidence_sources_unique_idx").on(
+      table.ingredient_target_evidence_id,
+      table.evidence_source_id,
+    ),
     // is_primary = true인 행은 각 ingredient_target_evidence_id당 딱 1개만 존재
     // Drizzle ORM에서는 partial unique index를 직접 지원하지 않으므로 마이그레이션에서 추가
     check(

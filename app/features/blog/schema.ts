@@ -1,11 +1,9 @@
 /**
  * Blog Schema
  *
- * Defines the blog_posts_meta table and associated RLS policies using
- * the same Drizzle pattern as other feature schemas.
+ * blog_posts_meta: 목록/검색/필터용 공용 인덱스 (MDX 홈페이지 + 네이버 등 외부)
+ * blog_post_sources: 외부 글 원문/캐시 (네이버 블로그 등)
  */
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
-
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -24,6 +22,75 @@ import { timestamps } from "~/core/db/helpers.server";
 
 import { profiles } from "../users/schema";
 
+/**
+ * Blog Post Sources - 외부 글 원문/캐시
+ * 네이버 블로그 등 URL이 원본인 콘텐츠 저장
+ */
+export const blogPostSources = pgTable(
+  "blog_post_sources",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    source: text().notNull().default("naver").$type<"naver" | "other">(),
+    source_url: text().notNull(),
+    title: text().notNull(),
+    published_at: timestamp(),
+    raw_html: text(),
+    raw_text: text(),
+    clean_text: text(),
+    checksum: text(),
+    fetched_at: timestamp().notNull().defaultNow(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("blog_post_sources_source_url_unique").on(table.source_url),
+    pgPolicy("blog-post-sources-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("blog-post-sources-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("blog-post-sources-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("blog-post-sources-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+  ],
+);
+
 export const blogPostsMeta = pgTable(
   "blog_posts_meta",
   {
@@ -37,6 +104,11 @@ export const blogPostsMeta = pgTable(
     author: text().notNull(),
     date: timestamp().notNull(),
     upvotes: bigint({ mode: "number" }).default(0),
+    source: text().$type<"mdx" | "naver" | "other">().default("mdx"),
+    canonical_url: text(),
+    content_ref_id: uuid().references(() => blogPostSources.id, {
+      onDelete: "set null",
+    }),
     naver_blog_url: text(),
     naver_post_id: text(),
     imported_at: timestamp(),
