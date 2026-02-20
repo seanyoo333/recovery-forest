@@ -933,14 +933,20 @@ export type Database = {
       evidence_sources: {
         Row: {
           authors: string | null
+          candidates: Json | null
+          cited: number | null
           created_at: string
           doi: string | null
           id: string
           journal: string | null
           pmid: string | null
           retrieved_at: string
+          snippet: string | null
+          source: string | null
+          status: string | null
           strength: number
           study_type: string
+          summary: string | null
           title: string | null
           updated_at: string
           url: string | null
@@ -948,14 +954,20 @@ export type Database = {
         }
         Insert: {
           authors?: string | null
+          candidates?: Json | null
+          cited?: number | null
           created_at?: string
           doi?: string | null
           id?: string
           journal?: string | null
           pmid?: string | null
           retrieved_at?: string
+          snippet?: string | null
+          source?: string | null
+          status?: string | null
           strength?: number
           study_type?: string
+          summary?: string | null
           title?: string | null
           updated_at?: string
           url?: string | null
@@ -963,14 +975,20 @@ export type Database = {
         }
         Update: {
           authors?: string | null
+          candidates?: Json | null
+          cited?: number | null
           created_at?: string
           doi?: string | null
           id?: string
           journal?: string | null
           pmid?: string | null
           retrieved_at?: string
+          snippet?: string | null
+          source?: string | null
+          status?: string | null
           strength?: number
           study_type?: string
+          summary?: string | null
           title?: string | null
           updated_at?: string
           url?: string | null

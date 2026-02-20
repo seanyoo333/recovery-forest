@@ -510,6 +510,18 @@ export const evidenceSources = pgTable(
     journal: text(),
     year: integer(),
     authors: text(),
+    summary: text(),
+    source: text(),
+    cited: integer(),
+    snippet: text(),
+    candidates: jsonb().$type<
+      Array<{
+        ingredient_slug: string;
+        target_slug: string;
+        note: string;
+      }>
+    >(),
+    status: text(),
     study_type: text()
       .notNull()
       .default("mechanistic")
@@ -534,11 +546,13 @@ export const evidenceSources = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    uniqueIndex("evidence_sources_pmid_unique_idx").on(table.pmid),
-    uniqueIndex("evidence_sources_doi_unique_idx").on(table.doi),
+    // Partial unique indexes are created via SQL migration
+    // See: sql/migrations/0095_fix_evidence_sources_unique_indexes.sql
+    // - evidence_sources_pmid_unique_idx (WHERE pmid IS NOT NULL AND pmid != '')
+    // - evidence_sources_doi_unique_idx (WHERE doi IS NOT NULL AND doi != '')
     check(
       "evidence_sources_pmid_or_doi_check",
-      sql`("pmid" IS NOT NULL) OR ("doi" IS NOT NULL)`,
+      sql`(("pmid" IS NOT NULL AND "pmid" != '') OR ("doi" IS NOT NULL AND "doi" != ''))`,
     ),
     check("evidence_sources_strength_check", sql`strength >= 0 AND strength <= 2`),
     pgPolicy("evidence-sources-select-policy", {

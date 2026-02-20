@@ -1,6 +1,6 @@
 {
-  "id": "f495242b-2a13-4d79-b3c2-ba6ee6043fbb",
-  "prevId": "3eab57a5-b28e-4a61-b1b5-15a41179f7a7",
+  "id": "b7bfa7e6-990b-4c30-b999-024ab3918590",
+  "prevId": "0395dbba-9ebb-4bde-ae40-0aa5576c08fe",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3219,6 +3219,36 @@
           "primaryKey": false,
           "notNull": false
         },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cited": {
+          "name": "cited",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "snippet": {
+          "name": "snippet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "candidates": {
+          "name": "candidates",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "study_type": {
           "name": "study_type",
           "type": "text",
@@ -3255,38 +3285,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "evidence_sources_pmid_unique_idx": {
-          "name": "evidence_sources_pmid_unique_idx",
-          "columns": [
-            {
-              "expression": "pmid",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "evidence_sources_doi_unique_idx": {
-          "name": "evidence_sources_doi_unique_idx",
-          "columns": [
-            {
-              "expression": "doi",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -3294,7 +3293,7 @@
       "checkConstraints": {
         "evidence_sources_pmid_or_doi_check": {
           "name": "evidence_sources_pmid_or_doi_check",
-          "value": "(\"pmid\" IS NOT NULL) OR (\"doi\" IS NOT NULL)"
+          "value": "((\"pmid\" IS NOT NULL AND \"pmid\" != '') OR (\"doi\" IS NOT NULL AND \"doi\" != ''))"
         },
         "evidence_sources_strength_check": {
           "name": "evidence_sources_strength_check",
