@@ -69,26 +69,26 @@ export const routineTemplates = pgTable(
     ...timestamps,
   },
   (table) => [
-    pgPolicy("routine-templates-select", {
+    pgPolicy("routine-templates-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-templates-insert", {
+    pgPolicy("routine-templates-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-templates-update", {
+    pgPolicy("routine-templates-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-templates-delete", {
+    pgPolicy("routine-templates-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
@@ -124,26 +124,26 @@ export const routineGridOptions = pgTable(
     // See: sql/migrations/0086_fix_grid_options_unique_constraint.sql
     // - routine_grid_options_user_category_template_uidx (template_id IS NOT NULL)
     // - routine_grid_options_user_category_label_uidx (template_id IS NULL)
-    pgPolicy("routine-grid-options-select", {
+    pgPolicy("routine-grid-options-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-grid-options-insert", {
+    pgPolicy("routine-grid-options-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-grid-options-update", {
+    pgPolicy("routine-grid-options-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-grid-options-delete", {
+    pgPolicy("routine-grid-options-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
@@ -178,7 +178,7 @@ export const routineItems = pgTable(
     ...timestamps,
   },
   (table) => [
-    pgPolicy("routine-items-select", {
+    pgPolicy("routine-items-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
@@ -188,7 +188,7 @@ export const routineItems = pgTable(
         AND routine_templates.user_id = ${authUid}
       )`,
     }),
-    pgPolicy("routine-items-insert", {
+    pgPolicy("routine-items-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
@@ -198,7 +198,7 @@ export const routineItems = pgTable(
         AND routine_templates.user_id = ${authUid}
       )`,
     }),
-    pgPolicy("routine-items-update", {
+    pgPolicy("routine-items-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
@@ -213,7 +213,7 @@ export const routineItems = pgTable(
         AND routine_templates.user_id = ${authUid}
       )`,
     }),
-    pgPolicy("routine-items-delete", {
+    pgPolicy("routine-items-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
@@ -256,26 +256,26 @@ export const routineDailyGridLogs = pgTable(
       table.time_block,
       table.category,
     ),
-    pgPolicy("routine-daily-grid-logs-select", {
+    pgPolicy("routine-daily-grid-logs-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-daily-grid-logs-insert", {
+    pgPolicy("routine-daily-grid-logs-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-daily-grid-logs-update", {
+    pgPolicy("routine-daily-grid-logs-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("routine-daily-grid-logs-delete", {
+    pgPolicy("routine-daily-grid-logs-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",
@@ -288,27 +288,129 @@ export const routineDailyGridLogs = pgTable(
  * Natural Ingredients Table
  *
  * 천연물 성분 (커큐민, 퀘르세틴 등)
+ * 공개 읽기 전용: 모든 사용자가 읽을 수 있음, 관리자만 수정 가능
  */
-export const naturalIngredients = pgTable("natural_ingredients", {
-  id: uuid().primaryKey().defaultRandom(),
-  slug: text().notNull().unique(),
-  display_name: text().notNull(),
-  synonyms: text().array().default([]),
-  ...timestamps,
-});
+export const naturalIngredients = pgTable(
+  "natural_ingredients",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    slug: text().notNull().unique(),
+    display_name: text().notNull(),
+    synonyms: text().array().default([]),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("natural-ingredients-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("natural-ingredients-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("natural-ingredients-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("natural-ingredients-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+  ],
+);
 
 /**
  * Natural Targets Table
  *
  * 표적 (GLUT, NF-kB 등)
+ * 공개 읽기 전용: 모든 사용자가 읽을 수 있음, 관리자만 수정 가능
  */
-export const naturalTargets = pgTable("natural_targets", {
-  id: uuid().primaryKey().defaultRandom(),
-  slug: text().notNull().unique(),
-  display_name: text().notNull(),
-  description: text(),
-  ...timestamps,
-});
+export const naturalTargets = pgTable(
+  "natural_targets",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    slug: text().notNull().unique(),
+    display_name: text().notNull(),
+    description: text(),
+    ...timestamps,
+  },
+  (table) => [
+    pgPolicy("natural-targets-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("natural-targets-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("natural-targets-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("natural-targets-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+  ],
+);
 
 /**
  * Target to Meta Axis Table
@@ -341,6 +443,51 @@ export const targetToMetaAxis = pgTable(
   (table) => [
     primaryKey({ columns: [table.target_id, table.meta_axis] }),
     check("axis_weight_check", sql`axis_weight >= 0 AND axis_weight <= 2`),
+    pgPolicy("target-to-meta-axis-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("target-to-meta-axis-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("target-to-meta-axis-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("target-to-meta-axis-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
   ],
 );
 
@@ -394,6 +541,51 @@ export const evidenceSources = pgTable(
       sql`("pmid" IS NOT NULL) OR ("doi" IS NOT NULL)`,
     ),
     check("evidence_sources_strength_check", sql`strength >= 0 AND strength <= 2`),
+    pgPolicy("evidence-sources-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("evidence-sources-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("evidence-sources-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("evidence-sources-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
   ],
 );
 
@@ -447,6 +639,51 @@ export const ingredientTargetEvidence = pgTable(
       table.target_id,
     ),
     check("strength_check", sql`strength >= 0 AND strength <= 2`),
+    pgPolicy("ingredient-target-evidence-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("ingredient-target-evidence-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("ingredient-target-evidence-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("ingredient-target-evidence-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
   ],
 );
 
@@ -485,6 +722,51 @@ export const ingredientTargetEvidenceSources = pgTable(
       "extracted_strength_override_check",
       sql`("extracted_strength_override" IS NULL) OR ("extracted_strength_override" >= 0 AND "extracted_strength_override" <= 2)`,
     ),
+    pgPolicy("ingredient-target-evidence-sources-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("ingredient-target-evidence-sources-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("ingredient-target-evidence-sources-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("ingredient-target-evidence-sources-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
   ],
 );
 
@@ -510,6 +792,51 @@ export const productIngredients = pgTable(
       table.product_id,
       table.ingredient_id,
     ),
+    pgPolicy("product-ingredients-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("product-ingredients-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'product_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("product-ingredients-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'product_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'product_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("product-ingredients-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'product_admin')
+        AND is_active = true
+      )`,
+    }),
   ],
 );
 
@@ -536,26 +863,26 @@ export const streaks = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    pgPolicy("streaks-select", {
+    pgPolicy("streaks-select-policy", {
       for: "select",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("streaks-insert", {
+    pgPolicy("streaks-insert-policy", {
       for: "insert",
       to: authenticatedRole,
       as: "permissive",
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("streaks-update", {
+    pgPolicy("streaks-update-policy", {
       for: "update",
       to: authenticatedRole,
       as: "permissive",
       using: sql`${authUid} = ${table.user_id}`,
       withCheck: sql`${authUid} = ${table.user_id}`,
     }),
-    pgPolicy("streaks-delete", {
+    pgPolicy("streaks-delete-policy", {
       for: "delete",
       to: authenticatedRole,
       as: "permissive",

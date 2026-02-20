@@ -34,7 +34,7 @@ export default function ChatSidebar() {
     name: "Evidence Base AI",
     avatar: "/ai-bot-avatar.png",
     description: "AI-powered research assistant",
-    capabilities: ["혈액검사 기반", "근거자료 기반", "개인 맞춤 제품 상담"],
+    capabilities: ["개인데이터 기반", "근거자료 기반", "개인 맞춤 조언"],
     status: "Online",
   };
 

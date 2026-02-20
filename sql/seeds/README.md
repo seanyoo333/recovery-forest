@@ -21,6 +21,16 @@
    - 성분 → 타겟 근거 데이터 삽입
    - 레이더 차트 계산을 위한 핵심 데이터
 
+## 대시보드 시각화용 시드 (선택적)
+
+- **seed_dashboard_visualization.sql**
+  - **30일치** 보조제·생활습관(`routine_daily_grid_logs`) + **오늘** 데이터 삽입
+  - natural_targets, natural_ingredients, target_to_meta_axis, ingredient_target_evidence는 **건드리지 않음**
+  - patient_health_profiles, blood_test_results는 **기존 데이터 그대로 사용**
+  - 없을 때만: routine_grid_options(preset), routine_templates(기존 natural_ingredients 참조)
+  - 기본 사용자 ID: `d54d4893-d74f-429c-9b4a-f84ce0607552` (파일 상단 v_user_id 교체)
+  - RLS 우회: service_role 또는 RLS 비활성화 후 실행
+
 ## 선택적 파일
 
 - **ingredient_target_evidence_sources.sql** (선택적)
