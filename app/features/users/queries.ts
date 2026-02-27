@@ -164,6 +164,8 @@ export const getNotifications = async (
       `
       notification_id,
       type,
+      content,
+      report_request_id,
       source:profiles!source_id(
         profile_id,
         name,
@@ -326,4 +328,35 @@ export const sendMessageToRoom = async (
   if (error) {
     throw error;
   }
+};
+
+/**
+ * 사용자의 리포트 요청 목록 + health_reports 조인
+ * 내 리포트 페이지용
+ */
+export const getReportRequestsWithHealthReports = async (
+  client: SupabaseClient<Database>,
+  { userId }: { userId: string },
+) => {
+  const [requestsRes, reportsRes] = await Promise.all([
+    client
+      .from("report_requests")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+    client
+      .from("health_reports")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const requests = requestsRes.data ?? [];
+  const reports = reportsRes.data ?? [];
+  const reportByRequestId = new Map(reports.map((r) => [r.request_id, r]));
+
+  return requests.map((r) => ({
+    ...r,
+    healthReport: reportByRequestId.get(r.id) ?? null,
+  }));
 };

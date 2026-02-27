@@ -7,6 +7,15 @@ interface OcrRequestPayload {
   imageBase64?: string;
   imageHash?: string;
   userId?: string;
+  documentType?: "blood_test" | "medical_record";
+}
+
+interface MedicalRecordResult {
+  test_content: string;
+  clinical_information: string;
+  finding: string;
+  conclusion: string;
+  test_date: string;
 }
 
 // ===== JWT & OAuth2 helper for Google service account =====
@@ -163,7 +172,13 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { imageBase64, imageHash }: OcrRequestPayload = await req.json();
+    const {
+      imageBase64,
+      imageHash,
+      documentType = "blood_test",
+    }: OcrRequestPayload = await req.json();
+
+    const isMedicalRecord = documentType === "medical_record";
 
     if (!imageBase64) {
       return new Response(
@@ -176,8 +191,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // 🔹 해시 기반 캐시 (blood_test_images + blood_test_results 사용)
-    // 테이블 없으면 에러만 찍고 넘어가므로 기능적으로는 안전
-    if (imageHash) {
+    // 의무기록은 캐시 미적용, 혈액검사만 캐시 사용
+    if (!isMedicalRecord && imageHash) {
       try {
         const { data: existingImage, error: imageQueryError } = await supabase
           .from("blood_test_images")
@@ -509,6 +524,86 @@ Deno.serve(async (req: Request) => {
 
     // 🔹 2) OpenAI로 구조화
     const openai = new OpenAI({ apiKey: openaiKey });
+
+    // 🔹 의무기록 OCR 분기
+    if (isMedicalRecord) {
+      const medicalRecordPrompt = `다음은 한국 병원에서 발급된 의무기록사본(진료기록, 검사결과 등)의 OCR 텍스트입니다.
+아래 JSON 형식으로 구조화해 주세요. 각 항목은 병원/문서마다 표현이 다를 수 있으므로, 유사한 내용을 찾아 적절한 필드에 넣어 주세요.
+없거나 알 수 없는 값은 빈 문자열("")로 두세요.
+
+반드시 이 JSON 형식 그대로만 출력하세요:
+{
+  "test_content": "",
+  "clinical_information": "",
+  "finding": "",
+  "conclusion": "",
+  "test_date": ""
+}
+
+필드 설명:
+- test_content: 검사명, 검사 항목, 검사 내용 등
+- clinical_information: 임상 정보, 환자 정보, 주소(主訴), 현병력 등
+- finding: 소견, 검사 결과 요약, 발견된 사항
+- conclusion: 결론, 진단명, 처방 내용 등
+- test_date: 검사/진료 일자 (yyyy-mm-dd 형식으로)
+
+OCR 텍스트:
+${text}`;
+
+      const medicalCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "너는 한국 병원 의무기록사본을 JSON으로 구조화하는 어시스턴트다. 반드시 유효한 JSON 형식만 반환해야 한다. 병원별 형식 차이가 있어도 유연하게 매칭해주세요.",
+          },
+          {
+            role: "user",
+            content: medicalRecordPrompt,
+          },
+        ],
+        temperature: 0,
+        response_format: { type: "json_object" },
+      });
+
+      const medicalReply =
+        medicalCompletion.choices[0]?.message?.content ?? "{}";
+      let medicalRecord: MedicalRecordResult;
+      try {
+        const parsed = JSON.parse(medicalReply);
+        medicalRecord = {
+          test_content: String(parsed.test_content ?? "").trim(),
+          clinical_information: String(
+            parsed.clinical_information ?? parsed.clinicalInformation ?? "",
+          ).trim(),
+          finding: String(parsed.finding ?? "").trim(),
+          conclusion: String(parsed.conclusion ?? "").trim(),
+          test_date: String(parsed.test_date ?? parsed.testDate ?? "").trim(),
+        };
+      } catch (e) {
+        console.error("Failed to parse medical record JSON:", e, medicalReply);
+        medicalRecord = {
+          test_content: "",
+          clinical_information: "",
+          finding: "",
+          conclusion: "",
+          test_date: "",
+        };
+      }
+
+      return new Response(
+        JSON.stringify({
+          medicalRecord,
+          rawText: text,
+          cached: false,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
 
     // variations 정보를 프롬프트에 포함
     const variationsText = Object.entries(metricVariations)

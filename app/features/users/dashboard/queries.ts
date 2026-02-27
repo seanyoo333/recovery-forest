@@ -11,6 +11,14 @@ import type {
 
 import { normalizeStandardName } from "./constants";
 
+export type MedicalRecordTranscriptEntry = {
+  test_date: string;
+  test_content: string;
+  clinical_information: string;
+  finding: string;
+  conclusion: string;
+};
+
 export type PatientHealthProfile = {
   age: number;
   gender: "M" | "F";
@@ -21,6 +29,7 @@ export type PatientHealthProfile = {
   medication_name: string | null;
   height_cm: number | null;
   weight_kg: number | null;
+  medical_record_transcripts?: MedicalRecordTranscriptEntry[] | null;
 };
 
 export type BloodTestChartPoint = {
@@ -179,23 +188,31 @@ export async function getPatientHealthProfile(
   client: SupabaseClientType,
   userId: string,
 ): Promise<PatientHealthProfile | null> {
+  // medical_record_transcripts 컬럼은 마이그레이션 0105에서 추가됨
+  // 마이그레이션 미적용 시에도 기본 프로필 로드가 되도록 fallback
+  const columnsWithMedical = `age, gender, disease, disease_status, treatment_status, medication_status, medication_name, height_cm, weight_kg, medical_record_transcripts`;
+  const columnsBase = `age, gender, disease, disease_status, treatment_status, medication_status, medication_name, height_cm, weight_kg`;
+
   const { data, error } = await client
     .from("patient_health_profiles")
-    .select(
-      `age,
-       gender,
-       disease,
-       disease_status,
-       treatment_status,
-       medication_status,
-       medication_name,
-       height_cm,
-       weight_kg`,
-    )
+    .select(columnsWithMedical)
     .eq("patient_id", userId)
     .maybeSingle();
 
   if (error) {
+    const isMissingColumn =
+      typeof error.message === "string" &&
+      (error.message.includes("medical_record_transcripts") ||
+        error.message.includes("does not exist"));
+    if (isMissingColumn) {
+      const { data: fallbackData, error: fallbackError } = await client
+        .from("patient_health_profiles")
+        .select(columnsBase)
+        .eq("patient_id", userId)
+        .maybeSingle();
+      if (fallbackError) throw fallbackError;
+      return fallbackData as PatientHealthProfile | null;
+    }
     throw error;
   }
 

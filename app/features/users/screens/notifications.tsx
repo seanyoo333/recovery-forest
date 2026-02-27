@@ -56,6 +56,8 @@ export default function NotificationsPage({
             teamName={notification.team?.team_name ?? ""}
             postTitle={notification.post?.title ?? ""}
             payloadId={notification.team?.team_id ?? notification.post?.post_id}
+            content={notification.content ?? undefined}
+            reportRequestId={notification.report_request_id ?? undefined}
             timestamp={
               DateTime.fromISO(notification.created_at, {
                 zone: "Asia/Seoul",

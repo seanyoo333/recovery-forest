@@ -49,6 +49,10 @@ export default [
     ...prefix("/clinic", [
       route("/upload-photo", "features/clinic/api/upload-photo.tsx"),
     ]),
+    route(
+      "/health-report-request",
+      "features/users/api/health-report-request.tsx",
+    ),
   ]),
 
   layout("core/layouts/navigation.layout.tsx", [
@@ -265,6 +269,10 @@ export default [
           route(
             "/health/submit",
             "features/users/dashboard/pages/dashboard-health-submit.tsx",
+          ),
+          route(
+            "/health/report",
+            "features/users/dashboard/pages/dashboard-health-report.tsx",
           ),
           route(
             "/bookmarks",

@@ -59,6 +59,46 @@ export const upsertPatientHealthProfile = async (
   }
 };
 
+export type MedicalRecordTranscriptEntry = {
+  test_date: string;
+  test_content: string;
+  clinical_information: string;
+  finding: string;
+  conclusion: string;
+};
+
+/** 의무기록사본 항목을 patient_health_profiles.medical_record_transcripts에 추가 */
+export const appendMedicalRecordTranscript = async (
+  client: SupabaseClient<Database>,
+  {
+    patientId,
+    entry,
+  }: {
+    patientId: string;
+    entry: MedicalRecordTranscriptEntry;
+  },
+) => {
+  const { data: existing, error: fetchError } = await client
+    .from("patient_health_profiles")
+    .select("medical_record_transcripts")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+
+  const current =
+    (existing?.medical_record_transcripts as MedicalRecordTranscriptEntry[]) ??
+    [];
+  const updated = [...current, entry];
+
+  const { error: updateError } = await client
+    .from("patient_health_profiles")
+    .update({ medical_record_transcripts: updated })
+    .eq("patient_id", patientId);
+
+  if (updateError) throw updateError;
+};
+
 export const upsertBloodTestImage = async (
   client: SupabaseClient<Database>,
   {

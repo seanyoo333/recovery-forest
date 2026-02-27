@@ -255,6 +255,7 @@ export const notificationType = pgEnum("notification_type", [
   "follow",
   "review",
   "reply",
+  "health_report",
 ]);
 
 export const notifications = pgTable(
@@ -272,6 +273,8 @@ export const notifications = pgTable(
     post_id: bigint({ mode: "number" }).references(() => posts.post_id, {
       onDelete: "cascade",
     }),
+    report_request_id: uuid(),
+    content: text(),
     target_id: uuid()
       .references(() => profiles.profile_id, {
         onDelete: "cascade",
@@ -442,6 +445,15 @@ export const medicationStatusEnum = pgEnum("patient_medication_status", [
   "active",
 ]);
 
+/** 의무기록사본 단일 항목 타입 */
+export type MedicalRecordTranscriptEntry = {
+  test_date: string;
+  test_content: string;
+  clinical_information: string;
+  finding: string;
+  conclusion: string;
+};
+
 export const patientHealthProfiles = pgTable(
   "patient_health_profiles",
   {
@@ -459,6 +471,9 @@ export const patientHealthProfiles = pgTable(
     medication_name: text(),
     height_cm: doublePrecision().notNull(),
     weight_kg: doublePrecision().notNull(),
+    medical_record_transcripts: jsonb()
+      .$type<MedicalRecordTranscriptEntry[]>()
+      .default([]),
     ...timestamps,
   },
   (table) => [

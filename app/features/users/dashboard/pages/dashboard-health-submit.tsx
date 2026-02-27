@@ -12,9 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/core/components/ui/c
 import { Checkbox } from "~/core/components/ui/checkbox";
 import { Input } from "~/core/components/ui/input";
 import { Label } from "~/core/components/ui/label";
+import { Textarea } from "~/core/components/ui/textarea";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { normalizeStandardName } from "~/features/users/dashboard/constants";
 import {
+  appendMedicalRecordTranscript,
   insertBloodTestResults,
   updateBloodTestImageTestDate,
   upsertBloodTestImage,
@@ -200,8 +202,58 @@ export const action = async ({ request }: Route.ActionArgs) => {
   const formData = await request.formData();
   const intent = formData.get("_intent");
 
+  // 🔹 0) 의무기록 저장 브랜치
+  if (intent === "save_medical_record") {
+    try {
+      const [client] = makeServerClient(request);
+      const userId = await getLoggedInUserId(client);
+
+      const profile = await getPatientHealthProfile(client, userId);
+      if (!profile) {
+        return jsonData(
+          { error: "환자 기본 정보가 없습니다. 검사 항목에서 혈액검사를 선택해 기본 정보를 먼저 입력·저장한 뒤 의무기록을 추가해주세요." },
+          { status: 400 },
+        );
+      }
+
+      const testDate = formData.get("testDate")?.toString();
+      const testContent = formData.get("testContent")?.toString() ?? "";
+      const clinicalInformation = formData.get("clinicalInformation")?.toString() ?? "";
+      const finding = formData.get("finding")?.toString() ?? "";
+      const conclusion = formData.get("conclusion")?.toString() ?? "";
+
+      if (!testDate || !testContent.trim()) {
+        return jsonData(
+          { error: "검사 날짜와 검사내용을 입력해주세요." },
+          { status: 400 },
+        );
+      }
+
+      await appendMedicalRecordTranscript(client, {
+        patientId: userId,
+        entry: {
+          test_date: testDate,
+          test_content: testContent.trim(),
+          clinical_information: clinicalInformation.trim(),
+          finding: finding.trim(),
+          conclusion: conclusion.trim(),
+        },
+      });
+      return jsonData({ success: true });
+    } catch (err) {
+      console.error("save_medical_record error:", err);
+      return jsonData(
+        {
+          error:
+            err instanceof Error ? err.message : "의무기록 저장에 실패했습니다.",
+        },
+        { status: 500 },
+      );
+    }
+  }
+
   // 🔹 1) OCR 전용 요청 브랜치 (결과만 반환, DB 저장 안 함)
-  if (intent === "ocr") {
+  if (intent === "ocr" || intent === "ocr_medical_record") {
     try {
       const [client] = makeServerClient(request);
 
@@ -430,6 +482,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
       console.log("Image hash:", imageHash);
       console.log("Base64 길이:", base64.length);
 
+      const isMedicalRecord = intent === "ocr_medical_record";
       const ocrRes = await fetch(`${supabaseUrl}/functions/v1/ocr_gpt`, {
         method: "POST",
         headers: {
@@ -440,6 +493,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
           imageBase64: base64,
           imageHash: imageHash,
           userId: userId,
+          documentType: isMedicalRecord ? "medical_record" : "blood_test",
         }),
       });
 
@@ -478,7 +532,23 @@ export const action = async ({ request }: Route.ActionArgs) => {
         return jsonData({ error: ocrJson.error }, { status: 500 });
       }
 
-      // Edge Function에서 캐시된 데이터를 반환한 경우
+      // 🔹 의무기록 OCR: medicalRecord 또는 structured에서 추출
+      if (isMedicalRecord) {
+        const src = ocrJson.medicalRecord ?? ocrJson.structured ?? {};
+        const medicalRecord = {
+          test_content: String(src.test_content ?? src.testContent ?? "").trim(),
+          clinical_information: String(src.clinical_information ?? src.clinicalInformation ?? "").trim(),
+          finding: String(src.finding ?? "").trim(),
+          conclusion: String(src.conclusion ?? "").trim(),
+          testDate: userTestDate || String(src.testDate ?? src.test_date ?? "").trim(),
+        };
+        return jsonData({
+          medicalRecord,
+          documentType: "medical_record",
+        });
+      }
+
+      // Edge Function에서 캐시된 데이터를 반환한 경우 (혈액검사)
       if (ocrJson.cached && ocrJson.structured) {
         console.log("✅ [Server Action] Edge Function에서 캐시된 데이터 반환");
         return jsonData({
@@ -498,7 +568,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
         return jsonData({ error: "OCR 결과에 structured 데이터가 없습니다." }, { status: 500 });
       }
 
-      // 🔹 이미지를 Storage에 업로드하고 blood_test_images에 저장
+      // 🔹 이미지를 Storage에 업로드하고 blood_test_images에 저장 (혈액검사만)
       console.log("🔹 [Server Action] 이미지 Storage 업로드 및 메타데이터 저장 시작");
 
       if (!imageHash) {
@@ -889,11 +959,25 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
   const [searchParams] = useSearchParams();
   const hasConsent = searchParams.get("consent") === "success";
 
+  // 검사 유형: 혈액검사 | 의무기록
+  const [examType, setExamType] = useState<"blood_test" | "medical_record">("blood_test");
+
   // 🔹 OCR 전용 fetcher
   const ocrFetcher = useFetcher<typeof action>();
 
+  // 의무기록 저장 fetcher
+  const medicalRecordFetcher = useFetcher<typeof action>();
+
   // OCR 결과로 채워질 필드 상태
   const [ocrResult, setOcrResult] = useState<Partial<Record<MetricField | "testDate", string>>>({});
+
+  // 의무기록 입력 필드
+  const [medicalRecordFields, setMedicalRecordFields] = useState({
+    testContent: "",
+    clinicalInformation: "",
+    finding: "",
+    conclusion: "",
+  });
 
   // 검사 날짜 상태 (이미지 업로드 전에 필수로 입력받음)
   const [testDate, setTestDate] = useState<string>("");
@@ -923,9 +1007,40 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
   const [calculatedLMR, setCalculatedLMR] = useState<string | null>(null);
   const [calculatedNLR, setCalculatedNLR] = useState<string | null>(null);
 
-  // 🔹 fetcher.data로 들어온 OCR 결과 반영
+  // 의무기록 OCR 결과 반영
+  useEffect(() => {
+    const data = ocrFetcher.data;
+    if (data && typeof data === "object" && "medicalRecord" in data && data.medicalRecord) {
+      const mr = data.medicalRecord as Record<string, string>;
+      setMedicalRecordFields({
+        testContent: mr.test_content ?? "",
+        clinicalInformation: mr.clinical_information ?? "",
+        finding: mr.finding ?? "",
+        conclusion: mr.conclusion ?? "",
+      });
+      if (mr.testDate) setTestDate(mr.testDate);
+      alert("의무기록 내용을 추출했습니다. 확인 후 저장해주세요.");
+    }
+  }, [ocrFetcher.data]);
+
+  // 의무기록 저장 성공
+  useEffect(() => {
+    const data = medicalRecordFetcher.data;
+    if (data && typeof data === "object" && "success" in data && data.success) {
+      setMedicalRecordFields({ testContent: "", clinicalInformation: "", finding: "", conclusion: "" });
+      setTestDate("");
+      alert("의무기록이 저장되었습니다.");
+      window.location.reload();
+    }
+    if (data && typeof data === "object" && "error" in data && data.error) {
+      alert(String(data.error));
+    }
+  }, [medicalRecordFetcher.data]);
+
+  // 🔹 fetcher.data로 들어온 OCR 결과 반영 (혈액검사)
   useEffect(() => {
     const fetcherData = ocrFetcher.data;
+    if (fetcherData && typeof fetcherData === "object" && "medicalRecord" in fetcherData) return;
     if (fetcherData && typeof fetcherData === "object" && "structured" in fetcherData && fetcherData.structured) {
       // LMR과 NLR은 OCR 결과에서 자동 계산하지 않음 (수동 입력만 가능)
       const processedResult = fetcherData.structured as Record<string, string>;
@@ -1162,8 +1277,8 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
       const formData = new FormData();
       formData.append("file", file);
       formData.append("imageHash", imageHash);
-      formData.append("testDate", testDate); // 사용자가 입력한 날짜를 전달
-      formData.append("_intent", "ocr"); // 헤더 대신 intent 필드로 분기
+      formData.append("testDate", testDate);
+      formData.append("_intent", examType === "medical_record" ? "ocr_medical_record" : "ocr");
 
       console.log("🔹 [Client] OCR 요청 전송 시작");
 
@@ -1195,11 +1310,40 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
           <CardContent>
             <div className="text-muted-foreground space-y-2 text-sm">
               <p>✅ 의료정보 제공에 동의하셨습니다.</p>
-              <p>이제 혈액검사 결과를 안전하게 입력할 수 있습니다.</p>
+              <p>이제 검사 결과를 안전하게 입력할 수 있습니다.</p>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>검사 항목 선택</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            입력할 검사 유형을 선택해주세요.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={examType === "blood_test" ? "default" : "outline"}
+              onClick={() => setExamType("blood_test")}
+              className="flex-1"
+            >
+              혈액검사
+            </Button>
+            <Button
+              type="button"
+              variant={examType === "medical_record" ? "default" : "outline"}
+              onClick={() => setExamType("medical_record")}
+              className="flex-1"
+            >
+              의무기록사본
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -1248,7 +1392,11 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
 
       <Card>
         <CardHeader>
-          <CardTitle>검사 결과 사진 업로드 (OCR)</CardTitle>
+          <CardTitle>
+            {examType === "medical_record"
+              ? "의무기록사본 이미지 업로드 (OCR)"
+              : "검사 결과 사진 업로드 (OCR)"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 md:space-y-6">
@@ -1283,19 +1431,105 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
             </div>
             {!testDate && <p className="text-sm text-amber-600">⚠️ 검사 날짜를 먼저 입력해주세요.</p>}
             <p className="text-muted-foreground text-sm">
-              혈액검사 결과 사진을 업로드하면 자동으로 수치를 인식합니다. <br />
-              <small className="text-muted-foreground text-xs">
-                ⚠️OCR 값이 부정확할 수 있습니다. 다시 확인해주세요.
-              </small>
-              <br />
-              <small className="text-muted-foreground text-xs">
-                ⚠️ 추가 검사 항목 저장을 원하시는 분은 아래 전체 선택을 체크해주세요.
-              </small>
+              {examType === "medical_record" ? (
+                <>
+                  의무기록사본 사진을 업로드하면 검사내용, Clinical Information, Finding, Conclusion을 자동 추출합니다.
+                  <br />
+                  <small className="text-muted-foreground text-xs">⚠️ OCR 값이 부정확할 수 있습니다. 확인 후 저장해주세요.</small>
+                </>
+              ) : (
+                <>
+                  혈액검사 결과 사진을 업로드하면 자동으로 수치를 인식합니다. <br />
+                  <small className="text-muted-foreground text-xs">⚠️ OCR 값이 부정확할 수 있습니다. 다시 확인해주세요.</small>
+                  <br />
+                  <small className="text-muted-foreground text-xs">⚠️ 추가 검사 항목 저장을 원하시는 분은 아래 전체 선택을 체크해주세요.</small>
+                </>
+              )}
             </p>
           </div>
         </CardContent>
       </Card>
 
+      {examType === "medical_record" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>의무기록 입력</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              OCR로 추출하거나 수동으로 입력해주세요. 검사내용은 필수입니다.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="mr-testContent">검사내용 *</Label>
+              <Textarea
+                id="mr-testContent"
+                placeholder="검사 내용을 입력하세요"
+                value={medicalRecordFields.testContent}
+                onChange={(e) =>
+                  setMedicalRecordFields((p) => ({ ...p, testContent: e.target.value }))
+                }
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mr-clinical">Clinical Information</Label>
+              <Textarea
+                id="mr-clinical"
+                placeholder="Clinical Information 입력"
+                value={medicalRecordFields.clinicalInformation}
+                onChange={(e) =>
+                  setMedicalRecordFields((p) => ({ ...p, clinicalInformation: e.target.value }))
+                }
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mr-finding">Finding</Label>
+              <Textarea
+                id="mr-finding"
+                placeholder="Finding 입력"
+                value={medicalRecordFields.finding}
+                onChange={(e) =>
+                  setMedicalRecordFields((p) => ({ ...p, finding: e.target.value }))
+                }
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mr-conclusion">Conclusion</Label>
+              <Textarea
+                id="mr-conclusion"
+                placeholder="Conclusion 입력"
+                value={medicalRecordFields.conclusion}
+                onChange={(e) =>
+                  setMedicalRecordFields((p) => ({ ...p, conclusion: e.target.value }))
+                }
+                rows={3}
+              />
+            </div>
+            <medicalRecordFetcher.Form method="post">
+              <input type="hidden" name="_intent" value="save_medical_record" />
+              <input type="hidden" name="testDate" value={testDate} />
+              <input type="hidden" name="testContent" value={medicalRecordFields.testContent} />
+              <input type="hidden" name="clinicalInformation" value={medicalRecordFields.clinicalInformation} />
+              <input type="hidden" name="finding" value={medicalRecordFields.finding} />
+              <input type="hidden" name="conclusion" value={medicalRecordFields.conclusion} />
+              <Button
+                type="submit"
+                disabled={
+                  medicalRecordFetcher.state !== "idle" ||
+                  !testDate ||
+                  !medicalRecordFields.testContent.trim()
+                }
+              >
+                {medicalRecordFetcher.state !== "idle" ? "저장 중..." : "의무기록 저장"}
+              </Button>
+            </medicalRecordFetcher.Form>
+          </CardContent>
+        </Card>
+      )}
+
+      {examType === "blood_test" && (
       <Form method="post" className="space-y-8">
         {/* OCR 업로드 시 계산된 imageHash를 hidden 필드로 전달 */}
         {currentImageHash && <input type="hidden" name="imageHash" value={currentImageHash} />}
@@ -1751,6 +1985,7 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
           <Button type="submit">저장하기</Button>
         </div>
       </Form>
+      )}
     </div>
   );
 }

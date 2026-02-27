@@ -1207,6 +1207,47 @@ export type Database = {
           },
         ]
       }
+      health_reports: {
+        Row: {
+          created_at: string
+          id: string
+          pdf_url: string | null
+          report_html: string | null
+          report_json: Json | null
+          request_id: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pdf_url?: string | null
+          report_html?: string | null
+          report_json?: Json | null
+          request_id: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pdf_url?: string | null
+          report_html?: string | null
+          report_json?: Json | null
+          request_id?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_reports_request_id_report_requests_id_fk"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "report_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredient_target_evidence: {
         Row: {
           created_at: string
@@ -1487,9 +1528,11 @@ export type Database = {
       }
       notifications: {
         Row: {
+          content: string | null
           created_at: string
           notification_id: number
           post_id: number | null
+          report_request_id: string | null
           seen: boolean
           source_id: string | null
           target_id: string
@@ -1497,9 +1540,11 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
         }
         Insert: {
+          content?: string | null
           created_at?: string
           notification_id?: never
           post_id?: number | null
+          report_request_id?: string | null
           seen?: boolean
           source_id?: string | null
           target_id: string
@@ -1507,9 +1552,11 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
         }
         Update: {
+          content?: string | null
           created_at?: string
           notification_id?: never
           post_id?: number | null
+          report_request_id?: string | null
           seen?: boolean
           source_id?: string | null
           target_id?: string
@@ -1597,6 +1644,7 @@ export type Database = {
           disease_status: string | null
           gender: string
           height_cm: number
+          medical_record_transcripts: Json | null
           medication_name: string | null
           medication_status: Database["public"]["Enums"]["patient_medication_status"]
           patient_id: string
@@ -1611,6 +1659,7 @@ export type Database = {
           disease_status?: string | null
           gender: string
           height_cm: number
+          medical_record_transcripts?: Json | null
           medication_name?: string | null
           medication_status?: Database["public"]["Enums"]["patient_medication_status"]
           patient_id: string
@@ -1625,6 +1674,7 @@ export type Database = {
           disease_status?: string | null
           gender?: string
           height_cm?: number
+          medical_record_transcripts?: Json | null
           medication_name?: string | null
           medication_status?: Database["public"]["Enums"]["patient_medication_status"]
           patient_id?: string
@@ -2494,6 +2544,42 @@ export type Database = {
           },
         ]
       }
+      report_requests: {
+        Row: {
+          created_at: string
+          id: string
+          input_json: Json
+          paid_status: string | null
+          report_type: string | null
+          snapshot_json: Json | null
+          status: Database["public"]["Enums"]["report_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_json: Json
+          paid_status?: string | null
+          report_type?: string | null
+          snapshot_json?: Json | null
+          status?: Database["public"]["Enums"]["report_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_json?: Json
+          paid_status?: string | null
+          report_type?: string | null
+          snapshot_json?: Json | null
+          status?: Database["public"]["Enums"]["report_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           created_at: string
@@ -3295,13 +3381,6 @@ export type Database = {
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "health_profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "health_profiles_view"
@@ -3311,7 +3390,7 @@ export type Database = {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "health_profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
@@ -3324,13 +3403,20 @@ export type Database = {
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
@@ -3450,6 +3536,42 @@ export type Database = {
         }
         Relationships: []
       }
+      routine_daily_full_view: {
+        Row: {
+          category: Database["public"]["Enums"]["habit_category"] | null
+          created_at: string | null
+          id: string | null
+          log_date: string | null
+          option_id: string | null
+          option_label: string | null
+          template_id: string | null
+          template_items: Json | null
+          template_name: string | null
+          template_notes: string | null
+          template_section_type:
+            | Database["public"]["Enums"]["habit_category"]
+            | null
+          time_block: Database["public"]["Enums"]["habit_time_block"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_daily_grid_logs_option_id_routine_grid_options_id_fk"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "routine_grid_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_daily_grid_logs_template_id_routine_templates_id_fk"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "routine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routine_daily_scores_view: {
         Row: {
           category: Database["public"]["Enums"]["habit_category"] | null
@@ -3502,6 +3624,10 @@ export type Database = {
         Returns: {
           message_room_id: number
         }[]
+      }
+      get_routine_context: {
+        Args: { p_days?: number; p_user_id: string }
+        Returns: Json
       }
       is_bot_user_member: {
         Args: { p_profile_id: string; p_room_id: number }
@@ -3557,7 +3683,7 @@ export type Database = {
         | "gyeongbuk"
         | "gyeongnam"
         | "jeju"
-      notification_type: "follow" | "review" | "reply"
+      notification_type: "follow" | "review" | "reply" | "health_report"
       patient_medication_status: "none" | "active"
       patient_treatment_status: "ongoing" | "completed" | "follow_up"
       photo_type:
@@ -3567,6 +3693,11 @@ export type Database = {
         | "equipment"
         | "staff"
         | "other"
+      report_request_status:
+        | "requested"
+        | "draft_ready"
+        | "under_review"
+        | "completed"
       team_position: "doctor" | "nurse" | "nutritionist" | "foresttherapist"
       user_role:
         | "healthy"
@@ -3735,7 +3866,7 @@ export const Constants = {
         "gyeongnam",
         "jeju",
       ],
-      notification_type: ["follow", "review", "reply"],
+      notification_type: ["follow", "review", "reply", "health_report"],
       patient_medication_status: ["none", "active"],
       patient_treatment_status: ["ongoing", "completed", "follow_up"],
       photo_type: [
@@ -3745,6 +3876,12 @@ export const Constants = {
         "equipment",
         "staff",
         "other",
+      ],
+      report_request_status: [
+        "requested",
+        "draft_ready",
+        "under_review",
+        "completed",
       ],
       team_position: ["doctor", "nurse", "nutritionist", "foresttherapist"],
       user_role: [

@@ -957,6 +957,119 @@ export const productIngredients = pgTable(
 );
 
 /**
+ * Report Requests Table
+ *
+ * 건강 리포트 요청 (CTA → n8n webhook → 워크플로우)
+ * 사용자 입력 + 생성 시점 스냅샷(혈액검사, 생활습관, 개인 프로필) 저장
+ */
+export const reportRequestStatusEnum = pgEnum("report_request_status", [
+  "requested",
+  "draft_ready",
+  "under_review",
+  "completed",
+]);
+
+export const reportRequests = pgTable(
+  "report_requests",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    user_id: uuid()
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    status: reportRequestStatusEnum().notNull().default("requested"),
+    input_json: jsonb().$type<Record<string, unknown>>().notNull(),
+    snapshot_json: jsonb().$type<Record<string, unknown>>(),
+    report_type: text().default("v1"),
+    paid_status: text().$type<"paid" | "free">().default("free"),
+    ...timestamps,
+  },
+  (table) => [
+    index("report_requests_user_id_idx").on(table.user_id),
+    index("report_requests_status_idx").on(table.status),
+    pgPolicy("report-requests-select-policy", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("report-requests-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("report-requests-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("report-requests-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+  ],
+);
+
+/**
+ * Health Reports Table
+ *
+ * 생성된 건강 리포트 (n8n 워크플로우 결과)
+ * report_requests와 1:1 연결
+ */
+export const healthReports = pgTable(
+  "health_reports",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    request_id: uuid()
+      .notNull()
+      .references(() => reportRequests.id, { onDelete: "cascade" }),
+    user_id: uuid()
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    version: integer().notNull().default(1),
+    report_json: jsonb().$type<Record<string, unknown>>(),
+    report_html: text(),
+    pdf_url: text(),
+    created_at: timestamp()
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),
+  },
+  (table) => [
+    uniqueIndex("health_reports_request_id_unique").on(table.request_id),
+    index("health_reports_user_id_idx").on(table.user_id),
+    pgPolicy("health-reports-select-policy", {
+      for: "select",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("health-reports-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("health-reports-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+      withCheck: sql`${authUid} = ${table.user_id}`,
+    }),
+    pgPolicy("health-reports-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.user_id}`,
+    }),
+  ],
+);
+
+/**
  * Streaks Table
  *
  * 사용자의 건강습관 기록 연속 일수(스트릭) 정보

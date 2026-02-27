@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { HealthReportRequestButton } from "~/core/components/health-report-request-button";
 import { Button } from "~/core/components/ui/button";
 import {
   Card,
@@ -434,6 +435,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="flex justify-end">
+        <HealthReportRequestButton sourceTag="dashboard" variant="outline" />
+      </div>
       {/* 6칸 그리드 레이아웃 */}
       <div className="grid auto-rows-fr gap-4 md:grid-cols-2">
         {/* 1. 혈액검사 기본 정보 */}
@@ -772,6 +776,17 @@ function getMetricColor(metric: string): string {
   return METRIC_DEFINITIONS_MAP[metric]?.color ?? "hsl(var(--primary))";
 }
 
+const treatmentStatusLabels: Record<string, string> = {
+  ongoing: "치료 중",
+  completed: "치료 완료",
+  follow_up: "경과 관찰",
+};
+
+const medicationStatusLabels: Record<string, string> = {
+  none: "복용 안 함",
+  active: "복용 중",
+};
+
 function BloodTestProfileCard({ patientProfile }: BloodTestProfileCardProps) {
   const bmi = calculateBmi(
     patientProfile?.height_cm,
@@ -810,6 +825,45 @@ function BloodTestProfileCard({ patientProfile }: BloodTestProfileCardProps) {
           <div>
             <div className="text-muted-foreground">질환명</div>
             <div className="font-medium">{patientProfile?.disease || "-"}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">질환 상태</div>
+            <div className="font-medium">
+              {patientProfile?.disease_status ?? "-"}
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">치료 상태</div>
+            <div className="font-medium">
+              {treatmentStatusLabels[patientProfile?.treatment_status ?? ""] ??
+                patientProfile?.treatment_status ??
+                "-"}
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">약물 복용</div>
+            <div className="font-medium">
+              {patientProfile?.medication_status === "active"
+                ? `${medicationStatusLabels["active"]} (${patientProfile?.medication_name ?? "약물명 미입력"})`
+                : medicationStatusLabels[patientProfile?.medication_status ?? ""] ??
+                  "-"}
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">키</div>
+            <div className="font-medium">
+              {patientProfile?.height_cm != null
+                ? `${patientProfile.height_cm} cm`
+                : "-"}
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">몸무게</div>
+            <div className="font-medium">
+              {patientProfile?.weight_kg != null
+                ? `${patientProfile.weight_kg} kg`
+                : "-"}
+            </div>
           </div>
           <div>
             <div className="text-muted-foreground">BMI</div>

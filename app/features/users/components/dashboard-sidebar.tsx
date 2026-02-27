@@ -58,8 +58,8 @@ const data = {
           url: "/my/dashboard/health-habits",
         },
         {
-          title: "EV AI 혈액검사 분석",
-          url: "/my/dashboard/health/analysis",
+          title: "개인 맞춤 건강 보고서",
+          url: "/my/dashboard/health/report",
         },
       ],
     },

@@ -33,6 +33,7 @@ import { getLoggedInUserId } from "~/features/users/queries";
 
 import {
   type BloodTestSummary,
+  type MedicalRecordTranscriptEntry,
   METRIC_DEFINITIONS,
   METRIC_DISPLAY_ORDER,
   PRIMARY_METRICS,
@@ -426,8 +427,25 @@ export default function DashboardHealth({
   } = loaderData as LoaderData;
 
   const [selectedDate, setSelectedDate] = useState<string>(lastTestDate || "");
+  const [summaryViewMode, setSummaryViewMode] = useState<"blood_test" | "medical_record">("blood_test");
   const [isEditing, setIsEditing] = useState(false);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+
+  const medicalRecords: MedicalRecordTranscriptEntry[] =
+    (patientProfile as { medical_record_transcripts?: MedicalRecordTranscriptEntry[] | null })
+      ?.medical_record_transcripts ?? [];
+  const medicalRecordDates = [...new Set(medicalRecords.map((r) => r.test_date))].sort(
+    (a, b) => b.localeCompare(a),
+  );
+  const [selectedMedicalDate, setSelectedMedicalDate] = useState<string>("");
+  const effectiveMedicalDate = selectedMedicalDate || (medicalRecordDates[0] ?? "");
+  const selectedMedicalRecords = medicalRecords.filter((r) => r.test_date === effectiveMedicalDate);
+
+  useEffect(() => {
+    if (medicalRecordDates.length > 0 && !medicalRecordDates.includes(selectedMedicalDate)) {
+      setSelectedMedicalDate(medicalRecordDates[0]);
+    }
+  }, [medicalRecordDates, selectedMedicalDate]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<{
     age: string;
@@ -1067,10 +1085,92 @@ export default function DashboardHealth({
 
         <Card>
           <CardHeader>
-            <CardTitle>최근 검사 결과 요약</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>최근 검사 결과 요약</CardTitle>
+              {(currentSummaryByDate.length > 0 || medicalRecords.length > 0) && (
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant={summaryViewMode === "blood_test" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSummaryViewMode("blood_test")}
+                  >
+                    혈액검사
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={summaryViewMode === "medical_record" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSummaryViewMode("medical_record")}
+                  >
+                    의무기록
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {currentSummaryByDate.length > 0 ? (
+            {summaryViewMode === "medical_record" ? (
+              medicalRecords.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-sm">검사일:</span>
+                    <Select
+                      value={effectiveMedicalDate}
+                      onValueChange={setSelectedMedicalDate}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="날짜 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {medicalRecordDates.map((date: string) => (
+                          <SelectItem key={date} value={date}>
+                            {new Date(date).toLocaleDateString("ko-KR")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-4">
+                    {selectedMedicalRecords.map((rec, idx) => (
+                      <div key={idx} className="bg-muted/50 space-y-2 rounded-lg border p-3 text-sm">
+                        {rec.test_content && (
+                          <div>
+                            <span className="font-medium">검사내용:</span>
+                            <p className="text-muted-foreground mt-1">{rec.test_content}</p>
+                          </div>
+                        )}
+                        {rec.clinical_information && (
+                          <div>
+                            <span className="font-medium">Clinical Information:</span>
+                            <p className="text-muted-foreground mt-1">{rec.clinical_information}</p>
+                          </div>
+                        )}
+                        {rec.finding && (
+                          <div>
+                            <span className="font-medium">Finding:</span>
+                            <p className="text-muted-foreground mt-1">{rec.finding}</p>
+                          </div>
+                        )}
+                        {rec.conclusion && (
+                          <div>
+                            <span className="font-medium">Conclusion:</span>
+                            <p className="text-muted-foreground mt-1">{rec.conclusion}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-muted-foreground text-sm">
+                  등록된 의무기록이 없습니다.{" "}
+                  <Link to="/my/dashboard/health/submit" className="underline">
+                    의무기록을 입력해보세요.
+                  </Link>
+                </div>
+              )
+            ) : currentSummaryByDate.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
