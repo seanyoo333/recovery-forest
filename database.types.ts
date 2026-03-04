@@ -2864,16 +2864,22 @@ export type Database = {
       }
       target_to_meta_axis: {
         Row: {
+          axis_description: string | null
+          axis_label: string | null
           axis_weight: number
           meta_axis: string
           target_id: string
         }
         Insert: {
+          axis_description?: string | null
+          axis_label?: string | null
           axis_weight?: number
           meta_axis: string
           target_id: string
         }
         Update: {
+          axis_description?: string | null
+          axis_label?: string | null
           axis_weight?: number
           meta_axis?: string
           target_id?: string

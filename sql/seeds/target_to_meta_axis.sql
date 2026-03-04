@@ -35,8 +35,8 @@ WHERE target_id IN (SELECT id FROM managed_targets);
 -- =========================
 -- 대사 안정화 (metabolic_pressure)
 -- =========================
-INSERT INTO target_to_meta_axis (target_id, meta_axis, axis_weight)
-SELECT id, 'metabolic_pressure', 1.0 FROM natural_targets
+INSERT INTO target_to_meta_axis (target_id, target_slug, meta_axis, axis_weight)
+SELECT id, slug, 'metabolic_pressure', 1.0 FROM natural_targets
 WHERE slug IN (
   'insulin','igf1',
   'glut1','aerobic_glycolysis','pppathway','hexokinase2',
@@ -47,25 +47,25 @@ WHERE slug IN (
   'srebp1','srebp2','acly','fas','mevalonate','fao','ldlr','acetate-srebp-1','mevalonate-srebp-2'
 )
 ON CONFLICT (target_id, meta_axis) DO UPDATE
-SET axis_weight = EXCLUDED.axis_weight;
+SET axis_weight = EXCLUDED.axis_weight, target_slug = EXCLUDED.target_slug;
 
 -- =========================
 -- 면역 균형 (immune_balance)
 -- =========================
-INSERT INTO target_to_meta_axis (target_id, meta_axis, axis_weight)
-SELECT id, 'immune_balance', 1.0 FROM natural_targets
+INSERT INTO target_to_meta_axis (target_id, target_slug, meta_axis, axis_weight)
+SELECT id, slug, 'immune_balance', 1.0 FROM natural_targets
 WHERE slug IN (
   'il1','il6','cox','pge2',
   'tlr4','tlr9'
 )
 ON CONFLICT (target_id, meta_axis) DO UPDATE
-SET axis_weight = EXCLUDED.axis_weight;
+SET axis_weight = EXCLUDED.axis_weight, target_slug = EXCLUDED.target_slug;
 
 -- =========================
 -- 비정상 신호조절 (abnormal_signals)
 -- =========================
-INSERT INTO target_to_meta_axis (target_id, meta_axis, axis_weight)
-SELECT id, 'abnormal_signals', 1.0 FROM natural_targets
+INSERT INTO target_to_meta_axis (target_id, target_slug, meta_axis, axis_weight)
+SELECT id, slug, 'abnormal_signals', 1.0 FROM natural_targets
 WHERE slug IN (
   'integrins',
   'estrogen_receptor',
@@ -74,14 +74,14 @@ WHERE slug IN (
   'ras','akt','cmyc','cyclin_d1','mir_34a'
 )
 ON CONFLICT (target_id, meta_axis) DO UPDATE
-SET axis_weight = EXCLUDED.axis_weight;
+SET axis_weight = EXCLUDED.axis_weight, target_slug = EXCLUDED.target_slug;
 
 -- =========================
 -- 신경·스트레스 (neuro_stress)
 -- =========================
 -- 현재 타겟 없음 (추후 추가 가능)
--- INSERT INTO target_to_meta_axis (target_id, meta_axis, axis_weight)
--- SELECT id, 'neuro_stress', 1.0 FROM natural_targets
+-- INSERT INTO target_to_meta_axis (target_id, target_slug, meta_axis, axis_weight)
+-- SELECT id, slug, 'neuro_stress', 1.0 FROM natural_targets
 -- WHERE slug IN (
 --   -- 추후 추가 예정
 -- );
