@@ -727,6 +727,14 @@ export const evidenceFigures = pgTable(
 );
 
 /**
+ * Ingredient-Target Effect: inhibit(억제) vs activate(활성화)
+ */
+export const ingredientTargetEffectEnum = pgEnum(
+  "ingredient_target_evidence_effect",
+  ["inhibit", "activate"],
+);
+
+/**
  * Ingredient Target Evidence Table (Aggregate)
  *
  * 성분 → 표적 매핑의 요약 정보
@@ -735,6 +743,7 @@ export const evidenceFigures = pgTable(
  * - 성분-표적 조합은 1행만 유지 (ingredient_id + target_id unique)
  * - strength는 연결된 논문들의 max(strength)로 자동 계산 (트리거 사용 권장)
  * - study_type은 연결된 논문들의 최고 study_type으로 자동 계산 (트리거 사용 권장)
+ * - effect: 해당 성분이 표적을 inhibit(억제)하는지 activate(활성화)하는지 구분
  *
  * 사용 예시:
  * - 커큐민 → NF-κB (여러 논문이 연결될 수 있음)
@@ -749,6 +758,7 @@ export const ingredientTargetEvidence = pgTable(
     target_id: uuid()
       .notNull()
       .references(() => naturalTargets.id, { onDelete: "cascade" }),
+    effect: ingredientTargetEffectEnum(),
     strength: doublePrecision().notNull().default(1),
     study_type: text()
       .notNull()
@@ -1000,6 +1010,7 @@ export const reportRequests = pgTable(
       .references(() => authUsers.id, { onDelete: "cascade" }),
     status: reportRequestStatusEnum().notNull().default("requested"),
     input_json: jsonb().$type<Record<string, unknown>>().notNull(),
+    sub1_input_json: jsonb().$type<Record<string, unknown>>(),
     snapshot_json: jsonb().$type<Record<string, unknown>>(),
     report_type: text().default("v1"),
     paid_status: text().$type<"paid" | "free">().default("free"),

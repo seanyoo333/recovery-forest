@@ -2,7 +2,19 @@
  * Health Report Request - API Client
  *
  * 동일 출처 API를 통해 n8n webhook으로 프록시 (CORS 회피)
+ * 안내 메시지: DB(report_requests) 기준으로 표시 (API 200이 아닌 실제 저장 확정 후)
  */
+
+/** 내 리포트 페이지 경로 */
+export const HEALTH_REPORT_PAGE_PATH = "/my/dashboard/health/report";
+
+/** 진행 중 상태일 때 표시할 안내 (DB에서 status requested 등 확인 후에만 사용) */
+export const HEALTH_REPORT_PENDING_MESSAGE =
+  "건강 리포트를 생성하고 있습니다. 1~3시간 정도 소요됩니다.";
+
+/** 웹훅 전달 실패 시 사용자 안내 메시지 */
+export const HEALTH_REPORT_WEBHOOK_FAILED_MESSAGE =
+  "요청 전달에 실패했습니다. 잠시 후 다시 시도해 주세요.";
 
 export const TREATMENT_STAGES = [
   "surveillance",
@@ -41,6 +53,7 @@ export type WeeklyExerciseFreq = (typeof WEEKLY_EXERCISE_FREQ)[number];
 export interface HealthReportPayload {
   user_id?: string;
   treatment_stage: TreatmentStage;
+  cancer_type?: string;
   top_concerns: TopConcern[];
   avg_sleep_hours: number;
   weekly_exercise_freq: WeeklyExerciseFreq;

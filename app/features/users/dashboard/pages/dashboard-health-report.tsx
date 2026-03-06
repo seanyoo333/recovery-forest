@@ -11,6 +11,7 @@ import { FileText, Loader2 } from "lucide-react";
 import { Link, useRevalidator } from "react-router";
 
 import { HealthReportRequestButton } from "~/core/components/health-report-request-button";
+import { HEALTH_REPORT_PENDING_MESSAGE } from "~/core/lib/health-report";
 import { Button } from "~/core/components/ui/button";
 import {
   Card,
@@ -162,7 +163,7 @@ function ReportRequestCard({
         )}
         {!request.healthReport && isPending && (
           <p className="text-muted-foreground text-sm">
-            건강 리포트를 생성하고 있습니다. 1~3시간 정도 소요됩니다.
+            {HEALTH_REPORT_PENDING_MESSAGE}
           </p>
         )}
       </CardContent>

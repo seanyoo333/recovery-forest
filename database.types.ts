@@ -2869,6 +2869,7 @@ export type Database = {
           axis_weight: number
           meta_axis: string
           target_id: string
+          target_slug: string | null
         }
         Insert: {
           axis_description?: string | null
@@ -2876,6 +2877,7 @@ export type Database = {
           axis_weight?: number
           meta_axis: string
           target_id: string
+          target_slug?: string | null
         }
         Update: {
           axis_description?: string | null
@@ -2883,6 +2885,7 @@ export type Database = {
           axis_weight?: number
           meta_axis?: string
           target_id?: string
+          target_slug?: string | null
         }
         Relationships: [
           {

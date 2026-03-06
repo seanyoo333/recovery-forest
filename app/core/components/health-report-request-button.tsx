@@ -31,6 +31,7 @@ import {
 } from "~/core/components/ui/select";
 import {
   type HealthReportPayload,
+  HEALTH_REPORT_PAGE_PATH,
   type TopConcern,
   type TreatmentStage,
   type WeeklyExerciseFreq,
@@ -99,6 +100,7 @@ export function HealthReportRequestButton({
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [treatmentStage, setTreatmentStage] = useState<TreatmentStage | "">("");
+  const [cancerType, setCancerType] = useState("");
   const [topConcerns, setTopConcerns] = useState<TopConcern[]>([]);
   const [avgSleepHours, setAvgSleepHours] = useState("");
   const [weeklyExerciseFreq, setWeeklyExerciseFreq] = useState<
@@ -146,6 +148,7 @@ export function HealthReportRequestButton({
     setSubmitting(true);
     const payload: HealthReportPayload = {
       treatment_stage: treatmentStage as TreatmentStage,
+      cancer_type: cancerType.trim() || undefined,
       top_concerns: topConcerns,
       avg_sleep_hours: parseFloat(avgSleepHours),
       weekly_exercise_freq: weeklyExerciseFreq as WeeklyExerciseFreq,
@@ -176,6 +179,7 @@ export function HealthReportRequestButton({
 
   const resetFormState = () => {
     setTreatmentStage("");
+    setCancerType("");
     setTopConcerns([]);
     setAvgSleepHours("");
     setWeeklyExerciseFreq("");
@@ -202,22 +206,16 @@ export function HealthReportRequestButton({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="size-5 text-green-500" />
-                요청 완료
+                요청 접수
               </DialogTitle>
               <DialogDescription>
-                건강 리포트 요청이 접수되었습니다.
+                건강 리포트 요청이 접수되었습니다. 진행상태는 내 리포트
+                페이지에서 확인하실 수 있습니다.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 pt-2">
-              <p>
-                OO님 맞춤 건강 리포트를 생성하고 있습니다. 총 예상 소요 시간:
-                1~3시간.
-              </p>
-              <p className="text-muted-foreground text-sm">
-                진행상태는 &quot;내 리포트&quot; 페이지에서 확인 가능합니다.
-              </p>
-              <Button asChild className="mt-4 w-full">
-                <Link to="/my/dashboard/health/report">내 리포트 보기</Link>
+            <div className="pt-2">
+              <Button asChild className="w-full">
+                <Link to={HEALTH_REPORT_PAGE_PATH}>내 리포트 보기</Link>
               </Button>
             </div>
           </>
@@ -268,6 +266,16 @@ export function HealthReportRequestButton({
                     <SelectItems labels={TREATMENT_STAGE_LABELS} />
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cancer_type">암종 (선택)</Label>
+                <Input
+                  id="cancer_type"
+                  placeholder="예: 유방암, 대장암"
+                  value={cancerType}
+                  onChange={(e) => setCancerType(e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">

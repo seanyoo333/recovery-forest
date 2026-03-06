@@ -1,4 +1,14 @@
+-- ingredient_target_evidence: effect 컬럼 추가 (inhibit/activate 구분)
+
+CREATE TYPE "public"."ingredient_target_evidence_effect" AS ENUM ('inhibit', 'activate');
+--> statement-breakpoint
+
+ALTER TABLE "ingredient_target_evidence"
+ADD COLUMN "effect" "ingredient_target_evidence_effect";
+--> statement-breakpoint
+
 DROP VIEW IF EXISTS ingredient_target_evidence_full_view;
+--> statement-breakpoint
 
 CREATE VIEW ingredient_target_evidence_full_view
 WITH (security_invoker = ON) AS
@@ -17,9 +27,7 @@ SELECT
   ite.notes AS evidence_notes,
   tma.meta_axis,
   tma.axis_weight,
-  -- 연결된 논문 수
   COUNT(DISTINCT ites.evidence_source_id) AS evidence_count,
-  -- 주요 논문 수
   COUNT(DISTINCT CASE WHEN ites.is_primary = true THEN ites.evidence_source_id END) AS primary_evidence_count,
   ite.created_at AS evidence_created_at,
   ite.updated_at AS evidence_updated_at

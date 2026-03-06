@@ -2,6 +2,7 @@ import { EyeIcon, FileTextIcon, TrashIcon } from "lucide-react";
 import { Link, useFetcher } from "react-router";
 
 import { cn } from "~/lib/utils";
+import { HEALTH_REPORT_PAGE_PATH } from "~/core/lib/health-report";
 
 import {
   Avatar,
@@ -61,8 +62,6 @@ export function NotificationCard({
   const fetcher = useFetcher();
   const optimisticSeen = fetcher.state === "idle" ? seen : true;
 
-  const reportLink = "/my/dashboard/health/report";
-
   return (
     <Card
       className={cn(
@@ -72,7 +71,7 @@ export function NotificationCard({
     >
       <CardHeader className="flex flex-row gap-5 space-y-0">
         {type === "health_report" ? (
-          <Link to={reportLink}>
+          <Link to={HEALTH_REPORT_PAGE_PATH}>
             <Avatar className="">
               <AvatarFallback>
                 <FileTextIcon className="size-5" />
@@ -129,7 +128,7 @@ export function NotificationCard({
             )}
             {type === "health_report" && (
               <Button variant={"link"} asChild className="p-0 text-lg text-white">
-                <Link to={reportLink}>내 리포트 보기</Link>
+                <Link to={HEALTH_REPORT_PAGE_PATH}>내 리포트 보기</Link>
               </Button>
             )}
           </CardTitle>
