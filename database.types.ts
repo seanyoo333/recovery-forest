@@ -1251,6 +1251,9 @@ export type Database = {
       ingredient_target_evidence: {
         Row: {
           created_at: string
+          effect:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           id: string
           ingredient_id: string
           notes: string | null
@@ -1261,6 +1264,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          effect?:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           id?: string
           ingredient_id: string
           notes?: string | null
@@ -1271,6 +1277,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          effect?:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           id?: string
           ingredient_id?: string
           notes?: string | null
@@ -1347,6 +1356,143 @@ export type Database = {
             referencedColumns: ["evidence_id"]
           },
         ]
+      }
+      knowledge_documents: {
+        Row: {
+          book_code: string
+          book_title: string
+          created_at: string
+          doc_id: string
+          file_name: string | null
+          id: string
+          ingest_status: string
+          is_active: boolean
+          language: string | null
+          source_type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          book_code: string
+          book_title: string
+          created_at?: string
+          doc_id: string
+          file_name?: string | null
+          id?: string
+          ingest_status?: string
+          is_active?: boolean
+          language?: string | null
+          source_type?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          book_code?: string
+          book_title?: string
+          created_at?: string
+          doc_id?: string
+          file_name?: string | null
+          id?: string
+          ingest_status?: string
+          is_active?: boolean
+          language?: string | null
+          source_type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      knowledge_sections: {
+        Row: {
+          axis_tags: string | null
+          book_code: string
+          book_title: string
+          bucket: string
+          chapter_no: number | null
+          chapter_root: string | null
+          created_at: string
+          doc_id: string
+          id: string
+          is_active: boolean
+          level: number | null
+          parent_title: string | null
+          section_text: string
+          section_title: string
+          tags: string | null
+          tags_enriched: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          axis_tags?: string | null
+          book_code: string
+          book_title: string
+          bucket: string
+          chapter_no?: number | null
+          chapter_root?: string | null
+          created_at?: string
+          doc_id: string
+          id?: string
+          is_active?: boolean
+          level?: number | null
+          parent_title?: string | null
+          section_text: string
+          section_title: string
+          tags?: string | null
+          tags_enriched?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          axis_tags?: string | null
+          book_code?: string
+          book_title?: string
+          bucket?: string
+          chapter_no?: number | null
+          chapter_root?: string | null
+          created_at?: string
+          doc_id?: string
+          id?: string
+          is_active?: boolean
+          level?: number | null
+          parent_title?: string | null
+          section_text?: string
+          section_title?: string
+          tags?: string | null
+          tags_enriched?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_sections_doc_id_knowledge_documents_doc_id_fk"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_documents"
+            referencedColumns: ["doc_id"]
+          },
+        ]
+      }
+      knowledge_vectors: {
+        Row: {
+          content: string
+          embedding: string | null
+          id: number
+          metadata: Json | null
+        }
+        Insert: {
+          content: string
+          embedding?: string | null
+          id?: never
+          metadata?: Json | null
+        }
+        Update: {
+          content?: string
+          embedding?: string | null
+          id?: never
+          metadata?: Json | null
+        }
+        Relationships: []
       }
       message_room_members: {
         Row: {
@@ -2553,6 +2699,8 @@ export type Database = {
           report_type: string | null
           snapshot_json: Json | null
           status: Database["public"]["Enums"]["report_request_status"]
+          sub1_input_json: Json | null
+          sub2_input_json: Json | null
           updated_at: string
           user_id: string
         }
@@ -2564,6 +2712,8 @@ export type Database = {
           report_type?: string | null
           snapshot_json?: Json | null
           status?: Database["public"]["Enums"]["report_request_status"]
+          sub1_input_json?: Json | null
+          sub2_input_json?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -2575,6 +2725,8 @@ export type Database = {
           report_type?: string | null
           snapshot_json?: Json | null
           status?: Database["public"]["Enums"]["report_request_status"]
+          sub1_input_json?: Json | null
+          sub2_input_json?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -2835,6 +2987,60 @@ export type Database = {
           sort_order?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      section_map: {
+        Row: {
+          active: boolean
+          axis_tags: string | null
+          book_code: string
+          book_title: string
+          bucket: string
+          chapter_no: number | null
+          chapter_root: string | null
+          created_at: string
+          id: number
+          level: number
+          parent_title: string | null
+          section_title: string
+          tags: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          axis_tags?: string | null
+          book_code: string
+          book_title: string
+          bucket: string
+          chapter_no?: number | null
+          chapter_root?: string | null
+          created_at?: string
+          id?: never
+          level: number
+          parent_title?: string | null
+          section_title: string
+          tags?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          axis_tags?: string | null
+          book_code?: string
+          book_title?: string
+          bucket?: string
+          chapter_no?: number | null
+          chapter_root?: string | null
+          created_at?: string
+          id?: never
+          level?: number
+          parent_title?: string | null
+          section_title?: string
+          tags?: string | null
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -3335,6 +3541,9 @@ export type Database = {
       ingredient_target_evidence_full_view: {
         Row: {
           axis_weight: number | null
+          effect:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           evidence_count: number | null
           evidence_created_at: string | null
           evidence_id: string | null
@@ -3390,13 +3599,6 @@ export type Database = {
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
-            isOneToOne: false
-            referencedRelation: "health_profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "health_profiles_view"
@@ -3406,7 +3608,7 @@ export type Database = {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "health_profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
@@ -3419,13 +3621,20 @@ export type Database = {
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
@@ -3673,6 +3882,7 @@ export type Database = {
       habit_category: "exercise" | "sleep" | "supplement" | "diet" | "therapy"
       habit_time_block: "am" | "noon" | "pm" | "bed"
       habit_time_slot: "am" | "noon" | "pm" | "bed"
+      ingredient_target_evidence_effect: "inhibit" | "activate"
       level: "1" | "2" | "3" | "4" | "5"
       location:
         | "seoul"
@@ -3855,6 +4065,7 @@ export const Constants = {
       habit_category: ["exercise", "sleep", "supplement", "diet", "therapy"],
       habit_time_block: ["am", "noon", "pm", "bed"],
       habit_time_slot: ["am", "noon", "pm", "bed"],
+      ingredient_target_evidence_effect: ["inhibit", "activate"],
       level: ["1", "2", "3", "4", "5"],
       location: [
         "seoul",

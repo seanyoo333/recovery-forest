@@ -278,7 +278,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     if (week7AxisScoresList.length > 0) {
       for (const axis of [
-        "metabolic_pressure",
+        "metabolic_stability",
         "immune_balance",
         "abnormal_signals",
         "neuro_stress",
@@ -294,7 +294,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     if (month30AxisScoresList.length > 0) {
       for (const axis of [
-        "metabolic_pressure",
+        "metabolic_stability",
         "immune_balance",
         "abnormal_signals",
         "neuro_stress",
@@ -311,7 +311,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     // 기준선 계산: 0.7 * week7Avg + 0.3 * month30Avg
     const baselineAxisScores: Record<string, number> = {};
     for (const axis of [
-      "metabolic_pressure",
+      "metabolic_stability",
       "immune_balance",
       "abnormal_signals",
       "neuro_stress",

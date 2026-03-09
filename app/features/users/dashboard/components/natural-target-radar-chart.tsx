@@ -231,7 +231,7 @@ export function NaturalTargetRadarChart({
             천연물 기여: {topIngredients
               .map((ing) => {
                 const axisLabels: Record<string, string> = {
-                  metabolic_pressure: "대사안정화",
+                  metabolic_stability: "대사안정화",
                   immune_balance: "면역균형",
                   abnormal_signals: "신호조절",
                   neuro_stress: "신경스트레스",

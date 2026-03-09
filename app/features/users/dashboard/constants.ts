@@ -114,7 +114,7 @@ export const GRACE_PER_WEEK = 1; // 주 1회 보호
  * 레이더 차트 메타축 정의 (5축)
  */
 export const META_AXES = [
-  "metabolic_pressure", // 대사 안정화
+  "metabolic_stability", // 대사 안정화
   "immune_balance", // 면역 균형
   "abnormal_signals", // 비정상 신호조절
   "neuro_stress", // 신경·스트레스 개입
@@ -127,7 +127,7 @@ export type MetaAxis = (typeof META_AXES)[number];
  * 메타축 라벨
  */
 export const AXIS_LABEL: Record<MetaAxis, string> = {
-  metabolic_pressure: "대사 안정화",
+  metabolic_stability: "대사 안정화",
   immune_balance: "면역 균형",
   abnormal_signals: "비정상 신호조절",
   neuro_stress: "신경·스트레스",
@@ -143,28 +143,28 @@ export const HABIT_TO_AXIS_WEIGHT: Record<
   Partial<Record<MetaAxis, number>>
 > = {
   exercise: {
-    metabolic_pressure: 0.35,
+    metabolic_stability: 0.35,
     immune_balance: 0.3,
     abnormal_signals: 0.1,
     neuro_stress: 0.15,
     recovery: 0.1,
   },
   sleep: {
-    metabolic_pressure: 0.1,
+    metabolic_stability: 0.1,
     immune_balance: 0.25,
     abnormal_signals: 0.1,
     neuro_stress: 0.4,
     recovery: 0.15,
   },
   diet: {
-    metabolic_pressure: 0.45,
+    metabolic_stability: 0.45,
     immune_balance: 0.25,
     abnormal_signals: 0.2,
     neuro_stress: 0.05,
     recovery: 0.05,
   },
   therapy: {
-    metabolic_pressure: 0.1,
+    metabolic_stability: 0.1,
     immune_balance: 0.2,
     abnormal_signals: 0.2,
     neuro_stress: 0.4,
@@ -172,7 +172,7 @@ export const HABIT_TO_AXIS_WEIGHT: Record<
   },
   supplement: {
     // supplement는 생활습관 점수에 포함되지 않음 (천연물 점수로만 계산)
-    metabolic_pressure: 0,
+    metabolic_stability: 0,
     immune_balance: 0,
     abnormal_signals: 0,
     neuro_stress: 0,
@@ -211,37 +211,37 @@ export const SUPPLEMENT_CALCULATION_CONSTANTS = {
  * 타겟 슬러그 → 메타축 매핑 (5축)
  * 
  * 각 타겟이 어떤 메타축에 속하는지 정의
- * - metabolic_pressure: 대사 안정화 관련 타겟
+ * - metabolic_stability: 대사 안정화 관련 타겟
  * - immune_balance: 면역 균형 관련 타겟
  * - abnormal_signals: 비정상 신호조절 관련 타겟
  * - neuro_stress: 신경·스트레스 관련 타겟 (현재 타겟 없음)
  * - recovery: 회복증진 관련 타겟
  */
 export const TARGET_TO_META_AXIS: Record<string, MetaAxis> = {
-  // 대사 안정화 (metabolic_pressure)
-  insulin: "metabolic_pressure",
-  igf1: "metabolic_pressure",
-  glut1: "metabolic_pressure",
-  aerobic_glycolysis: "metabolic_pressure",
-  ppp: "metabolic_pressure",
-  hexokinase2: "metabolic_pressure",
-  oxphos: "metabolic_pressure",
-  complex1: "metabolic_pressure",
-  pdh: "metabolic_pressure",
-  pdk: "metabolic_pressure",
-  ampk: "metabolic_pressure",
-  mtor: "metabolic_pressure",
-  glutaminolysis: "metabolic_pressure",
-  glutamine_transport: "metabolic_pressure",
-  glutaminase: "metabolic_pressure",
-  gdh_kgdh: "metabolic_pressure",
-  srebp1: "metabolic_pressure",
-  srebp2: "metabolic_pressure",
-  acly: "metabolic_pressure",
-  fas: "metabolic_pressure",
-  mevalonate: "metabolic_pressure",
-  fao: "metabolic_pressure",
-  ldlr: "metabolic_pressure",
+  // 대사 안정화 (metabolic_stability)
+  insulin: "metabolic_stability",
+  igf1: "metabolic_stability",
+  glut1: "metabolic_stability",
+  aerobic_glycolysis: "metabolic_stability",
+  ppp: "metabolic_stability",
+  hexokinase2: "metabolic_stability",
+  oxphos: "metabolic_stability",
+  complex1: "metabolic_stability",
+  pdh: "metabolic_stability",
+  pdk: "metabolic_stability",
+  ampk: "metabolic_stability",
+  mtor: "metabolic_stability",
+  glutaminolysis: "metabolic_stability",
+  glutamine_transport: "metabolic_stability",
+  glutaminase: "metabolic_stability",
+  gdh_kgdh: "metabolic_stability",
+  srebp1: "metabolic_stability",
+  srebp2: "metabolic_stability",
+  acly: "metabolic_stability",
+  fas: "metabolic_stability",
+  mevalonate: "metabolic_stability",
+  fao: "metabolic_stability",
+  ldlr: "metabolic_stability",
 
   // 면역 균형 (immune_balance)
   nfkb: "immune_balance",

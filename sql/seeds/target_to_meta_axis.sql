@@ -17,7 +17,7 @@ WITH managed_targets AS (
     -- immune_balance
     'tlr4','tlr9','il1','il6','cox','pge2',
 
-    -- metabolic_pressure
+    -- metabolic_stability
     'insulin','igf1','glut1','aerobic_glycolysis','pppathway','hexokinase2',
     'oxphos','complex1','pdh','pdk',
     'srebp1','srebp2','acly','fas','mevalonate','fao','ldlr','acetate-srebp-1','mevalonate-srebp-2',
@@ -33,10 +33,10 @@ DELETE FROM target_to_meta_axis
 WHERE target_id IN (SELECT id FROM managed_targets);
 
 -- =========================
--- 대사 안정화 (metabolic_pressure)
+-- 대사 안정화 (metabolic_stability)
 -- =========================
 INSERT INTO target_to_meta_axis (target_id, target_slug, meta_axis, axis_weight)
-SELECT id, slug, 'metabolic_pressure', 1.0 FROM natural_targets
+SELECT id, slug, 'metabolic_stability', 1.0 FROM natural_targets
 WHERE slug IN (
   'insulin','igf1',
   'glut1','aerobic_glycolysis','pppathway','hexokinase2',
@@ -89,12 +89,12 @@ SET axis_weight = EXCLUDED.axis_weight, target_slug = EXCLUDED.target_slug;
 -- =========================
 -- 회복증진 (recovery)
 -- =========================
-INSERT INTO target_to_meta_axis (target_id, meta_axis, axis_weight)
-SELECT id, 'recovery', 1.0 FROM natural_targets
+INSERT INTO target_to_meta_axis (target_id, target_slug, meta_axis, axis_weight)
+SELECT id, slug, 'recovery', 1.0 FROM natural_targets
 WHERE slug IN (
   'mmp2','mmp3','mmp9',
   'vegf','pdgf','tgfb','hif',
   'ros','glutathione','caspases','bcl2_bax','fas_receptor','caspase3'
 )
 ON CONFLICT (target_id, meta_axis) DO UPDATE
-SET axis_weight = EXCLUDED.axis_weight;
+SET axis_weight = EXCLUDED.axis_weight, target_slug = EXCLUDED.target_slug;

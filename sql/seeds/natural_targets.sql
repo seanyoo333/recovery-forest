@@ -36,7 +36,7 @@ VALUES
   ('pge2', 'PGE2', '염증성 프로스타글란딘으로 면역억제/염증 축에서 언급됨'),
 
 
-  -- 대사 안정화 (metabolic_pressure) - 포도당/해당 및 관련 대사
+  -- 대사 안정화 (metabolic_stability) - 포도당/해당 및 관련 대사
   ('insulin', 'Insulin', '대사/성장 신호에서 중요한 호르몬으로 언급됨'),
   ('glut1', 'GLUT1', '암세포에서 포도당 흡수 증가와 관련된 수송체로 언급됨'),
   ('aerobic_glycolysis', 'Aerobic glycolysis', '와버그 효과 관련 포도당 대사 경로로 언급됨'),
@@ -47,7 +47,7 @@ VALUES
   ('pdh', 'Pyruvate dehydrogenase (PDH)', 'DCA가 활성화한다고 언급된 미토콘드리아 포도당 산화 관련 효소'),
   ('pdk', 'Pyruvate dehydrogenase kinase (PDK)', 'DCA가 억제한다고 언급된 PDH 조절 효소'),
 
-  -- 대사 안정화 (metabolic_pressure) - 지질/콜레스테롤/지방산 축
+  -- 대사 안정화 (metabolic_stability) - 지질/콜레스테롤/지방산 축
   ('srebp1', 'SREBP-1', '지방산 합성 조절 축으로 언급됨'),
   ('srebp2', 'SREBP-2', '콜레스테롤/메발론산 경로 조절 축으로 언급됨'),
   ('acly', 'ACLY', 'ATP 시트르산 분해효소로 지방 대사 축에서 언급됨'),
@@ -59,7 +59,7 @@ VALUES
   ('mevalonate-srebp-2', 'Mevalonate-SREBP-2', '콜레스테롤/메발론산 경로 조절 축으로 언급됨'),
 
 
-  -- 대사 안정화 (metabolic_pressure) - 아미노산/자가포식/핵산 재활용
+  -- 대사 안정화 (metabolic_stability) - 아미노산/자가포식/핵산 재활용
   ('igf1', 'IGF-1', '인슐린 유사 성장인자로 차단이 중요하다고 언급됨'),
   ('mtor', 'mTOR', 'AMPK와 연관된 주요 대사 조절 축으로 언급됨'),
   ('glutaminolysis', 'Glutaminolysis', '공격적 암/전이암에서 활성화될 수 있는 글루타민 대사로 언급됨'),

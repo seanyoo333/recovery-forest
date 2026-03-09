@@ -433,7 +433,7 @@ export const targetToMetaAxis = pgTable(
     meta_axis: text()
       .notNull()
       .$type<
-        | "metabolic_pressure"
+        | "metabolic_stability"
         | "immune_balance"
         | "abnormal_signals"
         | "neuro_stress"
@@ -443,7 +443,7 @@ export const targetToMetaAxis = pgTable(
     axis_label: text("axis_label").generatedAlwaysAs(
       (): SQL =>
         sql`CASE ${targetToMetaAxis.meta_axis}
-          WHEN 'metabolic_pressure' THEN '대사 안정화'
+          WHEN 'metabolic_stability' THEN '대사 안정화'
           WHEN 'immune_balance' THEN '면역 균형'
           WHEN 'abnormal_signals' THEN '비정상 신호조절'
           WHEN 'neuro_stress' THEN '신경·스트레스 개입'
@@ -454,8 +454,8 @@ export const targetToMetaAxis = pgTable(
     axis_description: text("axis_description").generatedAlwaysAs(
       (): SQL =>
         sql`CASE ${targetToMetaAxis.meta_axis}
-          WHEN 'metabolic_pressure' THEN '암세포의 포도당, 단백질, 지방 대사 억제'
-          WHEN 'immune_balance' THEN '면역비율(th1/th2), 면역관문, 순환종양세포(CTC), 마이크로 바이옴'
+          WHEN 'metabolic_stability' THEN '암세포의 포도당, 단백질, 지방 대사 억제'
+          WHEN 'immune_balance' THEN '면역비율(th1/th2), 면역관문, 순환종양세포(CTC), 종양미세환경, 염증신호, 마이크로 바이옴'
           WHEN 'abnormal_signals' THEN '성장인자, 침윤 및 전이 인자, 호르몬'
           WHEN 'neuro_stress' THEN '자율신경+면역대사, 세포자멸사+치료민감도'
           WHEN 'recovery' THEN '후성유전, 미토콘드리아 회복, 인체회복, 디톡스'

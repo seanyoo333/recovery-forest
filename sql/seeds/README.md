@@ -59,7 +59,7 @@ psql -U postgres -d your_database -f sql/seeds/ingredient_target_evidence.sql
 
 ### target_to_meta_axis
 - 타겟 → 5축 매핑
-  - `metabolic_pressure`: 대사 안정화 (22개 타겟)
+  - `metabolic_stability`: 대사 안정화 (22개 타겟)
   - `immune_balance`: 면역 균형 (7개 타겟)
   - `abnormal_signals`: 비정상 신호조절 (12개 타겟)
   - `neuro_stress`: 신경·스트레스 (현재 타겟 없음)

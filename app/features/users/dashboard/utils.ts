@@ -706,7 +706,7 @@ export function computeLifestyleAxisScores(
 
   // 2. 축별 생활습관 점수 계산
   const axisScores: Record<MetaAxis, number> = {
-    metabolic_pressure: 0,
+    metabolic_stability: 0,
     immune_balance: 0,
     abnormal_signals: 0,
     neuro_stress: 0,
@@ -714,7 +714,7 @@ export function computeLifestyleAxisScores(
   };
 
   const axisWeights: Record<MetaAxis, number> = {
-    metabolic_pressure: 0,
+    metabolic_stability: 0,
     immune_balance: 0,
     abnormal_signals: 0,
     neuro_stress: 0,
@@ -876,7 +876,7 @@ export function computeSupplementAxisScores(
 
   // 5. 축별 점수 계산 (상위 2개 핵심 + 나머지 롱테일)
   const rawAxisScores: Record<MetaAxis, number> = {
-    metabolic_pressure: 0,
+    metabolic_stability: 0,
     immune_balance: 0,
     abnormal_signals: 0,
     neuro_stress: 0,
