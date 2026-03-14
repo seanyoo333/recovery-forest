@@ -75,7 +75,7 @@ const menus = [
     name: "소개",
     to: "/landing",
   },
-  {
+  /* {
     name: "기능의학 병원",
     to: "/clinic",
     items: [
@@ -85,7 +85,7 @@ const menus = [
         to: "/clinic",
       },
     ],
-  },
+  }, */
   {
     name: "커뮤니티",
     to: "/community",
@@ -155,7 +155,7 @@ const menus = [
       },
     ],
   },
-  {
+  /* {
     name: "전문가 그룹",
     to: "/teams",
     items: [
@@ -175,19 +175,19 @@ const menus = [
         to: "/programs",
       },
     ],
-  },
-  {
+  }, */
+ /*  {
     name: "EVIDENCE BASE AI 챗봇",
     to: "/chat",
   },
   {
     name: "결제",
     to: "/payments/checkout",
-  },
-  {
+  }, */
+/*   {
     name: "법적 문서",
     to: "/legal/terms",
-  },
+  }, */
 ];
 
 /**
