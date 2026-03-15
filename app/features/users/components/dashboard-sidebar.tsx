@@ -1,5 +1,5 @@
+import { FEATURES } from "~/core/config/features";
 import {
-  AudioWaveformIcon,
   BookOpenIcon,
   BotIcon,
   BriefcaseIcon,
@@ -50,15 +50,15 @@ const data = {
       isActive: true,
       items: [
         {
-          title: "혈액검사 현황",
+          title: "건강정보",
           url: "/my/dashboard/health",
         },
         {
-          title: "생활습관 관리",
+          title: "생활습관",
           url: "/my/dashboard/health-habits",
         },
         {
-          title: "개인 맞춤 건강 보고서",
+          title: "맞춤 건강 보고서",
           url: "/my/dashboard/health/report",
         },
       ],
@@ -160,23 +160,25 @@ export default function DashboardSidebar({
 
         {/* 구분선 */}
         <div className="border-border my-2 border-t" />
-        {/* Messages Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Messages</SidebarGroupLabel>
-          <SidebarMenu>
-            {messages.map((message) => (
-              <MessageRoomCard
-                key={message.message_room_id}
-                id={message.message_room_id.toString()}
-                name={message.name}
-                avatarUrl={message.avatar ?? ""}
-                lastMessage={message.last_message ?? ""}
-                lastTime={message.last_time ?? ""}
-                isRead={message.is_read ?? false}
-              />
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
+        {/* Messages Section (MVP: 숨김) */}
+        {FEATURES.userMessages && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Messages</SidebarGroupLabel>
+            <SidebarMenu>
+              {messages.map((message) => (
+                <MessageRoomCard
+                  key={message.message_room_id}
+                  id={message.message_room_id.toString()}
+                  name={message.name}
+                  avatarUrl={message.avatar ?? ""}
+                  lastMessage={message.last_message ?? ""}
+                  lastTime={message.last_time ?? ""}
+                  isRead={message.is_read ?? false}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
 
         {/* <SidebarProjects projects={data.projects} /> */}
       </SidebarContent>

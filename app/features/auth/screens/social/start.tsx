@@ -45,7 +45,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   // Validate the provider parameter
   const { error, success, data: parsedParams } = paramsSchema.safeParse(params);
   if (!success) {
-    return redirect("/auth/login");
+    return redirect("/login");
   }
 
   // Create Supabase client and get response headers for auth cookies

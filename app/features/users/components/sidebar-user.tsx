@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
+
 import {
   Avatar,
   AvatarFallback,
@@ -99,12 +101,15 @@ export default function SidebarUser({
                   Account
                 </Link>
               </DropdownMenuItem> */}
-              <DropdownMenuItem asChild>
-                <Link to="/my/messages">
-                  <CreditCard />
-                  메세지
-                </Link>
-              </DropdownMenuItem>
+              {/* 사용자 메시지 (MVP: 숨김) */}
+              {FEATURES.userMessages && (
+                <DropdownMenuItem asChild>
+                  <Link to="/my/messages">
+                    <CreditCard />
+                    메세지
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link to="/my/notifications">
                   <Bell />

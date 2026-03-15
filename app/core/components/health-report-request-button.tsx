@@ -4,7 +4,7 @@
  * Reusable button that opens a modal to collect minimal health info
  * and POSTs to n8n webhook. Redirects to login if not authenticated.
  */
-import { CheckCircle2, FileText, Info, UserPlus } from "lucide-react";
+import { CheckCircle2, Coins, FileText, Info, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
@@ -32,11 +32,14 @@ import {
 import {
   type HealthReportPayload,
   HEALTH_REPORT_PAGE_PATH,
+  HEALTH_REPORT_PENDING_KEY,
+  HEALTH_REPORT_POINT_PRICE,
   type TopConcern,
   type TreatmentStage,
   type WeeklyExerciseFreq,
   requestHealthReport,
 } from "~/core/lib/health-report";
+import { getCheckoutUrl } from "~/core/lib/payment-constants";
 
 const TOP_CONCERN_LABELS: Record<TopConcern, string> = {
   fatigue: "피로",
@@ -108,12 +111,28 @@ export function HealthReportRequestButton({
   >("");
   const [medsOrSupps, setMedsOrSupps] = useState("");
   const [goal8weeks, setGoal8weeks] = useState("");
+  const [consentSensitive, setConsentSensitive] = useState(false);
+  const [consentOverseas, setConsentOverseas] = useState(false);
+  const [consentAiNotice, setConsentAiNotice] = useState(false);
+  const [consentMedicalDisclaimer, setConsentMedicalDisclaimer] = useState(false);
+
+  const allConsentChecked =
+    consentSensitive && consentOverseas && consentAiNotice && consentMedicalDisclaimer;
+  const handleAgreeAllConsent = (checked: boolean) => {
+    setConsentSensitive(checked);
+    setConsentOverseas(checked);
+    setConsentAiNotice(checked);
+    setConsentMedicalDisclaimer(checked);
+  };
 
   const rootData = useRouteLoaderData("root") as {
     user?: { id: string } | null;
+    userPoints?: number;
   } | null;
   const userId = rootData?.user?.id ?? null;
+  const userPoints = rootData?.userPoints ?? 0;
   const isLoggedIn = !!userId;
+  const hasEnoughPoints = userPoints >= HEALTH_REPORT_POINT_PRICE;
   const location = useLocation();
   const pagePath = location.pathname;
 
@@ -124,6 +143,9 @@ export function HealthReportRequestButton({
   };
 
   const validate = (): string | null => {
+    if (!consentSensitive || !consentOverseas || !consentAiNotice || !consentMedicalDisclaimer) {
+      return "모든 필수 동의 항목에 체크해 주세요.";
+    }
     if (!treatmentStage) return "치료 단계를 선택해주세요.";
     if (topConcerns.length === 0) return "관심 항목을 1~2개 선택해주세요.";
     const sleep = parseFloat(avgSleepHours);
@@ -133,7 +155,18 @@ export function HealthReportRequestButton({
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const buildPayload = (): HealthReportPayload => ({
+    treatment_stage: treatmentStage as TreatmentStage,
+    cancer_type: cancerType.trim() || undefined,
+    top_concerns: topConcerns,
+    avg_sleep_hours: parseFloat(avgSleepHours),
+    weekly_exercise_freq: weeklyExerciseFreq as WeeklyExerciseFreq,
+    meds_or_supps: medsOrSupps.trim() || undefined,
+    goal_8weeks: goal8weeks.trim() || undefined,
+    source: { page: pagePath, cta: sourceTag },
+  });
+
+  const handleSubmitPointPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     const err = validate();
     if (err) {
@@ -144,20 +177,13 @@ export function HealthReportRequestButton({
       toast.error("로그인이 필요합니다.");
       return;
     }
+    if (!hasEnoughPoints) {
+      toast.error(`포인트가 부족합니다. (필요: ${HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)`);
+      return;
+    }
 
     setSubmitting(true);
-    const payload: HealthReportPayload = {
-      treatment_stage: treatmentStage as TreatmentStage,
-      cancer_type: cancerType.trim() || undefined,
-      top_concerns: topConcerns,
-      avg_sleep_hours: parseFloat(avgSleepHours),
-      weekly_exercise_freq: weeklyExerciseFreq as WeeklyExerciseFreq,
-      meds_or_supps: medsOrSupps.trim() || undefined,
-      goal_8weeks: goal8weeks.trim() || undefined,
-      source: { page: pagePath, cta: sourceTag },
-    };
-
-    const result = await requestHealthReport(payload);
+    const result = await requestHealthReport(buildPayload());
     setSubmitting(false);
 
     if (result.success) {
@@ -169,15 +195,37 @@ export function HealthReportRequestButton({
     }
   };
 
+  const handleCardPayment = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const err = validate();
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    try {
+      sessionStorage.setItem(
+        HEALTH_REPORT_PENDING_KEY,
+        JSON.stringify(buildPayload()),
+      );
+      window.location.href = getCheckoutUrl("health_report");
+    } catch {
+      toast.error("결제 페이지로 이동할 수 없습니다.");
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <Button variant={variant} asChild>
-        <Link to="/login">건강 리포트 요청</Link>
+        <Link to="/login">건강 보고서 요청</Link>
       </Button>
     );
   }
 
   const resetFormState = () => {
+    setConsentSensitive(false);
+    setConsentOverseas(false);
+    setConsentAiNotice(false);
+    setConsentMedicalDisclaimer(false);
     setTreatmentStage("");
     setCancerType("");
     setTopConcerns([]);
@@ -200,7 +248,7 @@ export function HealthReportRequestButton({
           {label}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         {showSuccess ? (
           <>
             <DialogHeader>
@@ -215,26 +263,54 @@ export function HealthReportRequestButton({
             </DialogHeader>
             <div className="pt-2">
               <Button asChild className="w-full">
-                <Link to={HEALTH_REPORT_PAGE_PATH}>내 리포트 보기</Link>
+                <Link to={HEALTH_REPORT_PAGE_PATH}>내 보고서 보기</Link>
               </Button>
             </div>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>건강 리포트 요청</DialogTitle>
+              <DialogTitle>건강 보고서 요청</DialogTitle>
               <DialogDescription>
-                간단한 정보를 입력하면 맞춤 건강 리포트 초안을 만들어 드립니다.
+                지피지기면 백전불태. 건강한 삶을 위한 건강 전략 지도.
               </DialogDescription>
             </DialogHeader>
+            <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/50 p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Coins className="text-muted-foreground size-4" />
+                <span className="font-medium">보유 포인트</span>
+                <span className={hasEnoughPoints ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}>
+                  {userPoints.toLocaleString()}P
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  (필요: {HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)
+                </span>
+              </div>
+              {!hasEnoughPoints && (
+                <Button variant="default" size="sm" asChild>
+                  <Link
+                    to={getCheckoutUrl("point")}
+                    onClick={() => setOpen(false)}
+                  >
+                    포인트 충전
+                  </Link>
+                </Button>
+              )}
+            </div>
             <div className="bg-muted/50 flex gap-3 rounded-lg border p-3 text-sm">
               <Info className="text-muted-foreground size-4 shrink-0" />
               <div className="space-y-2">
+                <p className="font-medium">
+                  기본 정보가 부족하면 리포트 내용이 제한될 수 있습니다.
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  환자 프로필, 혈액검사, 생활습관 등이 충분히 입력되어 있을수록 맞춤형 리포트 품질이 높아집니다.
+                </p>
                 <p>개인 맞춤 리포트를 위해 다음 정보 입력이 필요합니다:</p>
                 <ul className="text-muted-foreground list-inside list-disc space-y-0.5 text-xs">
                   <li>환자 기본 정보 (나이, 성별, 질환 등)</li>
                   <li>혈액검사 정보</li>
-                  <li>생활습관</li>
+                  <li>생활습관 기록</li>
                 </ul>
                 <Button
                   variant="outline"
@@ -252,7 +328,51 @@ export function HealthReportRequestButton({
                 </Button>
               </div>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmitPointPayment} className="space-y-4">
+              <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+                <div className="flex items-start gap-2 rounded-md border border-amber-400/50 bg-amber-100/50 p-2 dark:border-amber-600 dark:bg-amber-900/30">
+                  <Checkbox
+                    id="agreeAllConsent"
+                    checked={allConsentChecked}
+                    onCheckedChange={(v) => handleAgreeAllConsent(!!v)}
+                  />
+                  <label htmlFor="agreeAllConsent" className="cursor-pointer text-sm font-medium">
+                    전체 동의
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">[필수] 아래 항목에 모두 동의해 주세요.</p>
+                <div className="space-y-2">
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <Checkbox
+                      checked={consentSensitive}
+                      onCheckedChange={(v) => setConsentSensitive(!!v)}
+                    />
+                    <span>건강정보(민감정보) 수집·이용에 동의합니다.</span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <Checkbox
+                      checked={consentOverseas}
+                      onCheckedChange={(v) => setConsentOverseas(!!v)}
+                    />
+                    <span>개인정보의 국외 이전에 동의합니다.</span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <Checkbox
+                      checked={consentAiNotice}
+                      onCheckedChange={(v) => setConsentAiNotice(!!v)}
+                    />
+                    <span>AI 분석 및 자동화된 처리 안내를 확인했습니다.</span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <Checkbox
+                      checked={consentMedicalDisclaimer}
+                      onCheckedChange={(v) => setConsentMedicalDisclaimer(!!v)}
+                    />
+                    <span>본 서비스는 의료행위가 아니며, 진단·처방을 대체하지 않음을 이해했습니다.</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>치료 단계 *</Label>
                 <Select
@@ -358,8 +478,24 @@ export function HealthReportRequestButton({
                 >
                   취소
                 </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "요청 중..." : "요청하기"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCardPayment}
+                  disabled={submitting}
+                >
+                  카드로 결제 ({HEALTH_REPORT_POINT_PRICE.toLocaleString()}원)
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting || !hasEnoughPoints}
+                  title={
+                    !hasEnoughPoints
+                      ? `포인트가 부족합니다. (필요: ${HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)`
+                      : undefined
+                  }
+                >
+                  {submitting ? "요청 중..." : "포인트로 요청"}
                 </Button>
               </DialogFooter>
             </form>

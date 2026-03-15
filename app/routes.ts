@@ -53,6 +53,18 @@ export default [
       "/health-report-request",
       "features/users/api/health-report-request.tsx",
     ),
+    route(
+      "/health-report-complete-payment",
+      "features/users/api/health-report-complete-payment.tsx",
+    ),
+    route(
+      "/health-report-pdf",
+      "features/users/api/health-report-pdf.tsx",
+    ),
+    route(
+      "/health-report-pdf-download",
+      "features/users/api/health-report-pdf-download.tsx",
+    ),
   ]),
 
   layout("core/layouts/navigation.layout.tsx", [
@@ -101,14 +113,28 @@ export default [
 
     route("/contact", "features/contact/screens/contact-us.tsx"),
 
-    ...prefix("community", [
-      index("features/community/pages/community-page.tsx"),
-      route("/submit", "features/community/pages/submit-post-page.tsx"),
-      route("/:postId", "features/community/pages/post-page.tsx"),
-      route("/:postId/edit", "features/community/pages/edit-post-page.tsx"),
-      route("/:postId/upvote", "features/community/pages/upvote-post-page.tsx"),
-    ]),
+    // 커뮤니티, 천연물질, 블로그: 로그인 필요
+    layout(
+      "core/layouts/private.layout.tsx",
+      { id: "private-community" },
+      [
+        ...prefix("community", [
+          index("features/community/pages/community-page.tsx"),
+          route("/submit", "features/community/pages/submit-post-page.tsx"),
+          route("/:postId", "features/community/pages/post-page.tsx"),
+          route("/:postId/edit", "features/community/pages/edit-post-page.tsx"),
+          route(
+            "/:postId/upvote",
+            "features/community/pages/upvote-post-page.tsx",
+          ),
+        ]),
+      ],
+    ),
 
+    layout(
+      "core/layouts/private.layout.tsx",
+      { id: "private-products" },
+      [
     ...prefix("products", [
       index("features/products/pages/products-page.tsx"),
       layout("features/products/layouts/leaderboard-layout.tsx", [
@@ -172,6 +198,7 @@ export default [
         ],
       ),
     ]),
+    ]),
 
     ...prefix("teams", [
       index("features/teams/pages/teams-page.tsx"),
@@ -216,6 +243,7 @@ export default [
         index("features/users/pages/profile-page.tsx"),
         route("/teams", "features/users/pages/profile-teams-page.tsx"),
         route("/posts", "features/users/pages/profile-posts-page.tsx"),
+        route("/payments", "features/users/pages/profile-payments-page.tsx"),
       ]),
       route("/messages", "features/users/pages/send-message-page.tsx"),
       route("/welcome", "features/users/pages/welcome-page.tsx"),
@@ -273,6 +301,10 @@ export default [
           route(
             "/health/report",
             "features/users/dashboard/pages/dashboard-health-report.tsx",
+          ),
+          route(
+            "/health/report/:requestId",
+            "features/users/dashboard/pages/dashboard-health-report-detail.tsx",
           ),
           route(
             "/bookmarks",
@@ -362,10 +394,13 @@ export default [
 
   ...prefix("/legal", [route("/:slug", "features/legal/screens/policy.tsx")]),
 
-  layout("features/blog/layouts/blog.layout.tsx", [
-    ...prefix("/blog", [
-      index("features/blog/pages/posts.tsx"),
-      route("/:slug", "features/blog/pages/post.tsx"),
+  // 블로그: 로그인 필요
+  layout("core/layouts/private.layout.tsx", { id: "private-blog" }, [
+    layout("features/blog/layouts/blog.layout.tsx", [
+      ...prefix("/blog", [
+        index("features/blog/pages/posts.tsx"),
+        route("/:slug", "features/blog/pages/post.tsx"),
+      ]),
     ]),
   ]),
 ] satisfies RouteConfig;

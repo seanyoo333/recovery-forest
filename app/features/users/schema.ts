@@ -129,6 +129,9 @@ export const profiles = pgTable(
       as: "permissive",
       withCheck: sql`true`,
     }),
+    // username, email 중복 방지
+    uniqueIndex("profiles_username_unique").on(table.username),
+    uniqueIndex("profiles_email_unique").on(table.email),
   ],
 );
 

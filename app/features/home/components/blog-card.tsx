@@ -33,7 +33,7 @@ export function BlogCard({
   expanded = false,
 }: BlogCardProps) {
   return (
-    <Link to={`/blog-posts/${slug}`} className="block h-full">
+    <Link to={`/blog/${slug}`} className="block h-full">
       <Card
         className={cn(
           "neon-card !bg-background h-full cursor-pointer border transition-colors",

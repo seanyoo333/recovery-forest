@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "~/core/components/ui/card";
 import { Textarea } from "~/core/components/ui/textarea";
+import { FEATURES } from "~/core/config/features";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { updateBotMessageRoomConversationId } from "~/features/chat/mutations";
 import {
@@ -125,6 +126,7 @@ export default function BookmarkQuestionPage({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!question.trim()) return;
+    if (!FEATURES.aiChat) return; // MVP: AI 챗봇 비활성화 시 리다이렉트 차단
 
     // 북마크 컨텍스트를 포함한 질문 생성
     const enhancedQuestion = `다음은 내가 이전에 저장한 건강 관련 질문과 답변들입니다:\n\n${bookmarkContext}\n\n---\n\n위 내용들을 참고하여 다음 질문에 답변해주세요:\n\n${question}`;
@@ -201,6 +203,7 @@ export default function BookmarkQuestionPage({
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 className="resize-none"
+                disabled={!FEATURES.aiChat}
               />
               <div className="flex justify-end gap-2">
                 <Link to="/my/dashboard/bookmarks">
@@ -208,7 +211,11 @@ export default function BookmarkQuestionPage({
                     취소
                   </Button>
                 </Link>
-                <Button type="submit" disabled={!question.trim()}>
+                <Button
+                  type="submit"
+                  disabled={!question.trim() || !FEATURES.aiChat}
+                  title={!FEATURES.aiChat ? "준비 중입니다" : undefined}
+                >
                   {fetcher.state === "submitting" ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import { Form, Link, useNavigation, useRevalidator } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
 import { Button } from "~/core/components/ui/button";
 import {
   Card,
@@ -123,11 +124,14 @@ export default function DashboardBookmarksPage({
             저장한 건강 관련 질문과 답변을 관리하세요
           </p>
         </div>
-        <Link to="/chat/botmessages">
-          <Button>
-            <MessageSquare className="mr-2 h-4 w-4" />새 질문하기
-          </Button>
-        </Link>
+        {/* AI 챗봇 링크 (MVP: 숨김) */}
+        {FEATURES.aiChat && (
+          <Link to="/chat/botmessages">
+            <Button>
+              <MessageSquare className="mr-2 h-4 w-4" />새 질문하기
+            </Button>
+          </Link>
+        )}
       </div>
 
       {bookmarks.length === 0 ? (
@@ -137,11 +141,15 @@ export default function DashboardBookmarksPage({
             <p className="text-muted-foreground text-center">
               저장한 북마크가 없습니다.
               <br />
-              챗봇에서 건강 관련 질문을 하고 북마크로 저장해보세요.
+              {FEATURES.aiChat
+                ? "챗봇에서 건강 관련 질문을 하고 북마크로 저장해보세요."
+                : "AI 챗봇 기능이 준비되면 여기서 관리하실 수 있습니다."}
             </p>
-            <Link to="/chat/botmessages" className="mt-4">
-              <Button variant="outline">챗봇으로 이동</Button>
-            </Link>
+            {FEATURES.aiChat && (
+              <Link to="/chat/botmessages" className="mt-4">
+                <Button variant="outline">챗봇으로 이동</Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -258,26 +266,28 @@ export default function DashboardBookmarksPage({
                     )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <Link
-                      to={`/chat/botmessages/${bookmark.bot_message_room_id}`}
-                      className="flex-1"
-                    >
-                      <Button variant="outline" className="w-full" size="sm">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        대화 보기
-                      </Button>
-                    </Link>
-                    <Link
-                      to={`/my/dashboard/bookmarks/${bookmark.bookmark_id}/question`}
-                      className="flex-1"
-                    >
-                      <Button className="w-full" size="sm">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        기반 질문하기
-                      </Button>
-                    </Link>
-                  </div>
+                  {FEATURES.aiChat && (
+                    <div className="flex gap-2">
+                      <Link
+                        to={`/chat/botmessages/${bookmark.bot_message_room_id}`}
+                        className="flex-1"
+                      >
+                        <Button variant="outline" className="w-full" size="sm">
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          대화 보기
+                        </Button>
+                      </Link>
+                      <Link
+                        to={`/my/dashboard/bookmarks/${bookmark.bookmark_id}/question`}
+                        className="flex-1"
+                      >
+                        <Button className="w-full" size="sm">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          기반 질문하기
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

@@ -1,16 +1,14 @@
 /**
- * Payments History Page Component
+ * Profile Payments Page
  *
- * 이원화 결제 구조에 맞춘 결제 내역 페이지.
- * - payments: 일반 결제 (건강 보고서 카드 결제 등)
- * - point_payments: 포인트 충전 내역
- *
- * profile-payments-page와 동일한 구조로 통일하여 일관된 UX 제공.
+ * 프로필 내 구매내역 및 포인트 관리 페이지.
+ * 본인 프로필에서만 접근 가능하며, 보유 포인트, 구매내역, 포인트 충전 버튼을 제공합니다.
  */
-import type { Route } from "./+types/payments";
+import type { Route } from "./+types/profile-payments-page";
+
+import { Link, redirect } from "react-router";
 
 import { CoinsIcon, ReceiptIcon } from "lucide-react";
-import { Link } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/core/components/ui/card";
@@ -26,13 +24,13 @@ import { getCheckoutUrl } from "~/core/lib/payment-constants";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { requireAuthentication } from "~/features/admin/guards.server";
 
-import { getPayments, getPointPayments } from "../queries";
+import { getPayments, getPointPayments } from "../../payments/queries";
 
 export const meta: Route.MetaFunction = () => {
-  return [{ title: `결제 내역 | ${import.meta.env.VITE_APP_NAME}` }];
+  return [{ title: "결제 내역 | Evidence Base" }];
 };
 
-/** 결제 내역 레코드 (payments + point_payments 병합) */
+/** 결제 내역을 날짜 기준으로 정렬하여 병합 */
 type PaymentRecord = {
   id: number;
   order_id: string;
@@ -43,30 +41,34 @@ type PaymentRecord = {
   created_at: string;
   approved_at: string;
   type: "payment" | "point_payment";
-  points?: number;
-  /** payments 테이블 metadata.type (health_report 등) */
   metadataType?: string;
+  points?: number;
 };
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
   await requireAuthentication(client);
 
   const {
     data: { user },
   } = await client.auth.getUser();
-  if (!user) throw new Response("Unauthorized", { status: 401 });
+  if (!user) throw redirect("/login");
+
+  // 본인 프로필인지 확인 (username으로 프로필 조회)
+  const { data: profile } = await client
+    .from("profiles")
+    .select("profile_id, username, points")
+    .eq("profile_id", user.id)
+    .single();
+
+  if (!profile || profile.username !== params.username) {
+    return redirect(`/users/${params.username}`);
+  }
 
   const [payments, pointPayments] = await Promise.all([
     getPayments(client, { profileId: user.id }),
     getPointPayments(client, { profileId: user.id }),
   ]);
-
-  const { data: profile } = await client
-    .from("profiles")
-    .select("points")
-    .eq("profile_id", user.id)
-    .single();
 
   const allPayments: PaymentRecord[] = [
     ...payments.map((p) => ({
@@ -102,7 +104,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   );
 
   return {
-    points: Number(profile?.points ?? 0),
+    points: Number(profile.points ?? 0),
     payments: allPayments,
   };
 }
@@ -115,40 +117,48 @@ function formatDate(isoString: string) {
   });
 }
 
-export default function Payments({ loaderData }: Route.ComponentProps) {
+export default function ProfilePaymentsPage({
+  loaderData,
+}: Route.ComponentProps) {
   const { points, payments } = loaderData;
 
   return (
-    <div className="flex w-full flex-col items-center gap-10 pt-0 pb-8">
-      <div className="flex w-full max-w-screen-xl flex-col gap-8">
-        {/* 보유 포인트 */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">보유 포인트</CardTitle>
-            <CoinsIcon className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="text-2xl font-bold">{points.toLocaleString()}P</span>
-              <Button asChild size="sm">
-                <Link to={getCheckoutUrl("point")}>포인트 충전하기</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-8">
+      {/* 보유 포인트 */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base font-medium">보유 포인트</CardTitle>
+          <CoinsIcon className="text-muted-foreground size-4" />
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-2xl font-bold">{points.toLocaleString()}P</span>
+            <Button asChild size="sm">
+              <Link to={getCheckoutUrl("point")}>
+                포인트 구매하기
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* 구매 내역 */}
-        <Card className="p-8">
-          <h3 className="mb-4 text-lg font-semibold">구매 내역</h3>
-          {payments.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-10">
+      {/* 구매 내역 */}
+      <div className="space-y-4">
+        <h4 className="text-lg font-bold">구매 내역</h4>
+        {payments.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 py-10">
               <ReceiptIcon className="text-muted-foreground size-12" />
               <p className="text-muted-foreground">결제 내역이 없습니다.</p>
               <Button asChild variant="outline">
-                <Link to={getCheckoutUrl("point")}>포인트 충전하기</Link>
+                <Link to={getCheckoutUrl("point")}>
+                  포인트 구매하기
+                </Link>
               </Button>
-            </div>
-          ) : (
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -201,8 +211,8 @@ export default function Payments({ loaderData }: Route.ComponentProps) {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   );

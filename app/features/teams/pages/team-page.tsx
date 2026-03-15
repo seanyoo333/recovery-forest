@@ -2,6 +2,7 @@ import type { Route } from "./+types/team-page";
 
 import { Form, Link, useOutletContext } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
 import { Hero } from "~/core/components/hero";
 import InputPair from "~/core/components/input-pair";
 import {
@@ -124,27 +125,30 @@ export default function TeamPage({ loaderData }: Route.ComponentProps) {
               </Badge>
             </div>
           </div>
-          {userId && userId === loaderData.team.team_leader_id ? null : (
-            <Form
-              className="space-y-5"
-              method="post"
-              action={`/users/${teamLeader.username}/messages`}
-            >
-              <InputPair
-                label="소개하기"
-                description="당신의 소개를 입력하세요"
-                name="content"
-                type="text"
-                id="introduction"
-                required
-                textArea
-                placeholder="i.e. 산림치유를 통해 더 건강해 지고 싶습니다."
-              />
-              <Button type="submit" className="w-full font-bold">
-                메세지 보내기
-              </Button>
-            </Form>
-          )}
+          {/* 사용자 메시지 (MVP: 숨김) */}
+          {FEATURES.userMessages &&
+            userId &&
+            userId !== loaderData.team.team_leader_id && (
+              <Form
+                className="space-y-5"
+                method="post"
+                action={`/users/${teamLeader.username}/messages`}
+              >
+                <InputPair
+                  label="소개하기"
+                  description="당신의 소개를 입력하세요"
+                  name="content"
+                  type="text"
+                  id="introduction"
+                  required
+                  textArea
+                  placeholder="i.e. 산림치유를 통해 더 건강해 지고 싶습니다."
+                />
+                <Button type="submit" className="w-full font-bold">
+                  메세지 보내기
+                </Button>
+              </Form>
+            )}
         </aside>
       </div>
     </div>

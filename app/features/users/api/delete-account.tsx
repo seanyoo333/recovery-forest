@@ -52,7 +52,7 @@ export async function action({ request }: Route.ActionArgs) {
   requireMethod("DELETE")(request);
 
   // Create a server-side Supabase client with the user's session
-  const [client] = makeServerClient(request);
+  const [client, headers] = makeServerClient(request);
 
   // Verify the user is authenticated
   await requireAuthentication(client);
@@ -86,6 +86,9 @@ export async function action({ request }: Route.ActionArgs) {
     // This is just cleanup of associated resources
   }
 
-  // Redirect to home page after successful deletion
-  return redirect("/");
+  // Sign out to clear auth cookies (prevents 500 when redirecting to home)
+  await client.auth.signOut();
+
+  // Redirect to home page with cookie-clearing headers
+  return redirect("/", { headers });
 }

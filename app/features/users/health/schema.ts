@@ -999,6 +999,13 @@ export const reportRequestStatusEnum = pgEnum("report_request_status", [
   "draft_ready",
   "under_review",
   "completed",
+  "failed",
+]);
+
+/** health_reports.pdf_status: PDF 생성 상태 */
+export const healthReportPdfStatusEnum = pgEnum("health_report_pdf_status", [
+  "pdf_generating",
+  "pdf_ready",
 ]);
 
 export const reportRequests = pgTable(
@@ -1067,6 +1074,8 @@ export const healthReports = pgTable(
     report_json: jsonb().$type<Record<string, unknown>>(),
     report_html: text(),
     pdf_url: text(),
+    pdf_path: text(),
+    pdf_status: healthReportPdfStatusEnum(),
     created_at: timestamp()
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')`),

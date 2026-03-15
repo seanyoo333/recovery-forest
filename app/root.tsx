@@ -49,7 +49,11 @@ import makeServerClient from "./core/lib/supa-client.server";
 import { themeSessionResolver } from "./core/lib/theme-session.server";
 import { cn } from "./core/lib/utils";
 import NotFound from "./core/screens/404";
-import { countNotifications, getUserById } from "./features/users/queries";
+import {
+  countNotifications,
+  getUserById,
+  getUserPointsByUserId,
+} from "./features/users/queries";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico" },
@@ -107,20 +111,37 @@ export async function loader({ request }: Route.LoaderArgs) {
   ]);
 
   if (user && user.id) {
-    const profile = await getUserById(client, { id: user.id });
-    const count = await countNotifications(client, { userId: user.id });
-    return {
-      user,
-      profile,
-      notificationsCount: count,
-      theme: getTheme(),
-      locale,
-    };
+    try {
+      const [profile, count, userPoints] = await Promise.all([
+        getUserById(client, { id: user.id }),
+        countNotifications(client, { userId: user.id }),
+        getUserPointsByUserId(client, { userId: user.id }),
+      ]);
+      return {
+        user,
+        profile,
+        notificationsCount: count,
+        userPoints: userPoints?.points ?? 0,
+        theme: getTheme(),
+        locale,
+      };
+    } catch {
+      // 프로필이 없는 경우(삭제된 계정 등) 로그아웃 상태로 처리
+      return {
+        user: null,
+        profile: null,
+        notificationsCount: 0,
+        userPoints: 0,
+        theme: getTheme(),
+        locale,
+      };
+    }
   }
   return {
     user: null,
     profile: null,
     notificationsCount: 0,
+    userPoints: 0,
     theme: getTheme(),
     locale,
   };

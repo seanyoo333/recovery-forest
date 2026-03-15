@@ -49,7 +49,7 @@ type MetricField =
   | "vitaminD3";
 
 export const meta: Route.MetaFunction = () => {
-  return [{ title: "혈액검사 수치 입력 | Evidence Base" }];
+  return [{ title: "병원 검사 입력 | Evidence Base" }];
 };
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
@@ -1305,11 +1305,11 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
       {hasConsent && (
         <Card>
           <CardHeader>
-            <CardTitle>의료정보 제공 동의 완료</CardTitle>
+            <CardTitle>건강정보 및 서비스 이용 동의 완료</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-muted-foreground space-y-2 text-sm">
-              <p>✅ 의료정보 제공에 동의하셨습니다.</p>
+              <p>✅ 건강정보 및 서비스 이용에 동의하셨습니다.</p>
               <p>이제 검사 결과를 안전하게 입력할 수 있습니다.</p>
             </div>
           </CardContent>
@@ -1357,7 +1357,7 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
             <div className="flex flex-col space-y-2">
               <Label htmlFor="testDate" className="flex flex-col gap-1">
                 <small className="text-muted-foreground text-xs">
-                  검사 날짜를 먼저 입력해주세요. 이미지 업로드 전에 날짜를 확인하여 데이터가 올바른 날짜에 저장됩니다.
+                  검사 날짜를 먼저 입력해주세요. 이미지 업로드 전에 날짜를 선택해야 데이터가 올바르게 저장됩니다.
                 </small>
               </Label>
               <div
@@ -1399,6 +1399,11 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+            <p className="text-muted-foreground text-sm">
+              <strong>업로드 안내:</strong> 업로드 파일에는 건강 관련 민감정보가 포함될 수 있습니다. 본인 자료만 업로드해 주세요. 타인 자료 업로드 시 적법한 권한이 있어야 합니다.
+            </p>
+          </div>
           <div className="space-y-4 md:space-y-6">
             <div className="flex items-center gap-4">
               <input

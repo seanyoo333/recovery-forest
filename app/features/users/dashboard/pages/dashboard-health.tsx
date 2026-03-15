@@ -816,10 +816,10 @@ export default function DashboardHealth({
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold">혈액검사 분석</h1>
+        <h1 className="text-2xl font-semibold">건강정보 현황</h1>
         <Link to="/my/dashboard/health/consent">
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full font-bold shadow-sm sm:w-auto">
-            새 검사 결과 입력
+            병원 검사 입력
           </Button>
         </Link>
       </div>
@@ -915,7 +915,7 @@ export default function DashboardHealth({
                         handleProfileChange("disease", e.target.value)
                       }
                       className="border-input bg-background mt-1 w-full rounded-md border px-2 py-1 text-sm"
-                      placeholder="질환명 입력"
+                      placeholder="예) 유방암"
                     />
                   ) : (
                     <p className="text-muted-foreground">
@@ -933,7 +933,7 @@ export default function DashboardHealth({
                         handleProfileChange("disease_status", e.target.value)
                       }
                       className="border-input bg-background mt-1 w-full rounded-md border px-2 py-1 text-sm"
-                      placeholder="질환 상태 입력"
+                      placeholder="예) 기수, 전이 여부, 관해 여부, 이차암, 합병증 등"
                     />
                   ) : (
                     <p className="text-muted-foreground">
@@ -996,7 +996,7 @@ export default function DashboardHealth({
                             )
                           }
                           className="border-input bg-background w-full rounded-md border px-2 py-1 text-sm"
-                          placeholder="약물명 입력"
+                          placeholder="예) 메트포르민, 타목시펜 등"
                         />
                       )}
                     </div>

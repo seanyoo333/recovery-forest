@@ -35,12 +35,18 @@ export default function Footer() {
         </div>
         
         {/* Legal links - appears first on mobile, second on desktop */}
-        <div className="order-1 flex gap-10 *:underline md:order-none">
-          <Link to="/legal/privacy-policy" viewTransition>
-            Privacy Policy
-          </Link>
+        <div className="order-1 flex flex-wrap justify-center gap-6 *:underline md:order-none md:gap-10">
           <Link to="/legal/terms-of-service" viewTransition>
-            Terms of Service
+            이용약관
+          </Link>
+          <Link to="/legal/privacy-policy" viewTransition>
+            개인정보처리방침
+          </Link>
+          <Link to="/legal/ai-notice" viewTransition>
+            AI 분석 안내
+          </Link>
+          <Link to="/contact" viewTransition>
+            문의하기
           </Link>
         </div>
       </div>

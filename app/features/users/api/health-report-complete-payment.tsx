@@ -1,23 +1,16 @@
 /**
- * Health Report Request API - n8n Webhook Proxy
+ * Health Report Complete Payment API
  *
- * A안: 요청은 최소, 데이터는 서버/워크플로가 권위 있게 조회
- * 1. 포인트 확인 및 차감 (건강리포트 비용: 9,900P)
- * 2. report_requests에 요청 스냅샷(input_json) 저장
- * 3. webhook에 request_id + form 입력값 전달 → n8n이 추적 및 입력값 활용
- * 4. webhook 실패 시 insert 롤백 + 포인트 복원
+ * 카드로 건강 보고서 결제 후, 결제 성공 페이지에서 호출합니다.
+ * payments 테이블에 이미 기록된 결제를 검증하고 report_requests를 생성한 뒤 웹훅을 호출합니다.
+ * (포인트 차감 없음 - 카드 결제로 이미 완료됨)
  */
 import type { Json } from "database.types";
-import type { Route } from "./+types/health-report-request";
+import type { Route } from "./+types/health-report-complete-payment";
 
-import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
-import { HEALTH_REPORT_POINT_PRICE, HEALTH_REPORT_WEBHOOK_FAILED_MESSAGE } from "~/core/lib/health-report";
-import {
-  deductPointsForHealthReport,
-  getLoggedInUserId,
-  restorePointsForHealthReport,
-} from "~/features/users/queries";
+import { HEALTH_REPORT_WEBHOOK_FAILED_MESSAGE } from "~/core/lib/health-report";
+import { getLoggedInUserId } from "~/features/users/queries";
 
 const WEBHOOK_URL =
   "https://primary-production-42934.up.railway.app/webhook-test/health-report-request";
@@ -27,15 +20,9 @@ async function rollbackInsert(
   requestId: string,
 ): Promise<void> {
   try {
-    const { error } = await client
-      .from("report_requests")
-      .delete()
-      .eq("id", requestId);
-    if (error) {
-      console.error("Health report rollback (delete) error:", error);
-    }
+    await client.from("report_requests").delete().eq("id", requestId);
   } catch (e) {
-    console.error("Health report rollback (delete) threw:", e);
+    console.error("Health report complete rollback error:", e);
   }
 }
 
@@ -48,20 +35,37 @@ export async function action({ request }: Route.ActionArgs) {
     const [client] = makeServerClient(request);
     const userId = await getLoggedInUserId(client);
 
-    const body = (await request.json()) as Record<string, unknown>;
+    const body = (await request.json()) as {
+      payload: Record<string, unknown>;
+      orderId: string;
+      paymentKey: string;
+    };
 
-    // 1. 포인트 확인 및 차감
-    const deductResult = await deductPointsForHealthReport(adminClient, {
-      userId,
-      amount: HEALTH_REPORT_POINT_PRICE,
-    });
-    if (!deductResult.success) {
+    const { payload, orderId, paymentKey } = body;
+    if (!payload || !orderId || !paymentKey) {
       return Response.json(
-        { success: false, error: deductResult.error },
+        { success: false, error: "payload, orderId, paymentKey가 필요합니다." },
         { status: 400 },
       );
     }
-    const { user_id: _uid, ...inputJson } = body;
+
+    // 결제 검증: payments 테이블에 해당 order_id, profile_id로 기록이 있는지
+    const { data: payment } = await client
+      .from("payments")
+      .select("payment_id")
+      .eq("profile_id", userId)
+      .eq("order_id", orderId)
+      .eq("payment_key", paymentKey)
+      .single();
+
+    if (!payment) {
+      return Response.json(
+        { success: false, error: "유효한 결제 정보를 찾을 수 없습니다." },
+        { status: 400 },
+      );
+    }
+
+    const { user_id: _uid, ...inputJson } = payload;
     const inputJsonForDb = JSON.parse(
       JSON.stringify(inputJson),
     ) as Json;
@@ -78,10 +82,6 @@ export async function action({ request }: Route.ActionArgs) {
 
     if (insertError || !inserted?.id) {
       console.error("report_requests insert error:", insertError);
-      await restorePointsForHealthReport(adminClient, {
-        userId,
-        amount: HEALTH_REPORT_POINT_PRICE,
-      });
       return Response.json(
         { success: false, error: "요청 기록 생성 실패" },
         { status: 500 },
@@ -100,10 +100,6 @@ export async function action({ request }: Route.ActionArgs) {
       });
     } catch (fetchError) {
       await rollbackInsert(client, requestId);
-      await restorePointsForHealthReport(adminClient, {
-        userId,
-        amount: HEALTH_REPORT_POINT_PRICE,
-      });
       console.error("Health report webhook fetch error:", fetchError);
       return Response.json(
         { success: false, error: HEALTH_REPORT_WEBHOOK_FAILED_MESSAGE },
@@ -114,10 +110,6 @@ export async function action({ request }: Route.ActionArgs) {
     if (!webhookRes.ok) {
       const text = await webhookRes.text();
       await rollbackInsert(client, requestId);
-      await restorePointsForHealthReport(adminClient, {
-        userId,
-        amount: HEALTH_REPORT_POINT_PRICE,
-      });
       return Response.json(
         {
           success: false,
@@ -126,13 +118,14 @@ export async function action({ request }: Route.ActionArgs) {
         { status: webhookRes.status >= 500 ? 502 : webhookRes.status },
       );
     }
+
     return Response.json({ success: true }, { status: 200 });
   } catch (e) {
     if (e instanceof Response && e.status === 302) {
       return Response.json({ error: "로그인이 필요합니다." }, { status: 401 });
     }
     const message = e instanceof Error ? e.message : "네트워크 오류";
-    console.error("Health report request error:", e);
+    console.error("Health report complete payment error:", e);
     return Response.json(
       { success: false, error: message },
       { status: 500 },

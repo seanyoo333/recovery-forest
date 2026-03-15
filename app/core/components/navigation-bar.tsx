@@ -32,6 +32,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
 import { cn } from "~/lib/utils";
 
 import LangSwitcher from "./lang-switcher";
@@ -74,6 +75,27 @@ const menus = [
   {
     name: "소개",
     to: "/landing",
+  },
+  {
+    name: "건강 대시보드",
+    to: "/my/dashboard",
+    items: [
+      {
+        name: "건강정보",
+        description: "건강정보 현황을 확인하세요",
+        to: "/my/dashboard/health",
+      },
+      {
+        name: "생활습관",
+        description: "생활습관 기록을 관리하세요",
+        to: "/my/dashboard/health-habits",
+      },
+      {
+        name: "맞춤 건강 보고서",
+        description: "개인 맞춤 건강 리포트를 확인하세요",
+        to: "/my/dashboard/health/report",
+      },
+    ],
   },
   /* {
     name: "기능의학 병원",
@@ -238,12 +260,6 @@ function UserMenu({
 
         <DropdownMenuGroup>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link to="/my/dashboard">
-              <BarChart3Icon className="mr-2 size-4" />
-              대시보드
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild className="cursor-pointer">
             <Link to="/my/profile">
               <UserIcon className="mr-2 size-4" />
               프로필
@@ -325,37 +341,37 @@ function AuthButtons() {
 function Actions() {
   return (
     <>
-      {/* Settings/debug dropdown menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild className="cursor-pointer">
-          <Button variant="ghost" size="icon">
-            <CogIcon className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {/* Sentry monitoring link */}
-          <DropdownMenuItem asChild>
-            <SheetClose asChild>
-              <Link to="/debug/sentry" viewTransition>
-                Sentry
-              </Link>
-            </SheetClose>
-          </DropdownMenuItem>
-          {/* Google Analytics link */}
-          <DropdownMenuItem asChild>
-            <SheetClose asChild>
-              <Link to="/debug/analytics" viewTransition>
-                Google Tag
-              </Link>
-            </SheetClose>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Settings/debug dropdown menu (MVP: 숨김) */}
+      {FEATURES.debugMenu && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild className="cursor-pointer">
+            <Button variant="ghost" size="icon">
+              <CogIcon className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <SheetClose asChild>
+                <Link to="/debug/sentry" viewTransition>
+                  Sentry
+                </Link>
+              </SheetClose>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <SheetClose asChild>
+                <Link to="/debug/analytics" viewTransition>
+                  Google Tag
+                </Link>
+              </SheetClose>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
-      {/* Theme switcher component (light/dark mode) */}
-      <ThemeSwitcher />
+      {/* Theme switcher (MVP: 숨김) */}
+      {FEATURES.themeSwitcher && <ThemeSwitcher />}
 
-      {/* Language switcher component */}
+      {/* Language switcher */}
       <LangSwitcher />
     </>
   );
@@ -507,19 +523,22 @@ export function NavigationBar({
                       )}
                     </Link>
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    asChild
-                    className="relative"
-                  >
-                    <Link to="/my/messages">
-                      <MessageCircleIcon className="size-4" />
-                      {hasMessages && (
-                        <div className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-red-500" />
-                      )}
-                    </Link>
-                  </Button>
+                  {/* 사용자 메시지 (MVP: 숨김) */}
+                  {FEATURES.userMessages && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      asChild
+                      className="relative"
+                    >
+                      <Link to="/my/messages">
+                        <MessageCircleIcon className="size-4" />
+                        {hasMessages && (
+                          <div className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-red-500" />
+                        )}
+                      </Link>
+                    </Button>
+                  )}
                   <UserMenu
                     name={name || "Anonymous"}
                     email={email}

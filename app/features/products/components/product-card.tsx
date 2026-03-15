@@ -1,5 +1,11 @@
 import { ChevronUpIcon, EyeIcon, MessageCircleIcon } from "lucide-react";
-import { Link, useFetcher, useNavigate, useOutletContext } from "react-router";
+import {
+  Link,
+  useFetcher,
+  useLocation,
+  useNavigate,
+  useOutletContext,
+} from "react-router";
 
 import { cn } from "~/lib/utils";
 
@@ -50,8 +56,7 @@ export function ProductCard({
   const absorbClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!isLoggedIn) {
-      alert("Please log in first!");
-      navigate("/auth/login");
+      navigate(`/login?redirectTo=${encodeURIComponent(`/products/${id}`)}`);
       return;
     }
     fetcher.submit(null, {

@@ -25,22 +25,25 @@ import { Separator } from "~/core/components/ui/separator";
 import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 
-import { getUserProfile } from "../queries";
-
 export const loader = async ({ params, request }: Route.LoaderArgs) => {
-  // 현재 로그인한 사용자 정보 가져오기
   const [client] = makeServerClient(request);
   const {
     data: { user },
   } = await client.auth.getUser();
 
-  await adminClient.rpc("track_event", {
-    event_type: "profile_view",
-    event_data: {
-      username: params.username,
-    },
-    profile_id: user?.id as string,
-  });
+  try {
+    await adminClient.rpc("track_event", {
+      event_type: "profile_view",
+      event_data: {
+        username: params.username,
+      },
+      profile_id: user?.id ?? undefined,
+    });
+  } catch (err) {
+    // 트래킹 실패 시에도 페이지는 렌더링 (analytics는 best-effort)
+    console.warn("[profile-page] track_event failed:", err);
+  }
+
   return {};
 };
 

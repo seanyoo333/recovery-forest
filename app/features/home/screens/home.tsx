@@ -219,7 +219,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 블로그 포스트
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
-                <Link to="/blog-posts"> Explore all blog posts &rarr;</Link>
+                <Link to="/blog"> Explore all blog posts &rarr;</Link>
               </Button>
             </div>
             {loaderData.blogPosts.map((blogPost) => (

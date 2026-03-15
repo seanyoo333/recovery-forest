@@ -10,7 +10,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     data: { user },
   } = await client.auth.getUser();
   if (!user) {
-    throw redirect("/login");
+    const url = new URL(request.url);
+    const path = url.pathname + url.search;
+    const redirectTo =
+      path && path !== "/" && path !== "/login"
+        ? `?redirectTo=${encodeURIComponent(path)}`
+        : "";
+    throw redirect(`/login${redirectTo}`);
   }
 
   // Return an empty object to avoid the "Cannot read properties of undefined" error

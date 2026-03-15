@@ -104,8 +104,16 @@ export async function action({ request }: Route.ActionArgs) {
     return data({ error: signInError.message }, { status: 400 });
   }
 
-  // Redirect to home page with authentication cookies in headers
-  return redirect("/", { headers });
+  // Redirect to redirectTo param (from private layout) or home page
+  const url = new URL(request.url);
+  const redirectTo = url.searchParams.get("redirectTo");
+  const target =
+    redirectTo &&
+    redirectTo.startsWith("/") &&
+    !redirectTo.startsWith("//")
+      ? redirectTo
+      : "/";
+  return redirect(target, { headers });
 }
 
 /**

@@ -132,6 +132,65 @@ export const getUserPointsByUserId = async (
   return data;
 };
 
+/** 건강리포트 요청 시 포인트 차감. 잔액 부족 시 에러 반환. */
+export const deductPointsForHealthReport = async (
+  client: SupabaseClient<Database>,
+  { userId, amount }: { userId: string; amount: number },
+) => {
+  const { data: profile, error: selectError } = await client
+    .from("profiles")
+    .select("points")
+    .eq("profile_id", userId)
+    .single();
+
+  if (selectError || !profile) {
+    return { success: false as const, error: "포인트 조회 실패" };
+  }
+
+  const current = Number(profile.points ?? 0);
+  if (current < amount) {
+    return {
+      success: false as const,
+      error: `포인트가 부족합니다. (보유: ${current.toLocaleString()}P, 필요: ${amount.toLocaleString()}P)`,
+    };
+  }
+
+  const { error: updateError } = await client
+    .from("profiles")
+    .update({
+      points: current - amount,
+      points_updated_at: new Date().toISOString(),
+    })
+    .eq("profile_id", userId);
+
+  if (updateError) {
+    return { success: false as const, error: "포인트 차감 실패" };
+  }
+
+  return { success: true as const };
+};
+
+/** 웹훅 실패 등 롤백 시 포인트 복원 */
+export const restorePointsForHealthReport = async (
+  client: SupabaseClient<Database>,
+  { userId, amount }: { userId: string; amount: number },
+) => {
+  const { data: profile } = await client
+    .from("profiles")
+    .select("points")
+    .eq("profile_id", userId)
+    .single();
+
+  const current = Number(profile?.points ?? 0);
+  await client
+    .from("profiles")
+    .update({
+      points: current + amount,
+      points_updated_at: new Date().toISOString(),
+    })
+    .eq("profile_id", userId);
+};
+
 export const getLoggedInUserId = async (client: SupabaseClient<Database>) => {
   const { data, error } = await client.auth.getUser();
   if (error || data.user === null) {
@@ -359,4 +418,116 @@ export const getReportRequestsWithHealthReports = async (
     ...r,
     healthReport: reportByRequestId.get(r.id) ?? null,
   }));
+};
+
+/**
+ * request_id로 건강 리포트 조회 (상세 페이지용)
+ * 본인 소유 확인 후 반환, 없으면 null
+ */
+export const getHealthReportByRequestId = async (
+  client: SupabaseClient<Database>,
+  { userId, requestId }: { userId: string; requestId: string },
+) => {
+  const { data: req } = await client
+    .from("report_requests")
+    .select("id, user_id, status, created_at")
+    .eq("id", requestId)
+    .eq("user_id", userId)
+    .single();
+
+  if (!req) return null;
+
+  const { data: report, error: reportError } = await client
+    .from("health_reports")
+    .select("*")
+    .eq("request_id", requestId)
+    .eq("user_id", userId)
+    .single();
+
+  if (reportError) {
+    console.error("getHealthReportByRequestId health_reports error:", reportError);
+    return null;
+  }
+
+  return report ? { request: req, report } : null;
+};
+
+/**
+ * 리포트 요청 삭제 (본인 소유만, health_reports는 cascade로 연쇄 삭제)
+ */
+export const deleteReportRequest = async (
+  client: SupabaseClient<Database>,
+  { userId, requestId }: { userId: string; requestId: string },
+) => {
+  const { error } = await client
+    .from("report_requests")
+    .delete()
+    .eq("id", requestId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+};
+
+/**
+ * 리포트 요청 일괄 삭제 (본인 소유만)
+ */
+export const deleteReportRequests = async (
+  client: SupabaseClient<Database>,
+  { userId, requestIds }: { userId: string; requestIds: string[] },
+) => {
+  if (requestIds.length === 0) return;
+  const { error } = await client
+    .from("report_requests")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", requestIds);
+  if (error) throw error;
+};
+
+/**
+ * health_reports.pdf_path, pdf_status 업데이트
+ * PDF 생성 완료 시 webhook 반환값 저장 (private 버킷 → signed URL은 다운로드 시 생성)
+ */
+export const updateHealthReportPdfInfo = async (
+  client: SupabaseClient<Database>,
+  {
+    requestId,
+    userId,
+    pdfPath,
+    pdfStatus,
+  }: {
+    requestId: string;
+    userId: string;
+    pdfPath: string;
+    pdfStatus: "pdf_generating" | "pdf_ready";
+  },
+) => {
+  const { error } = await client
+    .from("health_reports")
+    .update({ pdf_path: pdfPath, pdf_status: pdfStatus })
+    .eq("request_id", requestId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+};
+
+/**
+ * health_reports.report_html upsert
+ * report_json을 HTML로 변환한 결과를 저장 (상세 페이지 로더에서 사용)
+ */
+export const upsertReportHtml = async (
+  client: SupabaseClient<Database>,
+  {
+    requestId,
+    userId,
+    reportHtml,
+  }: { requestId: string; userId: string; reportHtml: string },
+) => {
+  const { error } = await client
+    .from("health_reports")
+    .update({ report_html: reportHtml })
+    .eq("request_id", requestId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
 };

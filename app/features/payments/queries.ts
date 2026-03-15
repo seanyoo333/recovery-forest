@@ -16,25 +16,45 @@ import type { Database } from "database.types";
  * The RLS policies ensure users can only access their own payment records.
  *
  * @param client - Authenticated Supabase client instance
- * @param userId - The ID of the user whose payments to retrieve
+ * @param profileId - The profile ID of the user whose payments to retrieve
  * @returns An array of payment records for the specified user
  * @throws Will throw an error if the database query fails
  */
 export async function getPayments(
   client: SupabaseClient<Database>,
-  { userId }: { userId: string },
+  { profileId }: { profileId: string },
 ) {
-  // Query the payments table for all records matching the user ID
   const { data, error } = await client
     .from("payments")
     .select("*")
-    .eq("user_id", userId);
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false });
 
-  // Throw any database errors that occur during the query
   if (error) {
     throw error;
   }
+  return data ?? [];
+}
 
-  // Return the payment records
-  return data;
+/**
+ * Retrieve all point payment records for a specific user
+ *
+ * @param client - Authenticated Supabase client instance
+ * @param profileId - The profile ID of the user
+ * @returns An array of point payment records
+ */
+export async function getPointPayments(
+  client: SupabaseClient<Database>,
+  { profileId }: { profileId: string },
+) {
+  const { data, error } = await client
+    .from("point_payments")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+  return data ?? [];
 }

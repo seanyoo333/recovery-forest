@@ -8,6 +8,12 @@
 /** 내 리포트 페이지 경로 */
 export const HEALTH_REPORT_PAGE_PATH = "/my/dashboard/health/report";
 
+/** 건강 보고서 카드 결제 후 세션에 저장되는 payload 키 */
+export const HEALTH_REPORT_PENDING_KEY = "health_report_pending_payload";
+
+/** 건강 리포트 요청 시 필요 포인트 (9,900원 = 9,900 포인트) */
+export const HEALTH_REPORT_POINT_PRICE = 9_900;
+
 /** 진행 중 상태일 때 표시할 안내 (DB에서 status requested 등 확인 후에만 사용) */
 export const HEALTH_REPORT_PENDING_MESSAGE =
   "건강 리포트를 생성하고 있습니다. 1~3시간 정도 소요됩니다.";
@@ -15,6 +21,157 @@ export const HEALTH_REPORT_PENDING_MESSAGE =
 /** 웹훅 전달 실패 시 사용자 안내 메시지 */
 export const HEALTH_REPORT_WEBHOOK_FAILED_MESSAGE =
   "요청 전달에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+
+/** PDF 생성 실패 시 안내 */
+export const HEALTH_REPORT_PDF_FAILED_MESSAGE =
+  "PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+
+/** 요청 실패 시 안내 (status=failed일 때) */
+export const HEALTH_REPORT_FAILED_MESSAGE =
+  "리포트 생성 중 오류가 발생했습니다. 잠시 후 다시 요청해 주세요.";
+
+/** report_requests.status별 설정 (진행 흐름: requested → draft_ready → completed, failed 분기) */
+export const REPORT_REQUEST_STATUS_CONFIG: Record<
+  string,
+  { label: string; description: string; order: number }
+> = {
+  requested: {
+    label: "요청됨",
+    description: "요청이 접수되었습니다. 워크플로우가 처리 중입니다.",
+    order: 1,
+  },
+  draft_ready: {
+    label: "초안 완성",
+    description: "최종 리포트 JSON이 DB에 저장되었습니다. 초안을 확인할 수 있습니다.",
+    order: 2,
+  },
+  under_review: {
+    label: "검수 중",
+    description: "AI 검토 및 품질 점검 중입니다.",
+    order: 3,
+  },
+  completed: {
+    label: "완료",
+    description: "AI 검토를 통과했습니다. 최종 리포트를 확인하세요.",
+    order: 4,
+  },
+  failed: {
+    label: "요청 실패",
+    description: "리포트 생성 중 오류가 발생했습니다.",
+    order: -1,
+  },
+};
+
+/**
+ * report_html 생성이 허용되는 status
+ * status가 이 값일 때만 report_json → HTML 변환 후 health_reports.report_html에 저장
+ * (completed: AI 검토 통과 후 최종 본문 확정)
+ */
+export const REPORT_HTML_GENERATION_STATUSES: string[] = ["completed"];
+
+/** 진행 단계 순서 (failed 제외) */
+export const REPORT_STATUS_PROGRESS: string[] = [
+  "requested",
+  "draft_ready",
+  "under_review",
+  "completed",
+];
+
+/** 페이지당 카드 수 (리포트 목록 페이지네이션) */
+export const HEALTH_REPORT_CARDS_PER_PAGE = 10;
+
+/** 상태 배지에 초록색 불을 표시할 status (요청됨, 초안완성, 검수중, 완료) */
+export const REPORT_STATUS_WITH_GREEN_DOT: ReadonlySet<string> = new Set([
+  "requested",
+  "draft_ready",
+  "under_review",
+  "completed",
+]);
+
+/** input_json 한글 라벨 (요약용) */
+const TREATMENT_STAGE_LABELS: Record<string, string> = {
+  surveillance: "경과관찰",
+  chemo: "항암치료",
+  radiation: "방사선치료",
+  post_treatment_1y: "치료 후 1년 이내",
+  other: "기타",
+};
+
+const TOP_CONCERN_LABELS: Record<string, string> = {
+  fatigue: "피로",
+  sleep: "수면",
+  weight: "체중",
+  stress_anxiety: "스트레스/불안",
+  gut: "소화/장",
+  exercise: "운동",
+  metabolism: "대사",
+  recurrence_worry: "재발 걱정",
+  other: "기타",
+};
+
+const EXERCISE_LABELS: Record<string, string> = {
+  none: "없음",
+  "1": "주 1회",
+  "2-3": "주 2~3회",
+  "4plus": "주 4회 이상",
+};
+
+/** input_json을 요청 내용 요약 문자열로 변환 */
+export function formatHealthReportInputSummary(
+  input: Record<string, unknown> | null | undefined,
+): string[] {
+  if (!input || typeof input !== "object") return [];
+
+  const parts: string[] = [];
+
+  const stage = input.treatment_stage as string | undefined;
+  if (stage && TREATMENT_STAGE_LABELS[stage]) {
+    parts.push(`치료 단계: ${TREATMENT_STAGE_LABELS[stage]}`);
+  }
+
+  const cancer = input.cancer_type as string | undefined;
+  if (cancer && String(cancer).trim()) {
+    parts.push(`암종: ${String(cancer).trim()}`);
+  }
+
+  const concerns = input.top_concerns as string[] | undefined;
+  if (Array.isArray(concerns) && concerns.length > 0) {
+    const labels = concerns
+      .map((c) => TOP_CONCERN_LABELS[String(c)] ?? c)
+      .join(", ");
+    parts.push(`관심 항목: ${labels}`);
+  }
+
+  const sleep = input.avg_sleep_hours;
+  if (sleep != null && !Number.isNaN(Number(sleep))) {
+    parts.push(`평균 수면: ${Number(sleep)}시간`);
+  }
+
+  const ex = input.weekly_exercise_freq as string | undefined;
+  if (ex && EXERCISE_LABELS[ex]) {
+    parts.push(`운동 빈도: ${EXERCISE_LABELS[ex]}`);
+  }
+
+  const goal = input.goal_8weeks as string | undefined;
+  if (goal && String(goal).trim()) {
+    const g = String(goal).trim();
+    parts.push(`8주 목표: ${g.length > 60 ? g.slice(0, 60) + "…" : g}`);
+  }
+
+  const meds = input.meds_or_supps as string | undefined;
+  if (meds && String(meds).trim()) {
+    const m = String(meds).trim();
+    parts.push(`복용 중: ${m.length > 40 ? m.slice(0, 40) + "…" : m}`);
+  }
+
+  return parts;
+}
+
+/** request_id를 짧게 표시 (앞 8자) */
+export function shortRequestId(id: string): string {
+  if (!id || id.length < 8) return id;
+  return id.slice(0, 8);
+}
 
 export const TREATMENT_STAGES = [
   "surveillance",

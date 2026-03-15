@@ -15,9 +15,30 @@
  */
 import type { Route } from "./+types/success";
 
-import { redirect } from "react-router";
+import { CheckCircle2, FileText, LayoutDashboard, Receipt } from "lucide-react";
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { Link, redirect } from "react-router";
 import { z } from "zod";
 
+import { Button } from "~/core/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/core/components/ui/card";
+import {
+  HEALTH_REPORT_PAGE_PATH,
+  HEALTH_REPORT_PENDING_KEY,
+} from "~/core/lib/health-report";
+import {
+  getCheckoutUrl,
+  isAllowedPaymentAmount,
+  PAYMENT_METADATA_TYPE,
+} from "~/core/lib/payment-constants";
 import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { requireAuthentication } from "~/features/admin/guards.server";
@@ -32,7 +53,7 @@ import { requireAuthentication } from "~/features/admin/guards.server";
  */
 export const meta: Route.MetaFunction = () => [
   {
-    title: `Payment Complete | ${import.meta.env.VITE_APP_NAME}`,
+    title: `결제 완료 | ${import.meta.env.VITE_APP_NAME}`,
   },
 ];
 
@@ -112,7 +133,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   // Redirect to checkout if user is not found
   if (!user) {
-    throw redirect("/payments/checkout");
+    throw redirect(getCheckoutUrl("point"));
   }
 
   // Extract and validate payment parameters from URL
@@ -164,16 +185,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     );
   }
 
-  // CRITICAL SECURITY CHECK: Validate payment amount
-  // This prevents attackers from manipulating the payment amount
-  // 🚨⚠️ In a production app, you would compare against the expected amount from your database
-  if (paymentResponse.data.totalAmount !== 10_000) {
+  // CRITICAL SECURITY CHECK: Validate payment amount (whitelist)
+  if (!isAllowedPaymentAmount(paymentResponse.data.totalAmount)) {
     throw redirect(
       `/payments/failure?code=${encodeURIComponent("validation-error")}&message=${encodeURIComponent("Invalid amount")}`,
     );
   }
 
-  // Record the verified payment in the database
   const { data: profile } = await adminClient
     .from("profiles")
     .select("profile_id")
@@ -186,74 +204,198 @@ export async function loader({ request }: Route.LoaderArgs) {
     );
   }
 
-  await adminClient.from("payments").insert({
-    payment_key: paymentResponse.data.paymentKey,
-    order_id: paymentResponse.data.orderId,
-    order_name: paymentResponse.data.orderName,
-    total_amount: paymentResponse.data.totalAmount,
-    receipt_url: paymentResponse.data.receipt.url,
-    status: paymentResponse.data.status,
-    approved_at: paymentResponse.data.approvedAt,
-    requested_at: paymentResponse.data.requestedAt,
-    metadata: paymentResponse.data.metadata,
-    raw_data: data,
-    profile_id: profile.profile_id,
-  });
+  const isPointPurchase =
+    paymentResponse.data.metadata?.type === PAYMENT_METADATA_TYPE.POINT_PURCHASE;
+  const isHealthReport =
+    paymentResponse.data.metadata?.type === PAYMENT_METADATA_TYPE.HEALTH_REPORT;
 
-  // Return payment data for the success page
-  return { data };
+  if (isPointPurchase) {
+    // 포인트 충전: point_payments에 기록하고 profiles.points 증가
+    const pointsToAdd = parseInt(
+      String(paymentResponse.data.metadata?.points ?? "9900"),
+      10,
+    );
+
+    await adminClient.from("point_payments").insert({
+      payment_key: paymentResponse.data.paymentKey,
+      order_id: paymentResponse.data.orderId,
+      order_name: paymentResponse.data.orderName,
+      total_amount: paymentResponse.data.totalAmount,
+      receipt_url: paymentResponse.data.receipt.url,
+      status: paymentResponse.data.status,
+      approved_at: paymentResponse.data.approvedAt,
+      requested_at: paymentResponse.data.requestedAt,
+      metadata: paymentResponse.data.metadata,
+      raw_data: data,
+      profile_id: profile.profile_id,
+    });
+
+    const { data: currentProfile } = await adminClient
+      .from("profiles")
+      .select("points")
+      .eq("profile_id", user!.id)
+      .single();
+
+    const currentPoints = Number(currentProfile?.points ?? 0);
+    await adminClient
+      .from("profiles")
+      .update({
+        points: currentPoints + pointsToAdd,
+        points_updated_at: new Date().toISOString(),
+      })
+      .eq("profile_id", user!.id);
+  } else {
+    // 일반 결제: payments에 기록
+    await adminClient.from("payments").insert({
+      payment_key: paymentResponse.data.paymentKey,
+      order_id: paymentResponse.data.orderId,
+      order_name: paymentResponse.data.orderName,
+      total_amount: paymentResponse.data.totalAmount,
+      receipt_url: paymentResponse.data.receipt.url,
+      status: paymentResponse.data.status,
+      approved_at: paymentResponse.data.approvedAt,
+      requested_at: paymentResponse.data.requestedAt,
+      metadata: paymentResponse.data.metadata,
+      raw_data: data,
+      profile_id: profile.profile_id,
+    });
+  }
+
+  return {
+    data,
+    isPointPurchase,
+    isHealthReport: isHealthReport ?? false,
+    orderId: paymentResponse.data.orderId,
+    paymentKey: paymentResponse.data.paymentKey,
+  };
+}
+
+/** 결제 승인 시각을 읽기 쉬운 형식으로 포맷 */
+function formatApprovedAt(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return isoString;
+  }
 }
 
 /**
  * Success component for displaying payment confirmation
  *
- * This component displays a confirmation page after a successful payment.
- * It shows:
- * 1. A product image (in this case, an NFT)
- * 2. A success message confirming payment verification
- * 3. The raw payment data received from Toss Payments API
- *
- * In a production application, this page would typically show more user-friendly
- * information such as order details, shipping information, and next steps.
- *
- * @param loaderData - Data from the loader containing payment information
- * @returns JSX element representing the payment success page
+ * 프로덕션 환경에 맞는 사용자 친화적 결제 완료 화면
+ * - 포인트 충전: 적립 포인트, 영수증 링크, 건강리포트 요청 CTA
+ * - 일반 결제: 주문 정보, 영수증 링크
  */
 export default function Success({ loaderData }: Route.ComponentProps) {
+  const { data, isPointPurchase, isHealthReport, orderId, paymentKey } =
+    loaderData;
+  const pointsAdded = isPointPurchase
+    ? parseInt(String(data.metadata?.points ?? "0"), 10)
+    : 0;
+
+  // 건강 보고서 카드 결제 후: sessionStorage payload로 report_requests 생성
+  useEffect(() => {
+    if (!isHealthReport || !orderId || !paymentKey) return;
+    const raw = typeof window !== "undefined" && sessionStorage.getItem(HEALTH_REPORT_PENDING_KEY);
+    if (!raw) return;
+    const payload = JSON.parse(raw) as Record<string, unknown>;
+    fetch("/api/health-report-complete-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payload, orderId, paymentKey }),
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success) {
+          sessionStorage.removeItem(HEALTH_REPORT_PENDING_KEY);
+        } else {
+          toast.error(res.error ?? "건강 보고서 요청 처리에 실패했습니다.");
+        }
+      })
+      .catch(() => toast.error("건강 보고서 요청 처리에 실패했습니다."));
+  }, [isHealthReport, orderId, paymentKey]);
+
   return (
-    <div className="flex flex-col items-center gap-20">
-      {/* Main content grid - single column on mobile, two columns on desktop */}
-      <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-2">
-        {/* Product image section */}
-        <div>
-          <img
-            src="/nft-2.jpg"
-            alt="nft"
-            className="w-full rounded-2xl object-cover"
-          />
-        </div>
-
-        {/* Payment confirmation section */}
-        <div className="flex flex-col items-start gap-10 overflow-x-scroll">
-          {/* Success message */}
-          <h1 className="text-center text-4xl font-semibold tracking-tight lg:text-5xl">
-            Payment Complete
-          </h1>
-
-          {/* Explanation text */}
-          <p className="text-muted-foreground text-lg font-medium">
-            We have verified the payment with the Toss API.
-            <br />
-            <br />
-            Here is the data we got from Toss.
-          </p>
-
-          {/* Raw payment data (for demonstration purposes) */}
-          <pre className="break-all">
-            {JSON.stringify(loaderData.data, null, 2)}
-          </pre>
-        </div>
-      </div>
+    <div className="mx-auto flex max-w-lg flex-col items-center gap-8 py-12">
+      <Card className="w-full overflow-hidden border-green-200/60 bg-green-50/30 shadow-sm dark:border-green-900/40 dark:bg-green-950/20">
+        <CardHeader className="flex flex-col items-center pb-2">
+          <div className="mb-3 flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+            <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
+          </div>
+          <CardTitle className="text-center text-2xl font-semibold">
+            결제가 완료되었습니다
+          </CardTitle>
+          <CardDescription className="text-center text-base">
+            {isPointPurchase
+              ? "포인트가 정상적으로 적립되었습니다."
+              : isHealthReport
+                ? "건강 보고서 요청이 접수되었습니다. 결과는 대시보드에서 확인할 수 있습니다."
+                : "결제가 성공적으로 처리되었습니다."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 px-6">
+          <div className="space-y-2 rounded-lg border bg-background/80 p-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">주문명</span>
+              <span className="font-medium">{data.orderName}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">결제 금액</span>
+              <span className="font-medium">
+                {data.totalAmount?.toLocaleString()}원
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">결제 시각</span>
+              <span className="font-medium">
+                {formatApprovedAt(data.approvedAt ?? data.requestedAt ?? "")}
+              </span>
+            </div>
+            {isPointPurchase && pointsAdded > 0 && (
+              <div className="flex justify-between border-t pt-3 text-sm">
+                <span className="text-muted-foreground">적립 포인트</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  +{pointsAdded.toLocaleString()}P
+                </span>
+              </div>
+            )}
+          </div>
+          {data.receipt?.url && (
+            <a
+              href={data.receipt.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm underline underline-offset-4 transition-colors"
+            >
+              <Receipt className="size-4" />
+              영수증 보기
+            </a>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col gap-2 px-6">
+          {(isPointPurchase || isHealthReport) && (
+            <Button asChild className="w-full" size="lg">
+              <Link to={HEALTH_REPORT_PAGE_PATH}>
+                <FileText className="mr-2 size-4" />
+                {isHealthReport ? "건강리포트 결과 보기" : "건강리포트 요청하기"}
+              </Link>
+            </Button>
+          )}
+          <Button asChild variant="outline" className="w-full" size="lg">
+            <Link to="/my/dashboard">
+              <LayoutDashboard className="mr-2 size-4" />
+              대시보드로 이동
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

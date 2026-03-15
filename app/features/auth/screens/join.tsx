@@ -14,7 +14,7 @@
 import type { Route } from "./+types/join";
 
 import { CheckCircle2Icon } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Form, Link, data } from "react-router";
 import { z } from "zod";
 
@@ -39,7 +39,7 @@ import { Label } from "~/core/components/ui/label";
 import makeServerClient from "~/core/lib/supa-client.server";
 
 import { SignUpButtons } from "../components/auth-login-buttons";
-import { doesUserExist } from "../lib/queries.server";
+import { doesUserExist, doesUsernameExist } from "../lib/queries.server";
 
 /**
  * Meta function for the registration page
@@ -86,6 +86,7 @@ const joinSchema = z
       .min(8, { message: "Password must be at least 8 characters long" }),
     marketing: z.coerce.boolean().default(false),
     terms: z.coerce.boolean(),
+    privacy: z.coerce.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords must match",
@@ -121,20 +122,28 @@ export async function action({ request }: Route.ActionArgs) {
     return data({ fieldErrors: error.flatten().fieldErrors }, { status: 400 });
   }
 
-  // Verify terms of service acceptance
-  if (!validData.terms) {
+  // Verify terms and privacy acceptance
+  if (!validData.terms || !validData.privacy) {
     return data(
-      { error: "You must agree to the terms of service" },
+      { error: "이용약관 및 개인정보처리방침에 동의해 주세요." },
       { status: 400 },
     );
   }
 
   // Check if a user with the provided email already exists
   const userExists = await doesUserExist(validData.email);
-
   if (userExists) {
     return data(
-      { error: "There is an account with this email already." },
+      { error: "이미 사용 중인 이메일입니다." },
+      { status: 400 },
+    );
+  }
+
+  // Check if the username is already taken
+  const usernameTaken = await doesUsernameExist(validData.username);
+  if (usernameTaken) {
+    return data(
+      { error: "이미 사용 중인 아이디입니다. 다른 아이디를 선택해 주세요." },
       { status: 400 },
     );
   }
@@ -182,14 +191,25 @@ export async function action({ request }: Route.ActionArgs) {
  * @param actionData - Data returned from the form action, including errors or success status
  */
 export default function Join({ actionData }: Route.ComponentProps) {
-  // Reference to the form element for resetting after successful submission
   const formRef = useRef<HTMLFormElement>(null);
+  const [terms, setTerms] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
+  const [marketing, setMarketing] = useState(false);
 
-  // Reset the form when registration is successful
+  const allAgreed = terms && privacy && marketing;
+  const handleAgreeAll = (checked: boolean) => {
+    setTerms(checked);
+    setPrivacy(checked);
+    setMarketing(checked);
+  };
+
   useEffect(() => {
     if (actionData && "success" in actionData && actionData.success) {
       formRef.current?.reset();
       formRef.current?.blur();
+      setTerms(false);
+      setPrivacy(false);
+      setMarketing(false);
     }
   }, [actionData]);
   return (
@@ -331,41 +351,102 @@ export default function Join({ actionData }: Route.ComponentProps) {
                 <FormErrors errors={actionData.fieldErrors.confirmPassword} />
               ) : null}
             </div>
+            {/* 동의 항목 (전체 동의 + 개별) */}
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="agreeAll"
+                  checked={allAgreed}
+                  onCheckedChange={(v) => handleAgreeAll(!!v)}
+                />
+                <Label
+                  htmlFor="agreeAll"
+                  className="cursor-pointer font-medium"
+                >
+                  전체 동의
+                </Label>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                필수 및 선택 항목에 모두 동의합니다.
+              </p>
+              <div className="border-t pt-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="hidden"
+                    name="terms"
+                    value={terms ? "on" : ""}
+                  />
+                  <Checkbox
+                    id="terms"
+                    checked={terms}
+                    onCheckedChange={(v) => setTerms(!!v)}
+                  />
+                  <Label
+                    htmlFor="terms"
+                    className="text-muted-foreground cursor-pointer text-sm"
+                  >
+                    [필수]{" "}
+                    <Link
+                      to="/legal/terms-of-service"
+                      viewTransition
+                      className="text-muted-foreground hover:text-foreground underline transition-colors"
+                    >
+                      이용약관
+                    </Link>
+                    에 동의합니다.
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="hidden"
+                    name="privacy"
+                    value={privacy ? "on" : ""}
+                  />
+                  <Checkbox
+                    id="privacy"
+                    checked={privacy}
+                    onCheckedChange={(v) => setPrivacy(!!v)}
+                  />
+                  <Label
+                    htmlFor="privacy"
+                    className="text-muted-foreground cursor-pointer text-sm"
+                  >
+                    [필수]{" "}
+                    <Link
+                      to="/legal/privacy-policy"
+                      viewTransition
+                      className="text-muted-foreground hover:text-foreground underline transition-colors"
+                    >
+                      개인정보처리방침
+                    </Link>
+                    에 동의합니다.
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="hidden"
+                    name="marketing"
+                    value={marketing ? "on" : ""}
+                  />
+                  <Checkbox
+                    id="marketing"
+                    checked={marketing}
+                    onCheckedChange={(v) => setMarketing(!!v)}
+                  />
+                  <Label
+                    htmlFor="marketing"
+                    className="text-muted-foreground cursor-pointer text-sm"
+                  >
+                    [선택] 마케팅 및 정보성 뉴스레터 수신에 동의합니다.
+                  </Label>
+                </div>
+              </div>
+            </div>
+
             <FormButton label="계정 생성 하기" className="w-full" />
             {actionData && "error" in actionData && actionData.error ? (
               <FormErrors errors={[actionData.error]} />
             ) : null}
-
-            <div className="flex items-center gap-2">
-              <Checkbox id="marketing" name="marketing" />
-              <Label htmlFor="marketing" className="text-muted-foreground">
-                마케팅 및 정보성 뉴스레터 수신 동의
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox id="terms" name="terms" checked />
-              <Label htmlFor="terms" className="text-muted-foreground">
-                <span>
-                  서비스 이용약관 및 개인정보 처리방침을 확인하였으며, 이에
-                  동의합니다.{" "}
-                  <Link
-                    to="/legal/terms-of-service"
-                    viewTransition
-                    className="text-muted-foreground text-underline hover:text-foreground underline transition-colors"
-                  >
-                    서비스 이용약관
-                  </Link>{" "}
-                  및{" "}
-                  <Link
-                    to="/legal/privacy-policy"
-                    viewTransition
-                    className="text-muted-foreground hover:text-foreground text-underline underline transition-colors"
-                  >
-                    개인정보 처리방침
-                  </Link>
-                </span>
-              </Label>
-            </div>
             {actionData && "success" in actionData && actionData.success ? (
               <Alert className="bg-green-600/20 text-green-700 dark:bg-green-950/20 dark:text-green-600">
                 <CheckCircle2Icon

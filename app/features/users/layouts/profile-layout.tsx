@@ -9,6 +9,7 @@ import {
   useOutletContext,
 } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
 import { cn } from "~/lib/utils";
 
 import {
@@ -86,42 +87,44 @@ export default function ProfileLayout({
                   isFollowing={loaderData.user.is_following as boolean}
                   variant="secondary"
                 />
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="secondary">메세지</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>메세지</DialogTitle>
-                    </DialogHeader>
-                    <DialogDescription className="space-y-4" asChild>
-                      <Form
-                        method="post"
-                        action={`/users/${loaderData.user.username}/messages`}
-                      >
-                        <span className="text-muted-foreground text-sm">
-                          따뜻한 메세지를 보내보세요.
-                        </span>
-                        <div className="space-y-4">
-                          <Textarea
-                            placeholder="Message"
-                            className="resize-none"
-                            name="content"
-                            rows={4}
-                          />
-                          <Button
-                            type="submit"
-                            disabled={navigation.state === "submitting"}
-                          >
-                            {navigation.state === "submitting"
-                              ? "Sending..."
-                              : "Send"}
-                          </Button>
-                        </div>
-                      </Form>
-                    </DialogDescription>
-                  </DialogContent>
-                </Dialog>
+                {FEATURES.userMessages && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="secondary">메세지</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>메세지</DialogTitle>
+                      </DialogHeader>
+                      <DialogDescription className="space-y-4" asChild>
+                        <Form
+                          method="post"
+                          action={`/users/${loaderData.user.username}/messages`}
+                        >
+                          <span className="text-muted-foreground text-sm">
+                            따뜻한 메세지를 보내보세요.
+                          </span>
+                          <div className="space-y-4">
+                            <Textarea
+                              placeholder="Message"
+                              className="resize-none"
+                              name="content"
+                              rows={4}
+                            />
+                            <Button
+                              type="submit"
+                              disabled={navigation.state === "submitting"}
+                            >
+                              {navigation.state === "submitting"
+                                ? "Sending..."
+                                : "Send"}
+                            </Button>
+                          </div>
+                        </Form>
+                      </DialogDescription>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </>
             ) : null}
           </div>
@@ -144,11 +147,10 @@ export default function ProfileLayout({
       <div className="flex w-full justify-center gap-5 md:justify-start">
         {[
           { label: "About", to: `/users/${loaderData.user.username}` },
-          {
-            label: "Teams",
-            to: `/users/${loaderData.user.username}/teams`,
-          },
           { label: "Posts", to: `/users/${loaderData.user.username}/posts` },
+          ...(isLoggedIn && username === params.username
+            ? [{ label: "Payments", to: `/users/${loaderData.user.username}/payments` }]
+            : []),
         ].map((item) => (
           <NavLink
             end

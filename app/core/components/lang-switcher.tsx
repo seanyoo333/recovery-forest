@@ -15,6 +15,7 @@
 import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -80,10 +81,12 @@ export default function LangSwitcher() {
       
       {/* Dropdown menu with language options */}
       <DropdownMenuContent align="end">
-        {/* Spanish language option */}
-        <DropdownMenuItem onClick={() => handleLocaleChange("es")}>
-          🇪🇸 {t("navigation.es")} {/* Translated name of Spanish */}
-        </DropdownMenuItem>
+        {/* Spanish language option (MVP: 숨김) */}
+        {FEATURES.spanishLocale && (
+          <DropdownMenuItem onClick={() => handleLocaleChange("es")}>
+            🇪🇸 {t("navigation.es")}
+          </DropdownMenuItem>
+        )}
         
         {/* Korean language option */}
         <DropdownMenuItem onClick={() => handleLocaleChange("ko")}>

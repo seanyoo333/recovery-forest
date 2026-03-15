@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -62,14 +64,17 @@ export default function SidebarMain({
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild>
-            <Link to="/chat">
-              <BotIcon />
-              <span>EV AI 챗봇</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
+        {/* AI 챗봇 (MVP: 숨김) */}
+        {FEATURES.aiChat && (
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link to="/chat">
+                <BotIcon />
+                <span>EV AI 챗봇</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )}
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
             <Link to="/my/profile/settings">

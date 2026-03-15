@@ -29,7 +29,7 @@ export function FollowButton({
   if (!isLoggedIn) {
     return (
       <Button variant="outline" className="w-full" asChild>
-        <Link to="/auth/login">로그인하고 팔로우하기</Link>
+        <Link to="/login">로그인하고 팔로우하기</Link>
       </Button>
     );
   }

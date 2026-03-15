@@ -333,7 +333,7 @@ test.describe.serial("User Registration Flow", () => {
     await page.getByRole("option", { name: "비 암경험자" }).click();
     await page.getByRole("button", { name: "계정 생성 하기" }).click();
     await expect(
-      page.getByText("There is an account with this email already.", {
+      page.getByText("이미 사용 중인 이메일입니다.", {
         exact: true,
       }),
     ).toBeVisible();

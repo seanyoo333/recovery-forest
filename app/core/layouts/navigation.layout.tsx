@@ -3,6 +3,7 @@ import type { Route } from "./+types/navigation.layout";
 import { Suspense } from "react";
 import { Await, Outlet, useOutletContext } from "react-router";
 
+import { FEATURES } from "~/core/config/features";
 import {
   countNotifications,
   existMessages,
@@ -33,7 +34,9 @@ export async function loader({ request }: Route.LoaderArgs) {
   const [profile, notificationsCount, messagesCount] = await Promise.all([
     getUserById(client, { id: user.id }),
     countNotifications(client, { userId: user.id }),
-    existMessages(client, { userId: user.id }),
+    FEATURES.userMessages
+      ? existMessages(client, { userId: user.id })
+      : Promise.resolve(0),
   ]);
 
   return { userPromise, profile, notificationsCount, messagesCount };

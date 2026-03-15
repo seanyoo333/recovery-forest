@@ -1211,6 +1211,10 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          pdf_path: string | null
+          pdf_status:
+            | Database["public"]["Enums"]["health_report_pdf_status"]
+            | null
           pdf_url: string | null
           report_html: string | null
           report_json: Json | null
@@ -1221,6 +1225,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          pdf_path?: string | null
+          pdf_status?:
+            | Database["public"]["Enums"]["health_report_pdf_status"]
+            | null
           pdf_url?: string | null
           report_html?: string | null
           report_json?: Json | null
@@ -1231,6 +1239,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          pdf_path?: string | null
+          pdf_status?:
+            | Database["public"]["Enums"]["health_report_pdf_status"]
+            | null
           pdf_url?: string | null
           report_html?: string | null
           report_json?: Json | null
@@ -3855,6 +3867,15 @@ export type Database = {
         Args: { p_profile_id: string; p_room_id: number }
         Returns: boolean
       }
+      match_documents: {
+        Args: { filter: Json; match_count: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: number
+          metadata: Json
+          similarity: number
+        }[]
+      }
       recompute_primary_for_ite: {
         Args: { p_ite_id: string }
         Returns: undefined
@@ -3882,6 +3903,7 @@ export type Database = {
       habit_category: "exercise" | "sleep" | "supplement" | "diet" | "therapy"
       habit_time_block: "am" | "noon" | "pm" | "bed"
       habit_time_slot: "am" | "noon" | "pm" | "bed"
+      health_report_pdf_status: "pdf_generating" | "pdf_ready"
       ingredient_target_evidence_effect: "inhibit" | "activate"
       level: "1" | "2" | "3" | "4" | "5"
       location:
@@ -3917,6 +3939,7 @@ export type Database = {
         | "draft_ready"
         | "under_review"
         | "completed"
+        | "failed"
       team_position: "doctor" | "nurse" | "nutritionist" | "foresttherapist"
       user_role:
         | "healthy"
@@ -4065,6 +4088,7 @@ export const Constants = {
       habit_category: ["exercise", "sleep", "supplement", "diet", "therapy"],
       habit_time_block: ["am", "noon", "pm", "bed"],
       habit_time_slot: ["am", "noon", "pm", "bed"],
+      health_report_pdf_status: ["pdf_generating", "pdf_ready"],
       ingredient_target_evidence_effect: ["inhibit", "activate"],
       level: ["1", "2", "3", "4", "5"],
       location: [
@@ -4102,6 +4126,7 @@ export const Constants = {
         "draft_ready",
         "under_review",
         "completed",
+        "failed",
       ],
       team_position: ["doctor", "nurse", "nutritionist", "foresttherapist"],
       user_role: [
