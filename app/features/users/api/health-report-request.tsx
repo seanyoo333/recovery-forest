@@ -20,7 +20,7 @@ import {
 } from "~/features/users/queries";
 
 const WEBHOOK_URL =
-  "https://primary-production-42934.up.railway.app/webhook-test/health-report-request";
+  "https://primary-production-42934.up.railway.app/webhook/health-report-request";
 
 async function rollbackInsert(
   client: Awaited<ReturnType<typeof makeServerClient>>[0],

@@ -13,7 +13,7 @@ import { HEALTH_REPORT_WEBHOOK_FAILED_MESSAGE } from "~/core/lib/health-report";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 const WEBHOOK_URL =
-  "https://primary-production-42934.up.railway.app/webhook-test/health-report-request";
+  "https://primary-production-42934.up.railway.app/webhook/health-report-request";
 
 async function rollbackInsert(
   client: Awaited<ReturnType<typeof makeServerClient>>[0],

@@ -15,7 +15,7 @@ import {
 } from "~/features/users/queries";
 
 const WEBHOOK_URL =
-  "https://primary-production-42934.up.railway.app/webhook-test/health-report-pdf";
+  "https://primary-production-42934.up.railway.app/webhook/health-report-pdf";
 
 export async function action({ request }: Route.ActionArgs) {
   if (request.method !== "POST") {
