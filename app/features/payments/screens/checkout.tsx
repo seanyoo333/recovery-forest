@@ -16,18 +16,22 @@ import { useEffect, useRef, useState } from "react";
 import { Link, redirect } from "react-router";
 
 import { Button } from "~/core/components/ui/button";
-import { HEALTH_REPORT_POINT_PRICE } from "~/core/lib/health-report";
 import {
-  getCheckoutUrl,
-  PAYMENT_METADATA_TYPE,
+  HEALTH_REPORT_POINT_PRICE,
+  HEALTH_REPORT_PRODUCT_DESCRIPTION,
+  HEALTH_REPORT_PRODUCT_NAME,
+} from "~/core/lib/health-report";
+import {
   type CheckoutType,
+  PAYMENT_METADATA_TYPE,
+  getCheckoutUrl,
 } from "~/core/lib/payment-constants";
 import {
+  POINT_PACKAGES,
+  type PointPackage,
   getDefaultPointPackage,
   getPointPackage,
   isValidPointPackageId,
-  POINT_PACKAGES,
-  type PointPackage,
 } from "~/core/lib/point-packages";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
@@ -96,10 +100,12 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
 
   const isPointCharge = loaderData.type === "point";
   const isHealthReport = loaderData.type === "health_report";
-  const amount = isPointCharge ? selectedPackage.amount : HEALTH_REPORT_POINT_PRICE;
+  const amount = isPointCharge
+    ? selectedPackage.amount
+    : HEALTH_REPORT_POINT_PRICE;
   const orderName = isPointCharge
     ? `포인트 충전 ${selectedPackage.points.toLocaleString()}P`
-    : `건강 보고서 (${HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)`;
+    : `${HEALTH_REPORT_PRODUCT_NAME} (${HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)`;
 
   useEffect(() => {
     async function initToss() {
@@ -113,7 +119,9 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
         customerKey: loaderData.userId,
       });
 
-      const amt = isPointCharge ? selectedPackage.amount : HEALTH_REPORT_POINT_PRICE;
+      const amt = isPointCharge
+        ? selectedPackage.amount
+        : HEALTH_REPORT_POINT_PRICE;
       await widgets.current.setAmount({
         value: amt,
         currency: "KRW",
@@ -152,10 +160,12 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
       const metaTags = document.querySelectorAll('meta[name="color-scheme"]');
       metaTags.forEach((tag) => tag.setAttribute("content", "light"));
 
-      const amt = isPointCharge ? selectedPackage.amount : HEALTH_REPORT_POINT_PRICE;
+      const amt = isPointCharge
+        ? selectedPackage.amount
+        : HEALTH_REPORT_POINT_PRICE;
       const name = isPointCharge
         ? `포인트 충전 ${selectedPackage.points.toLocaleString()}P`
-        : `건강 보고서 (${HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)`;
+        : `${HEALTH_REPORT_PRODUCT_NAME} (${HEALTH_REPORT_POINT_PRICE.toLocaleString()}P)`;
 
       const metadata = isPointCharge
         ? {
@@ -188,20 +198,20 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
       <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-2">
         <div>
           <img
-            src="/nft.jpg"
-            alt={isPointCharge ? "포인트 충전" : "건강 보고서"}
+            src="/middle-man-before.png"
+            alt={isPointCharge ? "포인트 충전" : HEALTH_REPORT_PRODUCT_NAME}
             className="h-full w-full rounded-2xl object-cover"
           />
         </div>
 
         <div className="flex flex-col items-start gap-10">
           <h1 className="text-center text-4xl font-semibold tracking-tight lg:text-5xl">
-            {isPointCharge ? "포인트 충전" : "건강 보고서 결제"}
+            {isPointCharge ? "포인트 충전" : HEALTH_REPORT_PRODUCT_NAME}
           </h1>
           <p className="text-muted-foreground text-lg font-medium">
             {isPointCharge
-              ? "챗봇, 건강 보고서 등 다양한 서비스에 사용할 수 있는 포인트를 충전합니다. 패키지별 보너스가 적용됩니다."
-              : "건강 보고서 1회 요청을 카드로 결제합니다. 포인트를 충전해 사용할 수도 있습니다."}
+              ? "어려운 개인 건강 데이터를 AI 기반 리포트, 시각화 도구, 챗봇 등을 통해 쉽고 간편하게 관리하세요. 포인트 충전시 패키지별 보너스가 차등 적용됩니다."
+              : HEALTH_REPORT_PRODUCT_DESCRIPTION}
           </p>
 
           {/* 포인트 패키지 선택 (포인트 충전일 때만) */}
@@ -213,7 +223,9 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
                   <Button
                     key={pkg.id}
                     type="button"
-                    variant={selectedPackage.id === pkg.id ? "default" : "outline"}
+                    variant={
+                      selectedPackage.id === pkg.id ? "default" : "outline"
+                    }
                     className="flex min-h-[4.5rem] flex-col items-center justify-center gap-2 px-6 py-5"
                     onClick={() => setSelectedPackage(pkg)}
                   >
@@ -228,10 +240,12 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
           )}
 
           {isHealthReport && (
-            <div className="w-full rounded-lg border bg-muted/30 p-4">
+            <div className="bg-muted/30 w-full rounded-lg border p-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">상품</span>
-                <span className="font-medium">건강 보고서 1회</span>
+                <span className="font-medium">
+                  {HEALTH_REPORT_PRODUCT_NAME}
+                </span>
               </div>
               <div className="mt-2 flex justify-between text-sm">
                 <span className="text-muted-foreground">결제 금액</span>
@@ -245,7 +259,9 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
           {!canPay ? (
             <div className="flex w-full flex-col items-center justify-center gap-2">
               <Loader2Icon className="text-muted-foreground size-10 animate-spin" />
-              <span className="text-muted-foreground text-lg">결제 수단을 불러오는 중...</span>
+              <span className="text-muted-foreground text-lg">
+                결제 수단을 불러오는 중...
+              </span>
             </div>
           ) : null}
 
@@ -264,6 +280,35 @@ export default function Checkout({ loaderData }: Route.ComponentProps) {
                 id="toss-payment-agreement"
                 className="bg-background overflow-hidden rounded-b-2xl"
               />
+            </div>
+
+            {/* 환불 안내 (결제 버튼 위) */}
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-xs">
+                디지털 콘텐츠 특성상 결제 완료 후 환불이 제한될 수 있으며,
+                서비스 오류 등 회사의 귀책 사유가 있는 경우 환불이 가능합니다.{" "}
+                <Link
+                  to="/legal/refund-policy"
+                  viewTransition
+                  className="text-muted-foreground hover:text-foreground underline"
+                >
+                  환불정책 자세히 보기
+                </Link>
+              </p>
+              <ul className="text-muted-foreground flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
+                <li className="flex items-center gap-1.5">
+                  <span className="text-foreground">✓</span> 결제 후 즉시 리포트
+                  제공
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-foreground">✓</span> 데이터 기반 분석
+                  결과 제공
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-foreground">✓</span> 문제 발생 시 환불
+                  가능
+                </li>
+              </ul>
             </div>
 
             {canPay ? (

@@ -1,6 +1,6 @@
 import type { Route } from "./+types/landing";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router";
 
@@ -14,14 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/core/components/ui/dialog";
 import { Ripple } from "~/core/components/ui/ripple";
 import { Separator } from "~/core/components/ui/separator";
 import makeServerClient from "~/core/lib/supa-client.server";
@@ -36,21 +28,6 @@ interface TargetAudienceItem {
     title: string;
     steps: string[];
   };
-}
-
-interface TestimonialItem {
-  name: string;
-  content: string;
-  source: string;
-  category: "상품 후기" | "산림치유 후기";
-  detail: string;
-  rating?: number;
-  link?: string;
-}
-
-interface TestimonialGalleryItem {
-  src: string;
-  caption?: string;
 }
 
 /**
@@ -81,139 +58,6 @@ function TargetAudienceCard({
         </CardHeader>
       </Card>
     </BlurFade>
-  );
-}
-
-function TestimonialCard({ testimonial }: { testimonial: TestimonialItem }) {
-  return (
-    <Card className="rainbow-card flex h-full flex-col justify-between">
-      <CardHeader>
-        <div className="mb-3 flex items-center justify-between">
-          <Badge className="border-transparent bg-[#03C75A] text-white hover:bg-[#03C75A]">
-            {testimonial.source}
-          </Badge>
-          {testimonial.rating ? (
-            <div className="flex items-center gap-1 text-yellow-500">
-              {Array.from({ length: testimonial.rating }).map((_, i) => (
-                <span key={i}>★</span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <CardDescription className="text-base leading-relaxed">
-          {testimonial.content}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <div className="font-semibold">{testimonial.name}</div>
-          <div className="text-muted-foreground mt-2 text-sm">
-            {testimonial.detail}
-          </div>
-        </div>
-        {testimonial.link ? (
-          <Button variant="link" className="px-0 text-xs" asChild>
-            <a href={testimonial.link} target="_blank" rel="noreferrer">
-              원본 후기 보러가기 →
-            </a>
-          </Button>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-function TestimonialGalleryDialog({
-  triggerLabel,
-  images,
-  initialIndex = 0,
-  children,
-}: {
-  triggerLabel: string;
-  images: TestimonialGalleryItem[];
-  initialIndex?: number;
-  children?: React.ReactNode;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(initialIndex);
-
-  if (images.length === 0) {
-    return null;
-  }
-
-  function handlePrev() {
-    setActiveIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-  }
-
-  function handleNext() {
-    setActiveIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-  }
-
-  return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) setActiveIndex(initialIndex);
-        else setActiveIndex(initialIndex);
-      }}
-    >
-      <DialogTrigger asChild>
-        {children || (
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex items-center gap-2"
-          >
-            {triggerLabel}
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{triggerLabel || "후기 사진"}</DialogTitle>
-          <DialogDescription>실제 사용자 후기 캡처입니다.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="bg-muted/40 relative overflow-hidden rounded-lg border">
-            <img
-              src={images[activeIndex]?.src}
-              alt={`${triggerLabel || "후기"} ${activeIndex + 1}`}
-              className="h-[420px] w-full object-cover"
-              loading="lazy"
-            />
-            {images[activeIndex]?.caption ? (
-              <div className="absolute inset-x-0 bottom-0 bg-black/60 p-3 text-sm text-white">
-                {images[activeIndex]?.caption}
-              </div>
-            ) : null}
-          </div>
-          {images.length > 1 ? (
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePrev}
-                aria-label="이전 후기"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-muted-foreground text-sm">
-                {activeIndex + 1} / {images.length}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNext}
-                aria-label="다음 후기"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -268,233 +112,19 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
 
   const primaryCtaLabel = loaderData.isAuthenticated
-    ? "홈으로 이동"
-    : "무료가입 후, 암 이후 생활관리 가이드 받아보기";
+    ? "맞춤 건강 보고서 받기"
+    : "무료가입 후, 맞춤 건강 보고서 받기";
 
   const secondaryCtaLabel = "좋은습관 블로그 살펴보기";
 
-  const testimonialData: TestimonialItem[] = [
-    {
-      name: "박○○님",
-      content:
-        "같은 경험을 한 분들과 만날수 있는 기회가 되어 서로의 경험에 공감을 나눌수 있는 부분이 더욱 커져 우울감이나 스트레스를 덜받는 시간이 되었고 무엇보다 평온한 마음을 가질 수 있게 여러 치유방법을 경험할 수 있는 귀한 시간이 되었습니다. 숲, 아로마, 차담, 체조까지 어느것 하나 놓치고 싶지 않은 소중한 경험의 시간이었습니다~",
-      source: "네이버 폼",
-      category: "산림치유 후기",
-      detail:
-        "참여 프로그램: 회복의 여정, 암경험자와 보호자를 위한 산림치유 생활습관 솔루션",
-    },
-    {
-      name: "강○○님",
-      content:
-        "전문가 선생님의 지도에 따라 운동할 수 있어 매우 좋습니다. 아로마 오일, 차, 활동에 필요한 물품 등의 지원이 잘 마련되어 활동 효과를 제대로 얻을 수 있어 감사합니다.",
-      source: "네이버 폼",
-      category: "산림치유 후기",
-      detail:
-        "참여 서비스: 회복의 여정, 암경험자와 보호자를 위한 산림치유 생활습관 솔루션",
-    },
-    {
-      name: "김○○님",
-      content:
-        "의사에게서는 세부분야에 대한 소견만 들을 수 있고, 아플때만 가능합니다.. 암에 대한 폭 넓은 지식을 이렇게 전체적으로 공유하고 이야기할 수 있는 사람이 대한민국에 몇명이 있을까... 또 이런 기회가 과연 있을까 생각됩니다... 너무 유익하고 감사드립니다.",
-      source: "네이버 폼",
-      category: "산림치유 후기",
-      detail:
-        "참여 서비스: 회복의 여정, 암경험자와 보호자를 위한 산림치유 생활습관 솔루션",
-    },
-  ];
+  const healthReportPath = "/my/dashboard/health/report";
 
-  const testimonialBucketBaseUrl =
-    import.meta.env.VITE_SUPABASE_TESTIMONIAL_BASE_URL ??
-    "https://your-supabase-project.supabase.co/storage/v1/object/public/testimonial";
-
-  // 제품 후기 사진을 6개 그룹으로 구성 (각 그룹 6장씩)
-  const productReviewGroups: TestimonialGalleryItem[][] = [
-    // 첫 번째 카드: review1~6 (대표: review1)
-    [
-      {
-        src: "/images/products/review1.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review2.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review3.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review4.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review5.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review6.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-    ],
-    // 두 번째 카드: review7~12 (대표: review7)
-    [
-      {
-        src: "/images/products/review7.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review8.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review9.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review10.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review11.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review12.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-    ],
-    // 세 번째 카드: review13~18 (대표: review13)
-    [
-      {
-        src: "/images/products/review13.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review14.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review15.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review16.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review17.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review18.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-    ],
-    // 네 번째 카드: review19~24 (대표: review19)
-    [
-      {
-        src: "/images/products/review19.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review20.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review21.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review22.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review23.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review24.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-    ],
-    // 다섯 번째 카드: review25~30 (대표: review25)
-    [
-      {
-        src: "/images/products/review25.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review26.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review27.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review28.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review29.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review30.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-    ],
-    // 여섯 번째 카드: review31~36 (대표: review31)
-    [
-      {
-        src: "/images/products/review31.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review32.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review33.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review34.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review35.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-      {
-        src: "/images/products/review36.jpg",
-        caption: "😮개인 경험은 사람마다 다를 수 있습니다.",
-      },
-    ],
-  ];
-
-  // 팝업에서 전체 이미지를 보여주기 위한 배열
-  const allProductImages = productReviewGroups.flat();
-
-  const testimonialGallery: Record<
-    "product" | "program",
-    TestimonialGalleryItem[]
-  > = {
-    product: allProductImages,
-    program: [
-      {
-        src: `${testimonialBucketBaseUrl}/program/forest-review-01.png`,
-        caption: "산림치유 프로그램 참여 인증 (정신적·정서적 회복 지원)",
-      },
-      {
-        src: `${testimonialBucketBaseUrl}/program/forest-review-02.png`,
-        caption: "프로그램 만족도 설문 캡처",
-      },
-      {
-        src: `${testimonialBucketBaseUrl}/program/forest-review-03.png`,
-        caption: "생활습관·정서 관리에 대한 긍정적 경험",
-      },
-    ],
+  const handlePrimaryCta = () => {
+    if (loaderData.isAuthenticated) {
+      navigate(healthReportPath);
+    } else {
+      navigate("/join");
+    }
   };
 
   const audienceData: TargetAudienceItem[] = [
@@ -644,7 +274,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               <div className="mb-10 flex justify-center">
                 <div className="border-primary/20 relative w-full overflow-hidden rounded-2xl border-2 shadow-2xl">
                   <img
-                    src="/images/landing/landing hero1.png"
+                    src="/images/landing/landing hero3.png"
                     alt="암 이후 생활관리를 돕는 근거 기반 플랫폼 히어로 이미지"
                     className="h-auto w-full object-cover"
                     loading="eager"
@@ -665,16 +295,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </BlurFade>
 
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button
-                size="lg"
-                onClick={() => {
-                  if (loaderData.isAuthenticated) {
-                    navigate("/");
-                  } else {
-                    navigate("/join");
-                  }
-                }}
-              >
+              <Button size="lg" onClick={handlePrimaryCta}>
                 {primaryCtaLabel}
               </Button>
               <Button
@@ -996,10 +617,10 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mb-10 text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                암 이후 생활관리를 위한 세 가지
+                암 이후 생활관리를 위한 추천 서비스
               </h2>
               <p className="text-muted-foreground mx-auto max-w-2xl">
-                통합의학 정보 플랫폼 · 건강보조제 · 치유 프로그램을
+                통합의학 정보 플랫폼 · 천연성분 정보 · 치유 프로그램을
                 <br /> 하나의 여정에서 만날 수 있도록 정리했습니다.
               </p>
             </div>
@@ -1020,13 +641,81 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </div>
           </BlurFade>
 
+          {/* 맞춤 건강 보고서 3단계 플로우 */}
+          <BlurFade delay={0.28} duration={0.6} inView>
+            <Card
+              className="rainbow-card border-primary/30 mb-8 cursor-pointer transition-shadow hover:shadow-lg"
+              onClick={handlePrimaryCta}
+            >
+              <CardHeader>
+                <Badge variant="secondary" className="mb-2 w-fit">
+                  맞춤 건강 보고서
+                </Badge>
+                <CardTitle className="text-2xl md:text-3xl">
+                  건강정보 입력 → 생활습관 입력 → 맞춤 건강 보고서 요청
+                </CardTitle>
+                <CardDescription className="text-base">
+                  혈액검사·건강데이터와 일상 생활습관을 입력하면, AI가 분석해
+                  생활관리 관점의 맞춤 건강 보고서를 만들어 드립니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <ol className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm md:flex-nowrap md:gap-4 md:text-base">
+                    <li className="flex items-center gap-1">
+                      <span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                        1
+                      </span>
+                      건강정보 입력
+                    </li>
+                    <ChevronRight className="hidden h-5 w-5 shrink-0 md:block" />
+                    <li className="flex items-center gap-1">
+                      <span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                        2
+                      </span>
+                      생활습관 입력
+                    </li>
+                    <ChevronRight className="hidden h-5 w-5 shrink-0 md:block" />
+                    <li className="flex items-center gap-1">
+                      <span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                        3
+                      </span>
+                      맞춤 건강 보고서 요청
+                    </li>
+                  </ol>
+                  <Button
+                    size="lg"
+                    className="shrink-0"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrimaryCta();
+                    }}
+                  >
+                    {loaderData.isAuthenticated
+                      ? "내 리포트로 이동"
+                      : "무료가입 후 시작하기"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </BlurFade>
+
           {/* Platform Overview */}
           <BlurFade delay={0.3} duration={0.6} inView>
-            <Link to="/my/dashboard" className="block">
-              <Card className="rainbow-card mb-8 cursor-pointer">
+            <div
+              className="block cursor-pointer"
+              onClick={handlePrimaryCta}
+              onKeyDown={(e) =>
+                e.key === "Enter" ? handlePrimaryCta() : undefined
+              }
+              role="button"
+              tabIndex={0}
+            >
+              <Card className="rainbow-card mb-8 transition-shadow hover:shadow-lg">
                 <CardHeader>
                   <Badge variant="secondary" className="mb-2 w-fit">
-                    서비스 개요 1
+                    서비스 개요
                   </Badge>
                   <CardTitle className="text-2xl md:text-3xl">
                     통합 생활관리 정보 플랫폼
@@ -1059,72 +748,34 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                       <span className="text-primary mt-1">✓</span>
                       <span>회원들간의 실시간 대화와 정보 공유</span>
                     </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </Link>
-          </BlurFade>
-
-          {/* Natural Products Overview */}
-          <BlurFade delay={0.4} duration={0.6} inView>
-            <Link to="/products" className="block">
-              <Card className="rainbow-card mb-8 cursor-pointer">
-                <CardHeader>
-                  <Badge variant="secondary" className="mb-2 w-fit">
-                    서비스 개요 2
-                  </Badge>
-                  <CardTitle className="text-2xl md:text-3xl">
-                    일반적인 건강관리용 건강 보조제 큐레이션
-                  </CardTitle>
-                  <CardDescription className="text-base">
-                    일상적인 건강관리·영양보충 관점에서 참고할 수 있는 건강
-                    보조제 정보를 소개합니다.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="text-muted-foreground space-y-3 text-sm md:text-base">
                     <li className="flex items-start gap-2">
                       <span className="text-primary mt-1">✓</span>
                       <span>
-                        연구·자료를 참고해 성분·용량·주의사항 등을 정리 (효과
-                        보장 아님)
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">✓</span>
-                      <span>
-                        실제 사용자 후기와 사용자 평점을 함께 제공 (개인 경험은
-                        다름)
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">✓</span>
-                      <span>
-                        나의 건강 상태와 생활습관을 고려해 어떤 천연물질을
-                        우선적으로 검토할지 참고 가능
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary mt-1">✓</span>
-                      <span>
-                        암 치료·재발 예방 효과를 주장하지 않으며, 의료진 상담과
-                        함께 검토하는 것을 권장
+                        건강정보·생활습관을 바탕으로 한 맞춤 건강 보고서 요청
                       </span>
                     </li>
                   </ul>
                 </CardContent>
               </Card>
-            </Link>
+            </div>
           </BlurFade>
 
-          {/* Forest Therapy Overview */}
+          {/* Forest Therapy Overview - MVP: 준비 중 */}
           <BlurFade delay={0.5} duration={0.6} inView>
-            <Link to="/teams" className="block">
-              <Card className="rainbow-card cursor-pointer">
+            <div className="block">
+              <Card className="rainbow-card mb-8 transition-shadow hover:shadow-lg">
                 <CardHeader>
-                  <Badge variant="secondary" className="mb-2 w-fit">
-                    서비스 개요 3
-                  </Badge>
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="w-fit">
+                      서비스 개요
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500 text-amber-600 dark:text-amber-400"
+                    >
+                      준비 중
+                    </Badge>
+                  </div>
                   <CardTitle className="text-2xl md:text-3xl">
                     산림치유 프로그램 안내
                   </CardTitle>
@@ -1162,10 +813,20 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                         권장드립니다.
                       </span>
                     </li>
+                    <li className="text-muted-foreground mt-4 flex items-center gap-2 text-sm italic">
+                      <span>
+                        * 곧 제공될 예정입니다. 관심 있으시면 문의해 주세요.
+                      </span>
+                    </li>
                   </ul>
+                  <div className="mt-4">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/contact">문의하기</Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            </Link>
+            </div>
           </BlurFade>
         </div>
       </section>
@@ -1320,7 +981,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             {
               title: "상품·프로그램 리뷰 시스템",
               description:
-                "실제 사용자 후기와 전문가 코멘트를 함께 제공해, 어떤 기준으로 선택할지 참고할 수 있도록 돕습니다. 개인 경험은 사람마다 다를 수 있습니다.",
+                "전문가 코멘트를 제공해, 어떤 기준으로 선택할지 참고할 수 있도록 돕습니다.",
               icon: "⭐",
             },
             {
@@ -1356,139 +1017,6 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 </CardHeader>
               </Card>
             </BlurFade>
-          ))}
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="bg-muted/50 py-20">
-        <div className="container mx-auto px-4">
-          <BlurFade delay={0.2} duration={0.6} inView>
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                실제 사용자 후기와 경험
-              </h2>
-              <p className="text-muted-foreground mx-auto max-w-2xl">
-                아래 후기는 플랫폼에서 소개하는 일부 상품 및 서비스에 대한
-                개인의 경험으로,
-                <br /> 모든 분께 동일한 경험이 보장되는 것은 아닙니다.
-                <br /> 또한 이 상품 및 서비스가 플랫폼 전체 서비스의 경험을
-                대변하지 않습니다.
-              </p>
-            </div>
-          </BlurFade>
-
-          {[
-            {
-              title: "상품·서비스 활용 후기",
-              description:
-                "네이버 쇼핑몰에서 수집한, 실제 판매된 상품 후기 일부입니다.",
-              category: "상품 후기" as const,
-            },
-            {
-              title: "산림치유·프로그램 후기",
-              description:
-                "네이버 폼을 통해 수집한, 산림치유·생활습관 프로그램 체험 후기입니다.",
-              category: "산림치유 후기" as const,
-            },
-          ].map((group) => (
-            <div key={group.title} className="mb-14">
-              <BlurFade delay={0.3} duration={0.6} inView>
-                <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <Badge variant="outline" className="mb-2 w-fit">
-                      {group.title}
-                    </Badge>
-                    <h3 className="text-2xl font-semibold md:text-3xl">
-                      {group.description}
-                    </h3>
-                  </div>
-                </div>
-              </BlurFade>
-
-              {group.category === "상품 후기" ? (
-                <>
-                  {/* 제품 후기 사진 그리드 - 6개 카드, 각 카드에 대표 사진 1장 표시 */}
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {productReviewGroups.map((groupImages, groupIndex) => {
-                      const representativeImage = groupImages[0]; // 각 그룹의 첫 번째 이미지를 대표로 사용
-                      return (
-                        <BlurFade
-                          key={`product-group-${groupIndex}`}
-                          delay={0.3 + groupIndex * 0.1}
-                          duration={0.6}
-                          inView
-                        >
-                          <TestimonialGalleryDialog
-                            triggerLabel=""
-                            images={groupImages}
-                            initialIndex={0}
-                          >
-                            <Card className="rainbow-card group relative flex h-full cursor-pointer flex-col border-none p-0 transition-all hover:scale-105">
-                              <div className="relative aspect-[4/3] flex-1 overflow-hidden rounded-lg">
-                                <img
-                                  src={representativeImage.src}
-                                  alt={
-                                    representativeImage.caption ||
-                                    `상품 후기 그룹 ${groupIndex + 1}`
-                                  }
-                                  className="h-full w-full object-cover transition-transform group-hover:scale-110"
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                                {representativeImage.caption && (
-                                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                                    <p className="line-clamp-2 text-xs text-white">
-                                      {representativeImage.caption}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </Card>
-                          </TestimonialGalleryDialog>
-                        </BlurFade>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-8 flex justify-center">
-                    <Button variant="outline" size="lg" asChild>
-                      <a
-                        href="https://smartstore.naver.com"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        상품 서비스 활용후기 더보기
-                      </a>
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* 산림치유 후기는 기존 텍스트 카드 유지 */}
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {testimonialData
-                      .filter((item) => item.category === group.category)
-                      .map((testimonial, index) => (
-                        <BlurFade
-                          key={`${testimonial.name}-${testimonial.category}`}
-                          delay={0.3 + index * 0.1}
-                          duration={0.6}
-                          inView
-                        >
-                          <TestimonialCard testimonial={testimonial} />
-                        </BlurFade>
-                      ))}
-                  </div>
-                  <div className="mt-8 flex justify-center">
-                    <Button variant="outline" size="lg" asChild>
-                      <Link to="/teams">치유 프로그램 더 보기</Link>
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
           ))}
         </div>
       </section>
@@ -1760,8 +1288,9 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                     설명, 더 안전한 선택을 위해 꾸준히 업데이트해 나가겠습니다.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </BlurFade>
         </div>
       </section> */}
@@ -1866,30 +1395,18 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           <BlurFade delay={0.2} duration={0.6} inView>
             <div className="mx-auto max-w-3xl text-center">
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-                치료는 병원에서, 생활관리는 함께 정리해 볼까요?
+                건강정보와 생활습관을 입력하고, 맞춤 건강 보고서를 받아보세요
               </h2>
               <p className="text-muted-foreground mb-8 text-sm md:text-lg">
-                지금 Evidence Base에 가입하시면 암 이후 생활에서 자주 논의되는
-                생활습관·영양·치유 관련
-                <br /> 근거 기반 콘텐츠를 차분히 살펴보실 수 있습니다.
+                건강정보 입력 → 생활습관 입력 → 맞춤 건강 보고서 요청까지, 세
+                단계로 나의 생활관리를 체계적으로 정리할 수 있습니다.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    if (loaderData.isAuthenticated) {
-                      navigate("/");
-                    } else {
-                      navigate("/join");
-                    }
-                  }}
-                >
-                  {loaderData.isAuthenticated ? "홈으로 이동" : "무료 회원가입"}
+                <Button size="lg" onClick={handlePrimaryCta}>
+                  {primaryCtaLabel}
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link to="/clinic">
-                    통합의학 전문가와 먼저 상담하고 싶어요
-                  </Link>
+                  <Link to="/contact">궁금한 점 문의하기</Link>
                 </Button>
               </div>
               <p className="text-muted-foreground mt-4 text-xs">

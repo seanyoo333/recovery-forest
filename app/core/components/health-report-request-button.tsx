@@ -31,9 +31,12 @@ import {
 } from "~/core/components/ui/select";
 import {
   type HealthReportPayload,
+  getHealthReportProductPath,
   HEALTH_REPORT_PAGE_PATH,
   HEALTH_REPORT_PENDING_KEY,
   HEALTH_REPORT_POINT_PRICE,
+  HEALTH_REPORT_PRODUCT_DESCRIPTION,
+  HEALTH_REPORT_PRODUCT_NAME,
   type TopConcern,
   type TreatmentStage,
   type WeeklyExerciseFreq,
@@ -90,6 +93,8 @@ interface HealthReportRequestButtonProps {
   variant?: ButtonProps["variant"];
   label?: string;
   sourceTag?: string;
+  /** 상품 ID (제공 시 "내 보고서 보기" 링크가 해당 상품 요청 목록으로 연결) */
+  productId?: string;
   onSuccess?: () => void;
 }
 
@@ -97,6 +102,7 @@ export function HealthReportRequestButton({
   variant = "default",
   label = "건강 리포트 요청",
   sourceTag = "cta",
+  productId,
   onSuccess,
 }: HealthReportRequestButtonProps) {
   const [open, setOpen] = useState(false);
@@ -263,16 +269,24 @@ export function HealthReportRequestButton({
             </DialogHeader>
             <div className="pt-2">
               <Button asChild className="w-full">
-                <Link to={HEALTH_REPORT_PAGE_PATH}>내 보고서 보기</Link>
+                <Link
+                  to={
+                    productId
+                      ? getHealthReportProductPath(productId)
+                      : HEALTH_REPORT_PAGE_PATH
+                  }
+                >
+                  내 보고서 보기
+                </Link>
               </Button>
             </div>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>건강 보고서 요청</DialogTitle>
+              <DialogTitle>{HEALTH_REPORT_PRODUCT_NAME}</DialogTitle>
               <DialogDescription>
-                지피지기면 백전불태. 건강한 삶을 위한 건강 전략 지도.
+                {HEALTH_REPORT_PRODUCT_DESCRIPTION}
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/50 p-3">

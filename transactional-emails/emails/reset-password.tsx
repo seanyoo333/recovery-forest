@@ -17,39 +17,40 @@ export default function ResetPassword() {
       <Html>
         <Head />
         <Body className="bg-white font-sans">
-          <Preview>Reset Password</Preview>
+          <Preview>Evidence Base 비밀번호 재설정</Preview>
           <Container className="mx-auto max-w-[560px] py-5 pb-12">
             <Heading className="pt-4 text-center text-2xl leading-tight font-normal tracking-[-0.5px] text-black">
-              Reset Password
+              비밀번호를 재설정해주세요
             </Heading>
             <Section>
               <Text className="mb-4 text-[15px] leading-relaxed text-black">
-                Click the button below to reset your password:
+                비밀번호 재설정을 요청하셨다면 아래 버튼을 눌러 새 비밀번호를
+                설정해 주세요.
               </Text>
               <Button
                 className="block rounded-xl bg-black px-6 py-3 text-center text-[15px] font-semibold text-white no-underline"
                 href={`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/forgot-password/create`}
               >
-                Reset Password
+                비밀번호 재설정하기
               </Button>
             </Section>
             <Section>
               <Text className="mb-4 text-[15px] leading-relaxed text-black">
-                If the button above does not work, you can copy and paste the
-                URL below into your browser:
+                버튼이 동작하지 않으면 아래 주소를 복사해 브라우저에 직접
+                입력해 주세요.
               </Text>
               <Text className="mb-4 text-[15px] leading-relaxed text-blue-500">
                 {`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/forgot-password/create`}
               </Text>
               <Text className="mb-4 text-[15px] leading-relaxed text-black">
-                If you did not request a password reset, you can safely ignore
-                this email.
+                본인이 요청하지 않은 비밀번호 재설정이라면 이 메일을 무시해
+                주세요.
               </Text>
               <Text className="mb-4 text-[15px] leading-relaxed text-black">
-                Best regards,
+                계정 보안을 위해 비밀번호는 다른 사람과 공유하지 마세요.
               </Text>
               <Text className="mb-4 text-[15px] leading-relaxed text-black">
-                The Supaplate Team
+                Evidence Base 팀 드림
               </Text>
             </Section>
           </Container>

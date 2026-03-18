@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Link,
+  redirect,
   useFetcher,
   useNavigate,
   useRevalidator,
@@ -25,7 +27,11 @@ import {
 import { HealthReportRequestButton } from "~/core/components/health-report-request-button";
 import {
   formatHealthReportInputSummary,
+  getHealthReportDetailPath,
+  getHealthReportProduct,
+  getHealthReportProductPath,
   HEALTH_REPORT_CARDS_PER_PAGE,
+  HEALTH_REPORT_PAGE_PATH,
   HEALTH_REPORT_FAILED_MESSAGE,
   HEALTH_REPORT_PENDING_MESSAGE,
   REPORT_REQUEST_STATUS_CONFIG,
@@ -62,19 +68,47 @@ import {
   getReportRequestsWithHealthReports,
 } from "~/features/users/queries";
 
-export const meta: Route.MetaFunction = () => {
-  return [{ title: "내 리포트 | Dashboard" }];
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const meta: Route.MetaFunction = ({ params }) => {
+  const product = getHealthReportProduct(params.productId ?? "");
+  return [
+    {
+      title: product ? `${product.name} | Dashboard` : "내 리포트 | Dashboard",
+    },
+  ];
 };
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
+  const productId = params.productId;
+  if (!productId) {
+    throw redirect(HEALTH_REPORT_PAGE_PATH);
+  }
+
+  // 이전 URL 형식 호환: /health/report/:requestId → /health/report/basic/:requestId
+  if (UUID_REGEX.test(productId)) {
+    throw redirect(
+      `${getHealthReportProductPath("basic")}/${productId}`,
+    );
+  }
+
+  const product = getHealthReportProduct(productId);
+  if (!product) {
+    throw redirect(HEALTH_REPORT_PAGE_PATH);
+  }
+
   const [client] = makeServerClient(request);
   const userId = await getLoggedInUserId(client);
+  if (!userId) {
+    throw new Response(null, { status: 401 });
+  }
 
   const requests = await getReportRequestsWithHealthReports(client, {
     userId,
   });
 
-  return { requests };
+  return { requests, product };
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -131,7 +165,7 @@ export async function action({ request }: Route.ActionArgs) {
 export default function DashboardHealthReportPage({
   loaderData,
 }: Route.ComponentProps) {
-  const { requests } = loaderData;
+  const { requests, product } = loaderData;
   const revalidator = useRevalidator();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
@@ -198,19 +232,33 @@ export default function DashboardHealthReportPage({
   const buildPageUrl = (p: number) => {
     const params = new URLSearchParams(searchParams);
     params.set("page", String(p));
-    return `?${params.toString()}`;
+    return `${getHealthReportProductPath(product.id)}?${params.toString()}`;
   };
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">개인 맞춤 건강 보고서</h1>
+          <Link
+            to={HEALTH_REPORT_PAGE_PATH}
+            viewTransition
+            className="text-muted-foreground hover:text-foreground mb-2 inline-block text-sm"
+          >
+            ← 상품 목록으로
+          </Link>
+          <h1 className="text-2xl font-bold">{product.name}</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            건강 리포트 요청 및 진행상태 확인
+            {product.description}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            건강 리포트 요청 및 진행상태 확인 ·{" "}
+            <span className="font-semibold text-foreground">
+              {product.price.toLocaleString()}원
+            </span>
           </p>
         </div>
         <HealthReportRequestButton
+          productId={product.id}
           sourceTag="report_page"
           onSuccess={() => revalidator.revalidate()}
         />
@@ -228,6 +276,7 @@ export default function DashboardHealthReportPage({
                 버튼을 클릭하여 맞춤 건강 리포트를 요청하세요.
               </p>
               <HealthReportRequestButton
+                productId={product.id}
                 sourceTag="report_page_empty"
                 onSuccess={() => revalidator.revalidate()}
               />
@@ -274,6 +323,7 @@ export default function DashboardHealthReportPage({
               {paginatedRequests.map((req) => (
                 <ReportRequestCard
                   key={req.id}
+                  productId={product.id}
                   request={{
                     id: req.id,
                     status: req.status,
@@ -354,11 +404,13 @@ export default function DashboardHealthReportPage({
 }
 
 function ReportRequestCard({
+  productId,
   request,
   selected,
   onToggleSelect,
   onDeleted,
 }: {
+  productId: string;
   request: {
     id: string;
     status: string;
@@ -412,7 +464,7 @@ function ReportRequestCard({
   const currentStepIndex = REPORT_STATUS_PROGRESS.indexOf(request.status);
   const showGreenDot = REPORT_STATUS_WITH_GREEN_DOT.has(request.status);
 
-  const detailPath = `/my/dashboard/health/report/${request.id}`;
+  const detailPath = getHealthReportDetailPath(productId, request.id);
 
   const navigate = useNavigate();
 

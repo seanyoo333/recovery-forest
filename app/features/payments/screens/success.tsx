@@ -17,8 +17,8 @@ import type { Route } from "./+types/success";
 
 import { CheckCircle2, FileText, LayoutDashboard, Receipt } from "lucide-react";
 import { useEffect } from "react";
-import { toast } from "sonner";
 import { Link, redirect } from "react-router";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "~/core/components/ui/button";
@@ -31,13 +31,15 @@ import {
   CardTitle,
 } from "~/core/components/ui/card";
 import {
+  DEFAULT_HEALTH_REPORT_PRODUCT_ID,
   HEALTH_REPORT_PAGE_PATH,
   HEALTH_REPORT_PENDING_KEY,
+  getHealthReportProductPath,
 } from "~/core/lib/health-report";
 import {
+  PAYMENT_METADATA_TYPE,
   getCheckoutUrl,
   isAllowedPaymentAmount,
-  PAYMENT_METADATA_TYPE,
 } from "~/core/lib/payment-constants";
 import adminClient from "~/core/lib/supa-admin-client.server";
 import makeServerClient from "~/core/lib/supa-client.server";
@@ -205,7 +207,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   const isPointPurchase =
-    paymentResponse.data.metadata?.type === PAYMENT_METADATA_TYPE.POINT_PURCHASE;
+    paymentResponse.data.metadata?.type ===
+    PAYMENT_METADATA_TYPE.POINT_PURCHASE;
   const isHealthReport =
     paymentResponse.data.metadata?.type === PAYMENT_METADATA_TYPE.HEALTH_REPORT;
 
@@ -303,7 +306,9 @@ export default function Success({ loaderData }: Route.ComponentProps) {
   // 건강 보고서 카드 결제 후: sessionStorage payload로 report_requests 생성
   useEffect(() => {
     if (!isHealthReport || !orderId || !paymentKey) return;
-    const raw = typeof window !== "undefined" && sessionStorage.getItem(HEALTH_REPORT_PENDING_KEY);
+    const raw =
+      typeof window !== "undefined" &&
+      sessionStorage.getItem(HEALTH_REPORT_PENDING_KEY);
     if (!raw) return;
     const payload = JSON.parse(raw) as Record<string, unknown>;
     fetch("/api/health-report-complete-payment", {
@@ -323,79 +328,103 @@ export default function Success({ loaderData }: Route.ComponentProps) {
   }, [isHealthReport, orderId, paymentKey]);
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col items-center gap-8 py-12">
-      <Card className="w-full overflow-hidden border-green-200/60 bg-green-50/30 shadow-sm dark:border-green-900/40 dark:bg-green-950/20">
-        <CardHeader className="flex flex-col items-center pb-2">
-          <div className="mb-3 flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
-            <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
-          </div>
-          <CardTitle className="text-center text-2xl font-semibold">
-            결제가 완료되었습니다
-          </CardTitle>
-          <CardDescription className="text-center text-base">
-            {isPointPurchase
-              ? "포인트가 정상적으로 적립되었습니다."
-              : isHealthReport
-                ? "건강 보고서 요청이 접수되었습니다. 결과는 대시보드에서 확인할 수 있습니다."
-                : "결제가 성공적으로 처리되었습니다."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 px-6">
-          <div className="space-y-2 rounded-lg border bg-background/80 p-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">주문명</span>
-              <span className="font-medium">{data.orderName}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">결제 금액</span>
-              <span className="font-medium">
-                {data.totalAmount?.toLocaleString()}원
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">결제 시각</span>
-              <span className="font-medium">
-                {formatApprovedAt(data.approvedAt ?? data.requestedAt ?? "")}
-              </span>
-            </div>
-            {isPointPurchase && pointsAdded > 0 && (
-              <div className="flex justify-between border-t pt-3 text-sm">
-                <span className="text-muted-foreground">적립 포인트</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">
-                  +{pointsAdded.toLocaleString()}P
-                </span>
+    <div className="flex flex-col items-center gap-20 py-12">
+      <div className="grid w-full grid-cols-1 gap-10 md:grid-cols-2">
+        <div>
+          <img
+            src="/middle-man-after.png"
+            alt="결제 완료"
+            className="h-full w-full rounded-2xl object-cover"
+          />
+        </div>
+
+        <div className="flex flex-col items-start gap-10">
+          <Card className="w-full overflow-hidden border-green-200/60 bg-green-50/30 shadow-sm dark:border-green-900/40 dark:bg-green-950/20">
+            <CardHeader className="flex flex-col items-center pb-2">
+              <div className="mb-3 flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+                <CheckCircle2 className="size-10 text-green-600 dark:text-green-400" />
               </div>
-            )}
-          </div>
-          {data.receipt?.url && (
-            <a
-              href={data.receipt.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm underline underline-offset-4 transition-colors"
-            >
-              <Receipt className="size-4" />
-              영수증 보기
-            </a>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-col gap-2 px-6">
-          {(isPointPurchase || isHealthReport) && (
-            <Button asChild className="w-full" size="lg">
-              <Link to={HEALTH_REPORT_PAGE_PATH}>
-                <FileText className="mr-2 size-4" />
-                {isHealthReport ? "건강리포트 결과 보기" : "건강리포트 요청하기"}
-              </Link>
-            </Button>
-          )}
-          <Button asChild variant="outline" className="w-full" size="lg">
-            <Link to="/my/dashboard">
-              <LayoutDashboard className="mr-2 size-4" />
-              대시보드로 이동
-            </Link>
-          </Button>
-        </CardFooter>
-      </Card>
+              <CardTitle className="text-center text-2xl font-semibold">
+                결제가 완료되었습니다
+              </CardTitle>
+              <CardDescription className="text-center text-base">
+                {isPointPurchase
+                  ? "포인트가 정상적으로 적립되었습니다."
+                  : isHealthReport
+                    ? "건강 보고서 요청이 접수되었습니다. 결과는 대시보드에서 확인할 수 있습니다."
+                    : "결제가 성공적으로 처리되었습니다."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 px-6">
+              <div className="bg-background/80 space-y-2 rounded-lg border p-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">주문명</span>
+                  <span className="font-medium">{data.orderName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">결제 금액</span>
+                  <span className="font-medium">
+                    {data.totalAmount?.toLocaleString()}원
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">결제 시각</span>
+                  <span className="font-medium">
+                    {formatApprovedAt(
+                      data.approvedAt ?? data.requestedAt ?? "",
+                    )}
+                  </span>
+                </div>
+                {isPointPurchase && pointsAdded > 0 && (
+                  <div className="flex justify-between border-t pt-3 text-sm">
+                    <span className="text-muted-foreground">적립 포인트</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      +{pointsAdded.toLocaleString()}P
+                    </span>
+                  </div>
+                )}
+              </div>
+              {data.receipt?.url && (
+                <a
+                  href={data.receipt.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm underline underline-offset-4 transition-colors"
+                >
+                  <Receipt className="size-4" />
+                  영수증 보기
+                </a>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col gap-2 px-6">
+              {(isPointPurchase || isHealthReport) && (
+                <Button asChild className="w-full" size="lg">
+                  <Link
+                    to={
+                      isHealthReport
+                        ? getHealthReportProductPath(
+                            DEFAULT_HEALTH_REPORT_PRODUCT_ID,
+                          )
+                        : HEALTH_REPORT_PAGE_PATH
+                    }
+                  >
+                    <FileText className="mr-2 size-4" />
+                    {isHealthReport
+                      ? "건강리포트 결과 보기"
+                      : "건강리포트 요청하기"}
+                  </Link>
+                </Button>
+              )}
+              <Button asChild variant="outline" className="w-full" size="lg">
+                <Link to="/my/dashboard">
+                  <LayoutDashboard className="mr-2 size-4" />
+                  건강 현황으로 이동
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

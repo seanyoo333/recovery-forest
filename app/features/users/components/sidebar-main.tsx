@@ -9,8 +9,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 
-import { FEATURES } from "~/core/config/features";
-
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,6 +24,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "~/core/components/ui/sidebar";
+import { FEATURES } from "~/core/config/features";
 
 export default function SidebarMain({
   items,

@@ -1,6 +1,6 @@
 import type { Route } from "./+types/private.layout";
 
-import { Outlet, redirect } from "react-router";
+import { Outlet, redirect, useOutletContext } from "react-router";
 
 import makeServerClient from "../lib/supa-client.server";
 
@@ -24,5 +24,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function PrivateLayout() {
-  return <Outlet />;
+  const outletContext = useOutletContext<{
+    isLoggedIn?: boolean;
+    name?: string;
+    username?: string;
+    avatar?: string;
+  }>();
+  return <Outlet context={outletContext ?? {}} />;
 }

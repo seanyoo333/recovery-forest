@@ -5,14 +5,25 @@
  */
 import type { Route } from "./+types/dashboard-health-report-detail";
 
-import { DateTime } from "luxon";
 import { ArrowLeft, Download, FileText, Loader2, Sparkles } from "lucide-react";
+import { DateTime } from "luxon";
 import { bundleMDX } from "mdx-bundler";
 import { getMDXComponent } from "mdx-bundler/client";
 import path from "node:path";
 import { useEffect } from "react";
 import { Link, data, useFetcher, useRevalidator } from "react-router";
 
+import {
+  TypographyBlockquote,
+  TypographyH1,
+  TypographyH2,
+  TypographyH3,
+  TypographyH4,
+  TypographyInlineCode,
+  TypographyList,
+  TypographyOrderedList,
+  TypographyP,
+} from "~/core/components/mdx-typography1";
 import {
   ActionTimeline,
   DoctorQuestionBox,
@@ -26,17 +37,6 @@ import {
   SectionCard,
   WarningPanel,
 } from "~/core/components/report_components";
-import {
-  TypographyBlockquote,
-  TypographyH1,
-  TypographyH2,
-  TypographyH3,
-  TypographyH4,
-  TypographyInlineCode,
-  TypographyList,
-  TypographyOrderedList,
-  TypographyP,
-} from "~/core/components/mdx-typography1";
 import { Button } from "~/core/components/ui/button";
 import {
   Card,
@@ -44,6 +44,11 @@ import {
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
+import {
+  HEALTH_REPORT_PDF_FAILED_MESSAGE,
+  REPORT_HTML_GENERATION_STATUSES,
+  getHealthReportProductPath,
+} from "~/core/lib/health-report";
 import makeServerClient from "~/core/lib/supa-client.server";
 import {
   AskDoctorList,
@@ -54,10 +59,6 @@ import {
 } from "~/features/blog/components/blog-components";
 import { reportJsonToHtml } from "~/features/users/health/report-json-to-html";
 import { reportJsonToMdx } from "~/features/users/health/report-json-to-mdx";
-import {
-  HEALTH_REPORT_PDF_FAILED_MESSAGE,
-  REPORT_HTML_GENERATION_STATUSES,
-} from "~/core/lib/health-report";
 import {
   getHealthReportByRequestId,
   getLoggedInUserId,
@@ -78,9 +79,10 @@ export const meta: Route.MetaFunction = ({ data }) => {
 export async function loader({ request, params }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
   const userId = await getLoggedInUserId(client);
+  const productId = params.productId;
   const requestId = params.requestId;
 
-  if (!requestId) {
+  if (!productId || !requestId) {
     throw data(null, { status: 404 });
   }
 
@@ -96,8 +98,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   let { report } = result;
   const reportJson = report.report_json as ReportJson | null;
   const hasReportJson =
-    reportJson && typeof reportJson === "object" && Object.keys(reportJson).length > 0;
-  const statusAllowsHtml = REPORT_HTML_GENERATION_STATUSES.includes(result.request.status);
+    reportJson &&
+    typeof reportJson === "object" &&
+    Object.keys(reportJson).length > 0;
+  const statusAllowsHtml = REPORT_HTML_GENERATION_STATUSES.includes(
+    result.request.status,
+  );
   const needsHtml =
     statusAllowsHtml &&
     hasReportJson &&
@@ -138,8 +144,18 @@ export async function loader({ request, params }: Route.LoaderArgs) {
           cwd: process.cwd(),
           esbuildOptions(options) {
             options.resolveExtensions = [
-              ".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif",
-              ".tsx", ".ts", ".jsx", ".js", ".mjs", ".cjs",
+              ".webp",
+              ".png",
+              ".jpg",
+              ".jpeg",
+              ".svg",
+              ".gif",
+              ".tsx",
+              ".ts",
+              ".jsx",
+              ".js",
+              ".mjs",
+              ".cjs",
             ];
             options.alias = { "~": path.join(process.cwd(), "app") };
             return options;
@@ -148,18 +164,22 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         mdxCode = code;
       }
     } catch (err) {
-      console.warn("Health report MDX compilation failed, using fallback:", err);
+      console.warn(
+        "Health report MDX compilation failed, using fallback:",
+        err,
+      );
     }
   }
 
-  return { ...result, report, mdxCode };
+  return { ...result, report, mdxCode, productId };
 }
 
 type ReportJson = Record<string, unknown>;
 
 function isHealthReportStructure(data: ReportJson): boolean {
   if (!data || typeof data !== "object") return false;
-  const hasTitle = typeof data.Title === "string" || typeof data.title === "string";
+  const hasTitle =
+    typeof data.Title === "string" || typeof data.title === "string";
   const hasContext = Array.isArray(data.context);
   const hasSection = Object.keys(data).some(
     (k) => k.includes("section") && typeof data[k] === "object",
@@ -168,9 +188,13 @@ function isHealthReportStructure(data: ReportJson): boolean {
 }
 
 /** 섹션 객체에서 title-content 블록 추출 (insertion order 기준, _content/_explanation 직전 키를 제목으로 사용) */
-function parseSectionBlocks(section: Record<string, unknown>): Array<{ title: string; content: string }> {
+function parseSectionBlocks(
+  section: Record<string, unknown>,
+): Array<{ title: string; content: string }> {
   const blocks: Array<{ title: string; content: string }> = [];
-  const keys = Object.keys(section).filter((k) => section[k] != null && typeof section[k] === "string");
+  const keys = Object.keys(section).filter(
+    (k) => section[k] != null && typeof section[k] === "string",
+  );
   let pendingTitle: string | null = null;
 
   for (const key of keys) {
@@ -178,9 +202,10 @@ function parseSectionBlocks(section: Record<string, unknown>): Array<{ title: st
     if (!val) continue;
 
     const isContent = key.endsWith("_content") || key.endsWith("_explanation");
-    const explicitTitle = isContent && key.endsWith("_content")
-      ? (section[key.replace(/_content$/, "_title")] as string | undefined)
-      : undefined;
+    const explicitTitle =
+      isContent && key.endsWith("_content")
+        ? (section[key.replace(/_content$/, "_title")] as string | undefined)
+        : undefined;
 
     if (isContent) {
       const title =
@@ -225,13 +250,24 @@ function PremiumReportRenderer({
   const starting = (data.starting_sentence as string) ?? "";
   const ending = (data.ending_sentence as string) ?? "";
   const context = (data.context as string[]) ?? [];
-  const skipKeys = new Set(["Title", "title", "starting_sentence", "ending_sentence", "context", "html"]);
+  const skipKeys = new Set([
+    "Title",
+    "title",
+    "starting_sentence",
+    "ending_sentence",
+    "context",
+    "html",
+  ]);
 
-  const sectionKeys = context.filter((k) => typeof k === "string" && (data[k] as object));
+  const sectionKeys = context.filter(
+    (k) => typeof k === "string" && (data[k] as object),
+  );
   const sectionKeySet = sectionKeys.length
     ? new Set(sectionKeys)
     : new Set(
-        Object.keys(data).filter((k) => !skipKeys.has(k) && typeof data[k] === "object"),
+        Object.keys(data).filter(
+          (k) => !skipKeys.has(k) && typeof data[k] === "object",
+        ),
       );
 
   const first = data.first_section as Record<string, unknown> | undefined;
@@ -243,9 +279,17 @@ function PremiumReportRenderer({
 
   const firstBlocks = first ? parseSectionBlocks(first) : [];
   const totalSummary = (first?.total_individualized_summary as string) ?? "";
-  const totalSummaryContent = (first?.total_individualized_summary_content as string) ?? "";
+  const totalSummaryContent =
+    (first?.total_individualized_summary_content as string) ?? "";
   const keyPoints = firstBlocks
-    .filter((b) => b.title && !["total_individualized_summary", "total individualized summary"].includes(b.title.toLowerCase()))
+    .filter(
+      (b) =>
+        b.title &&
+        ![
+          "total_individualized_summary",
+          "total individualized summary",
+        ].includes(b.title.toLowerCase()),
+    )
     .slice(0, 5)
     .map((b) => b.title);
 
@@ -262,7 +306,9 @@ function PremiumReportRenderer({
       {(totalSummary || totalSummaryContent || starting.trim()) && (
         <ReportHeroSummary
           headline={stripAngleBrackets(totalSummary) || title}
-          summary={totalSummaryContent || starting || "맞춤 분석 결과를 확인해 주세요."}
+          summary={
+            totalSummaryContent || starting || "맞춤 분석 결과를 확인해 주세요."
+          }
           keyPoints={keyPoints}
           tone="focus"
         />
@@ -278,16 +324,23 @@ function PremiumReportRenderer({
             {firstBlocks
               .filter(
                 (b) =>
-                  !["total_individualized_summary", "total individualized summary"].includes(
-                    (b.title || "").toLowerCase(),
-                  ),
+                  ![
+                    "total_individualized_summary",
+                    "total individualized summary",
+                  ].includes((b.title || "").toLowerCase()),
               )
               .map((b, i) => (
                 <InsightPanel
                   key={i}
                   title={stripAngleBrackets(b.title)}
                   content={b.content}
-                  variant={b.title?.toLowerCase().includes("routine") ? "routine" : b.title?.toLowerCase().includes("blood") ? "clinical" : "default"}
+                  variant={
+                    b.title?.toLowerCase().includes("routine")
+                      ? "routine"
+                      : b.title?.toLowerCase().includes("blood")
+                        ? "clinical"
+                        : "default"
+                  }
                 />
               ))}
           </div>
@@ -295,9 +348,15 @@ function PremiumReportRenderer({
       )}
 
       {sectionKeySet.has("second_section") && second && (
-        <SectionCard step="2" title="핵심 표적 및 관리 축" description="우선적으로 살펴볼 바이오마커와 생활습관 포인트입니다.">
+        <SectionCard
+          step="2"
+          title="핵심 표적 및 관리 축"
+          description="우선적으로 살펴볼 바이오마커와 생활습관 포인트입니다."
+        >
           <PriorityTargetCard
-            axis={stripAngleBrackets((second.major_targets_axis as string) ?? "종합")}
+            axis={stripAngleBrackets(
+              (second.major_targets_axis as string) ?? "종합",
+            )}
             explanation={(second.targets_axis_explanation as string) ?? ""}
             symptoms={[]}
             targets={[]}
@@ -306,23 +365,50 @@ function PremiumReportRenderer({
       )}
 
       {sectionKeySet.has("third_section") && third && (
-        <SectionCard step="3" title="근거 및 연구 요약" description="표적과 생활습관 연결 근거, 관련 논문·리소스 요약입니다.">
+        <SectionCard
+          step="3"
+          title="근거 및 연구 요약"
+          description="표적과 생활습관 연결 근거, 관련 논문·리소스 요약입니다."
+        >
           {third.relation_between_targets_status != null ||
           third.top_paper_research != null ? (
             <EvidenceBridge
-              relationTitle={stripAngleBrackets((third.relation_between_targets_status as string) ?? "표적-상태 연결")}
+              relationTitle={stripAngleBrackets(
+                (third.relation_between_targets_status as string) ??
+                  "표적-상태 연결",
+              )}
               relationContent={(third.relation_content as string) ?? ""}
-              paperSummaryTitle={stripAngleBrackets((third.top_paper_research as string) ?? "관련 연구")}
+              paperSummaryTitle={stripAngleBrackets(
+                (third.top_paper_research as string) ?? "관련 연구",
+              )}
               paperSummary={(third.top_paper_research_content as string) ?? ""}
               relevanceTitle="맞춤 해석"
-              relevanceContent={(third.relation_content as string) ?? (third.top_paper_research_content as string) ?? ""}
-              extraEvidenceTitle={third.top_blog ? String(third.top_blog) : undefined}
-              extraEvidenceContent={(third.top_blog_content as string) ?? (third.top_blog ? (third as Record<string, unknown>)[`top_blog_content`] as string : undefined)}
+              relevanceContent={
+                (third.relation_content as string) ??
+                (third.top_paper_research_content as string) ??
+                ""
+              }
+              extraEvidenceTitle={
+                third.top_blog ? String(third.top_blog) : undefined
+              }
+              extraEvidenceContent={
+                (third.top_blog_content as string) ??
+                (third.top_blog
+                  ? ((third as Record<string, unknown>)[
+                      `top_blog_content`
+                    ] as string)
+                  : undefined)
+              }
             />
           ) : (
             <div className="space-y-4">
               {parseSectionBlocks(third).map((b, i) => (
-                <InsightPanel key={i} title={stripAngleBrackets(b.title)} content={b.content} variant="default" />
+                <InsightPanel
+                  key={i}
+                  title={stripAngleBrackets(b.title)}
+                  content={b.content}
+                  variant="default"
+                />
               ))}
             </div>
           )}
@@ -330,40 +416,67 @@ function PremiumReportRenderer({
       )}
 
       {sectionKeySet.has("forth_section") && forth && (
-        <SectionCard step="4" title="실행 가이드" description="목표와 7일·8주 단위 실행 계획입니다.">
+        <SectionCard
+          step="4"
+          title="실행 가이드"
+          description="목표와 7일·8주 단위 실행 계획입니다."
+        >
           <ActionTimeline
-            goalTitle={stripAngleBrackets((forth.goal_action as string) ?? "목표")}
+            goalTitle={stripAngleBrackets(
+              (forth.goal_action as string) ?? "목표",
+            )}
             goalContent={(forth.goal_action_content as string) ?? ""}
-            firstWeekTitle={stripAngleBrackets((forth.goal_7d_action as string) ?? "7일 실행")}
+            firstWeekTitle={stripAngleBrackets(
+              (forth.goal_7d_action as string) ?? "7일 실행",
+            )}
             firstWeekContent={(forth.goal_7d_action_content as string) ?? ""}
-            eightWeekTitle={stripAngleBrackets((forth.goal_8w_action as string) ?? "8주 실행")}
+            eightWeekTitle={stripAngleBrackets(
+              (forth.goal_8w_action as string) ?? "8주 실행",
+            )}
             eightWeekContent={(forth.goal_8w_action_content as string) ?? ""}
           />
         </SectionCard>
       )}
 
-      {sectionKeySet.has("fifth_section") && fifth && (() => {
-        const questions = [
-          ...(fifth.current_interaction_content ? parseListItems(String(fifth.current_interaction_content)) : []),
-          ...(fifth.suggested_interaction_content ? parseListItems(String(fifth.suggested_interaction_content)) : []),
-          ...parseSectionBlocks(fifth).flatMap((b) => parseListItems(b.content)),
-        ].filter((q) => q.length > 0);
-        return questions.length > 0 ? (
-          <DoctorQuestionBox
-            title="담당 선생님께 여쭤볼 수 있는 질문"
-            intro={(fifth.things_to_ask as string) ?? undefined}
-            questions={questions}
-          />
-        ) : (
-          <SectionCard step="5" title="상담 시 참고" description="담당 선생님과 상의할 때 참고하실 수 있는 내용입니다.">
-            <div className="space-y-4">
-              {parseSectionBlocks(fifth).map((b, i) => (
-                <InsightPanel key={i} title={stripAngleBrackets(b.title)} content={b.content} variant="default" />
-              ))}
-            </div>
-          </SectionCard>
-        );
-      })()}
+      {sectionKeySet.has("fifth_section") &&
+        fifth &&
+        (() => {
+          const questions = [
+            ...(fifth.current_interaction_content
+              ? parseListItems(String(fifth.current_interaction_content))
+              : []),
+            ...(fifth.suggested_interaction_content
+              ? parseListItems(String(fifth.suggested_interaction_content))
+              : []),
+            ...parseSectionBlocks(fifth).flatMap((b) =>
+              parseListItems(b.content),
+            ),
+          ].filter((q) => q.length > 0);
+          return questions.length > 0 ? (
+            <DoctorQuestionBox
+              title="담당 선생님께 여쭤볼 수 있는 질문"
+              intro={(fifth.things_to_ask as string) ?? undefined}
+              questions={questions}
+            />
+          ) : (
+            <SectionCard
+              step="5"
+              title="상담 시 참고"
+              description="담당 선생님과 상의할 때 참고하실 수 있는 내용입니다."
+            >
+              <div className="space-y-4">
+                {parseSectionBlocks(fifth).map((b, i) => (
+                  <InsightPanel
+                    key={i}
+                    title={stripAngleBrackets(b.title)}
+                    content={b.content}
+                    variant="default"
+                  />
+                ))}
+              </div>
+            </SectionCard>
+          );
+        })()}
 
       {sectionKeySet.has("sixth_section") && sixth && (
         <WarningPanel
@@ -373,7 +486,11 @@ function PremiumReportRenderer({
       )}
 
       {ending.trim() && (
-        <ReportClosing message={ending} nextStepTitle="다음 권장 단계" nextStepItems={[]} />
+        <ReportClosing
+          message={ending}
+          nextStepTitle="다음 권장 단계"
+          nextStepItems={[]}
+        />
       )}
 
       <ReportFooterMeta
@@ -386,9 +503,16 @@ function PremiumReportRenderer({
 }
 
 /** 기존 범용 구조 대응 (html, sections, body 등) */
-function FallbackReportRenderer({ data }: { data: ReportJson | null | undefined }) {
+function FallbackReportRenderer({
+  data,
+}: {
+  data: ReportJson | null | undefined;
+}) {
   if (!data) return null;
-  if (typeof (data as { html?: string }).html === "string" && (data as { html: string }).html.trim()) {
+  if (
+    typeof (data as { html?: string }).html === "string" &&
+    (data as { html: string }).html.trim()
+  ) {
     return (
       <div
         className="prose prose-slate dark:prose-invert max-w-none"
@@ -398,7 +522,7 @@ function FallbackReportRenderer({ data }: { data: ReportJson | null | undefined 
   }
   const body = (data as { body?: string }).body;
   if (typeof body === "string" && body.trim()) {
-    return <p className="whitespace-pre-wrap leading-relaxed">{body}</p>;
+    return <p className="leading-relaxed whitespace-pre-wrap">{body}</p>;
   }
   return null;
 }
@@ -436,7 +560,7 @@ function HealthReportMDXContent({ code }: { code: string }) {
 export default function DashboardHealthReportDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  const { report, request, mdxCode } = loaderData;
+  const { report, request, mdxCode, productId } = loaderData;
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
   const requestId = request?.id ?? "";
@@ -456,7 +580,9 @@ export default function DashboardHealthReportDetailPage({
   /** PDF 다운로드 가능: (기존 pdf_url) 또는 (private 버킷의 pdf_path + pdf_status=pdf_ready) */
   const canDownloadPdf =
     (typeof pdfUrl === "string" && pdfUrl.trim()) ||
-    (typeof pdfPath === "string" && pdfPath.trim() && pdfStatus === "pdf_ready");
+    (typeof pdfPath === "string" &&
+      pdfPath.trim() &&
+      pdfStatus === "pdf_ready");
 
   /** PDF 다운로드 URL: public이면 pdf_url, private이면 signed URL API */
   const pdfDownloadHref = pdfUrl
@@ -481,21 +607,23 @@ export default function DashboardHealthReportDetailPage({
   }, [pdfSuccess, revalidator]);
 
   const isPdfLoading =
-    fetcher.state !== "idle" &&
-    fetcher.formAction === "/api/health-report-pdf";
+    fetcher.state !== "idle" && fetcher.formAction === "/api/health-report-pdf";
   const pdfError =
-    fetcher.data && typeof fetcher.data === "object" && !(fetcher.data as { success?: boolean }).success
-      ? ((fetcher.data as { error?: string }).error ?? HEALTH_REPORT_PDF_FAILED_MESSAGE)
+    fetcher.data &&
+    typeof fetcher.data === "object" &&
+    !(fetcher.data as { success?: boolean }).success
+      ? ((fetcher.data as { error?: string }).error ??
+        HEALTH_REPORT_PDF_FAILED_MESSAGE)
       : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50/50 to-background dark:from-slate-950/30 dark:to-background">
+    <div className="to-background dark:to-background flex min-h-screen flex-col bg-gradient-to-b from-slate-50/50 dark:from-slate-950/30">
       {/* 헤더 - 프리미엄 */}
       <header className="sticky top-0 z-10 border-b bg-white/90 shadow-sm backdrop-blur dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/my/dashboard/health/report">
+              <Link to={getHealthReportProductPath(productId)}>
                 <ArrowLeft className="size-4" />
               </Link>
             </Button>
@@ -505,7 +633,9 @@ export default function DashboardHealthReportDetailPage({
                 맞춤 건강 보고서
               </h1>
               <p className="text-muted-foreground mt-0.5 text-sm">
-                {DateTime.fromISO(createdAt, { zone: "Asia/Seoul" }).toFormat("yyyy년 M월 d일 HH:mm")}
+                {DateTime.fromISO(createdAt, { zone: "Asia/Seoul" }).toFormat(
+                  "yyyy년 M월 d일 HH:mm",
+                )}
               </p>
             </div>
           </div>
@@ -555,12 +685,14 @@ export default function DashboardHealthReportDetailPage({
       </div>
 
       {/* 본문 */}
-      <main className="mx-auto flex-1 max-w-5xl px-4 py-8 md:px-8">
+      <main className="mx-auto max-w-5xl flex-1 px-4 py-8 md:px-8">
         {hasAnyContent ? (
           usePremium ? (
             <PremiumReportRenderer
               data={reportJson}
-              createdAt={DateTime.fromISO(createdAt, { zone: "Asia/Seoul" }).toFormat("yyyy년 M월 d일")}
+              createdAt={DateTime.fromISO(createdAt, {
+                zone: "Asia/Seoul",
+              }).toFormat("yyyy년 M월 d일")}
             />
           ) : useMdx ? (
             <article className="max-w-4xl [&_blockquote+p]:-mt-0 [&_h2+ol]:-mt-2 [&_h2+ul]:-mt-2 [&_h3+ol]:-mt-2 [&_h3+ul]:-mt-2 [&_h4+ol]:-mt-2 [&_h4+ul]:-mt-2 [&_li_ol]:my-0 [&_li_ol]:-mt-2 [&_li_ul]:my-0 [&_li_ul]:-mt-2 [&_p+blockquote]:-mt-0 [&_p+ol]:-mt-2 [&_p+ul]:-mt-2">
@@ -582,8 +714,12 @@ export default function DashboardHealthReportDetailPage({
           <Card className="overflow-hidden">
             <CardContent className="flex flex-col items-center justify-center py-20 text-center">
               <FileText className="text-muted-foreground mb-4 size-14" />
-              <p className="text-muted-foreground">아직 리포트 내용이 준비되지 않았습니다.</p>
-              <p className="text-muted-foreground mt-1 text-sm">잠시 후 다시 확인해 주세요.</p>
+              <p className="text-muted-foreground">
+                아직 리포트 내용이 준비되지 않았습니다.
+              </p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                잠시 후 다시 확인해 주세요.
+              </p>
             </CardContent>
           </Card>
         )}
@@ -621,9 +757,7 @@ export default function DashboardHealthReportDetailPage({
                 </Button>
               </fetcher.Form>
             )}
-            {pdfError && (
-              <p className="text-destructive text-sm">{pdfError}</p>
-            )}
+            {pdfError && <p className="text-destructive text-sm">{pdfError}</p>}
           </div>
         )}
       </main>

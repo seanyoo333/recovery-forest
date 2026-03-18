@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { FEATURES } from "~/core/config/features";
+import { getCheckoutUrl } from "~/core/lib/payment-constants";
 import { cn } from "~/lib/utils";
 
 import LangSwitcher from "./lang-switcher";
@@ -77,23 +78,23 @@ const menus = [
     to: "/landing",
   },
   {
-    name: "건강 대시보드",
-    to: "/my/dashboard",
+    name: "서비스",
+    to: "/payments",
     items: [
       {
-        name: "건강정보",
-        description: "건강정보 현황을 확인하세요",
-        to: "/my/dashboard/health",
-      },
-      {
-        name: "생활습관",
-        description: "생활습관 기록을 관리하세요",
-        to: "/my/dashboard/health-habits",
-      },
-      {
         name: "맞춤 건강 보고서",
-        description: "개인 맞춤 건강 리포트를 확인하세요",
+        description: "개인 맞춤 건강 리포트를 요청하고 결과를 확인하세요",
         to: "/my/dashboard/health/report",
+      },
+      {
+        name: "포인트 충전",
+        description: "건강 보고서와 서비스 이용에 필요한 포인트를 충전하세요",
+        to: getCheckoutUrl("point"),
+      },
+      {
+        name: "결제 내역",
+        description: "포인트 충전 및 결제 내역을 확인하세요",
+        to: "/payments",
       },
     ],
   },
@@ -135,6 +136,22 @@ const menus = [
     ],
   },
   {
+    name: "블로그",
+    to: "/blog",
+    items: [
+      {
+        name: "전체 글",
+        description: "모든 블로그 글을 보세요",
+        to: "/blog",
+      },
+      {
+        name: "최신 글",
+        description: "최신 블로그 글을 보세요",
+        to: "/blog?sort=new",
+      },
+    ],
+  },
+  {
     name: "천연물질",
     to: "/products",
     items: [
@@ -158,22 +175,6 @@ const menus = [
         name: "검색",
         description: "천연물질(Natural Products)을 검색하세요",
         to: "/products/search",
-      },
-    ],
-  },
-  {
-    name: "블로그",
-    to: "/blog",
-    items: [
-      {
-        name: "전체 글",
-        description: "모든 블로그 글을 보세요",
-        to: "/blog",
-      },
-      {
-        name: "최신 글",
-        description: "최신 블로그 글을 보세요",
-        to: "/blog?sort=new",
       },
     ],
   },
@@ -263,6 +264,12 @@ function UserMenu({
             <Link to="/my/profile">
               <UserIcon className="mr-2 size-4" />
               프로필
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <Link to="/my/dashboard">
+              <BarChart3Icon className="mr-2 size-4" />
+              내 건강 대시보드
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">

@@ -1,54 +1,94 @@
 /**
  * Footer Component
  *
- * A responsive footer that displays copyright information and legal links.
- * This component appears at the bottom of every page in the application and
- * provides essential legal information and copyright notice.
+ * A responsive footer for sales and legal compliance that displays:
+ * - Company information (EvidenceBase Inc., representative, business number, email)
+ * - Links to legal pages (Terms, Privacy, AI Notice, Contact)
+ * - Copyright notice
  *
- * Features:
- * - Responsive design that adapts to different screen sizes
- * - Dynamic copyright year that automatically updates
- * - Links to legal pages (Privacy Policy, Terms of Service)
- * - View transitions for smooth navigation to legal pages
+ * Company details can be updated in the FOOTER_CONFIG object below.
  */
+import { MailIcon } from "lucide-react";
 import { Link } from "react-router";
 
-/**
- * Footer component for displaying copyright information and legal links
- * 
- * This component renders a responsive footer that adapts to different screen sizes.
- * On mobile, it displays the legal links above the copyright notice, while on desktop,
- * it displays them side by side with the copyright on the left and links on the right.
- * 
- * @returns A footer component with copyright information and legal links
- */
+/** 푸터에 표시할 회사 정보 (필요 시 수정) */
+const FOOTER_CONFIG = {
+  companyName: "EvidenceBase Inc.",
+  companyNameKo: "에비던스베이스 주식회사",
+  representative: "유명길",
+  businessNumber: "316-87-03897",
+  email: "shineyou@evidence-base.ai",
+  address: "서울시 도봉구 마들로 11길 65, 5층 503-이13호",
+} as const;
+
 export default function Footer() {
+  const { companyName, representative, businessNumber, email, address } =
+    FOOTER_CONFIG;
+
   return (
-    <footer className="text-muted-foreground mt-auto flex items-center justify-between border-t py-3 text-sm md:py-5">
-      <div className="mx-auto flex h-full w-full max-w-screen-2xl flex-col items-center justify-between gap-2.5 md:order-none md:flex-row md:gap-0">
-        {/* Copyright notice - appears second on mobile, first on desktop */}
-        <div className="order-2 md:order-none">
-          <p>
-            &copy; {new Date().getFullYear()} {import.meta.env.VITE_APP_NAME}.
-            All rights reserved.
-          </p>
+    <footer className="bg-muted/30 mt-auto border-t">
+      <div className="mx-auto w-full max-w-screen-2xl px-5 py-6 md:py-8">
+        {/* Company info */}
+        <div className="text-muted-foreground mb-6 grid gap-4 text-sm md:grid-cols-2 md:items-start md:gap-8">
+          <div className="space-y-1">
+            <p className="text-foreground font-semibold">{companyName}</p>
+            <p>대표자: {representative}</p>
+            <p>사업자등록번호: {businessNumber}</p>
+            <a
+              href={`mailto:${email}`}
+              className="hover:text-foreground flex items-center gap-2 transition-colors"
+            >
+              <MailIcon className="h-4 w-4 shrink-0" />
+              {email}
+            </a>
+            <p>주소: {address}</p>
+          </div>
+
+          {/* Legal links */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 md:justify-end md:gap-x-8">
+            <Link
+              to="/legal/terms-of-service"
+              viewTransition
+              className="hover:text-foreground underline transition-colors"
+            >
+              이용약관
+            </Link>
+            <Link
+              to="/legal/refund-policy"
+              viewTransition
+              className="hover:text-foreground underline transition-colors"
+            >
+              환불정책
+            </Link>
+            <Link
+              to="/legal/privacy-policy"
+              viewTransition
+              className="hover:text-foreground underline transition-colors"
+            >
+              개인정보처리방침
+            </Link>
+            <Link
+              to="/legal/ai-notice"
+              viewTransition
+              className="hover:text-foreground underline transition-colors"
+            >
+              AI 분석 안내
+            </Link>
+            <Link
+              to="/contact"
+              viewTransition
+              className="hover:text-foreground underline transition-colors"
+            >
+              문의하기
+            </Link>
+          </div>
         </div>
-        
-        {/* Legal links - appears first on mobile, second on desktop */}
-        <div className="order-1 flex flex-wrap justify-center gap-6 *:underline md:order-none md:gap-10">
-          <Link to="/legal/terms-of-service" viewTransition>
-            이용약관
-          </Link>
-          <Link to="/legal/privacy-policy" viewTransition>
-            개인정보처리방침
-          </Link>
-          <Link to="/legal/ai-notice" viewTransition>
-            AI 분석 안내
-          </Link>
-          <Link to="/contact" viewTransition>
-            문의하기
-          </Link>
-        </div>
+
+        {/* Copyright */}
+        <p className="text-muted-foreground border-border/50 border-t pt-4 text-center text-xs md:text-left">
+          &copy; {new Date().getFullYear()} {import.meta.env.VITE_APP_NAME}. All
+          rights reserved.
+        </p>
       </div>
     </footer>
   );

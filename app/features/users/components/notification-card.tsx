@@ -2,7 +2,11 @@ import { EyeIcon, FileTextIcon, TrashIcon } from "lucide-react";
 import { Link, useFetcher } from "react-router";
 
 import { cn } from "~/lib/utils";
-import { HEALTH_REPORT_PAGE_PATH } from "~/core/lib/health-report";
+import {
+  DEFAULT_HEALTH_REPORT_PRODUCT_ID,
+  getHealthReportDetailPath,
+  HEALTH_REPORT_PAGE_PATH,
+} from "~/core/lib/health-report";
 
 import {
   Avatar,
@@ -46,7 +50,12 @@ export function NotificationCard({
   payloadId,
   content,
   id,
+  reportRequestId,
 }: NotificationCardProps) {
+  const healthReportLink =
+    reportRequestId
+      ? getHealthReportDetailPath(DEFAULT_HEALTH_REPORT_PRODUCT_ID, reportRequestId)
+      : HEALTH_REPORT_PAGE_PATH;
   const getMessage = (t: typeof type) => {
     switch (t) {
       case "follow":
@@ -71,7 +80,7 @@ export function NotificationCard({
     >
       <CardHeader className="flex flex-row gap-5 space-y-0">
         {type === "health_report" ? (
-          <Link to={HEALTH_REPORT_PAGE_PATH}>
+          <Link to={healthReportLink}>
             <Avatar className="">
               <AvatarFallback>
                 <FileTextIcon className="size-5" />
@@ -128,7 +137,9 @@ export function NotificationCard({
             )}
             {type === "health_report" && (
               <Button variant={"link"} asChild className="p-0 text-lg text-white">
-                <Link to={HEALTH_REPORT_PAGE_PATH}>내 리포트 보기</Link>
+                <Link to={healthReportLink}>
+                  {reportRequestId ? "리포트 보기" : "내 리포트 보기"}
+                </Link>
               </Button>
             )}
           </CardTitle>

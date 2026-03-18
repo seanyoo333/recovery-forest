@@ -300,10 +300,14 @@ export default [
           ),
           route(
             "/health/report",
+            "features/users/dashboard/pages/dashboard-health-report-products.tsx",
+          ),
+          route(
+            "/health/report/:productId",
             "features/users/dashboard/pages/dashboard-health-report.tsx",
           ),
           route(
-            "/health/report/:requestId",
+            "/health/report/:productId/:requestId",
             "features/users/dashboard/pages/dashboard-health-report-detail.tsx",
           ),
           route(

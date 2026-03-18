@@ -5,14 +5,73 @@
  * 안내 메시지: DB(report_requests) 기준으로 표시 (API 200이 아닌 실제 저장 확정 후)
  */
 
-/** 내 리포트 페이지 경로 */
+/** 내 리포트 페이지 경로 (상품 목록) */
 export const HEALTH_REPORT_PAGE_PATH = "/my/dashboard/health/report";
+
+/** 건강 보고서 상품별 경로 */
+export function getHealthReportProductPath(productId: string): string {
+  return `${HEALTH_REPORT_PAGE_PATH}/${productId}`;
+}
+
+/** 건강 보고서 상세 경로 (상품별 요청 상세) */
+export function getHealthReportDetailPath(
+  productId: string,
+  requestId: string,
+): string {
+  return `${HEALTH_REPORT_PAGE_PATH}/${productId}/${requestId}`;
+}
 
 /** 건강 보고서 카드 결제 후 세션에 저장되는 payload 키 */
 export const HEALTH_REPORT_PENDING_KEY = "health_report_pending_payload";
 
-/** 건강 리포트 요청 시 필요 포인트 (9,900원 = 9,900 포인트) */
+/** 건강 리포트 요청 시 필요 포인트 (9,900원 = 9,900 포인트) - 기본 상품 */
 export const HEALTH_REPORT_POINT_PRICE = 9_900;
+
+/** 건강 보고서 상품 타입 */
+export interface HealthReportProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  /** 결제용 checkout type (payment-constants.CheckoutType) */
+  checkoutType: "health_report";
+}
+
+/** 구매 가능한 건강 보고서 상품 목록 (향후 추가 상품 확장) */
+export const HEALTH_REPORT_PRODUCTS: readonly HealthReportProduct[] = [
+  {
+    id: "basic",
+    name: "AI 기반 건강 전략 지도(기본)",
+    description:
+      "개인 기록 기반 건강 분석, 생활습관 및 영양 전략 제공, PDF 리포트 제공",
+    price: 9_900,
+    checkoutType: "health_report",
+  },
+] as const;
+
+/** 기본 상품 ID (현재 DB의 report_requests는 모두 이 상품에 해당) */
+export const DEFAULT_HEALTH_REPORT_PRODUCT_ID = "basic";
+
+export function getHealthReportProduct(
+  productId: string,
+): HealthReportProduct | undefined {
+  return HEALTH_REPORT_PRODUCTS.find((p) => p.id === productId);
+}
+
+export function getDefaultHealthReportProduct(): HealthReportProduct {
+  const p = getHealthReportProduct(DEFAULT_HEALTH_REPORT_PRODUCT_ID);
+  if (!p) throw new Error("Default health report product not found");
+  return p;
+}
+
+/** 기존 코드 호환: 상품명 */
+export const HEALTH_REPORT_PRODUCT_NAME =
+  HEALTH_REPORT_PRODUCTS[0]?.name ?? "AI 기반 건강 전략 지도(기본)";
+
+/** 기존 코드 호환: 상품 설명 */
+export const HEALTH_REPORT_PRODUCT_DESCRIPTION =
+  HEALTH_REPORT_PRODUCTS[0]?.description ??
+  "개인 기록 기반 건강 분석, 생활습관 및 영양 전략 제공, PDF 리포트 제공";
 
 /** 진행 중 상태일 때 표시할 안내 (DB에서 status requested 등 확인 후에만 사용) */
 export const HEALTH_REPORT_PENDING_MESSAGE =

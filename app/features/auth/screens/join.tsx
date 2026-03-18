@@ -37,6 +37,9 @@ import { Checkbox } from "~/core/components/ui/checkbox";
 import { Input } from "~/core/components/ui/input";
 import { Label } from "~/core/components/ui/label";
 import makeServerClient from "~/core/lib/supa-client.server";
+import resendClient from "~/core/lib/resend-client.server";
+
+import Welcome from "transactional-emails/emails/welcome";
 
 import { SignUpButtons } from "../components/auth-login-buttons";
 import { doesUserExist, doesUsernameExist } from "../lib/queries.server";
@@ -167,6 +170,28 @@ export async function action({ request }: Route.ActionArgs) {
   // Return error if user creation fails
   if (signInError) {
     return data({ error: signInError.message }, { status: 400 });
+  }
+
+  // Send welcome email on signup completion (non-blocking)
+  if (process.env.RESEND_API_KEY) {
+    resendClient.emails
+      .send({
+        from: "Evidence_Base <good_habit@mail.evidence-base.ai>",
+        to: [validData.email],
+        subject: "Evidence Base 가입을 환영합니다!",
+        react: (
+          <Welcome
+            profile={{
+              name: validData.name,
+              email: validData.email,
+              username: validData.username,
+            }}
+          />
+        ),
+      })
+      .catch((err) => {
+        console.error("[join] Welcome email send failed:", err);
+      });
   }
 
   // Return success response

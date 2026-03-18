@@ -84,7 +84,7 @@ export default function CommunityPage({ loaderData }: Route.ComponentProps) {
     <div className="space-y-20">
       <Hero
         title="커뮤니티"
-        subtitle="질문하고 정보를 공유하세요. 다른 사람을 도우는 길이 자신을 도우는 길입니다."
+        subtitle="질문하고 정보를 공유하세요. 다른 사람을 돕는 길이 자신을 돕는 길입니다."
       />
       <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-6 md:gap-40">
         <div className="space-y-10 md:col-span-4">

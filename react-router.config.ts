@@ -23,6 +23,7 @@ export default {
     return [
       "/legal/terms-of-service",
       "/legal/privacy-policy",
+      "/legal/refund-policy",
       "/blog",
       "/sitemap.xml",
       "/robots.txt",
