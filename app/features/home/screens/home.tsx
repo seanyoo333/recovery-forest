@@ -314,7 +314,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <span className="font-bold">Evidence Base</span>의 최근 핫 이슈
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
-                <Link to="/community" className="block w-full text-center md:text-center">
+                <Link
+                  to="/community"
+                  className="block w-full text-center md:text-center"
+                >
                   Explore all discussions &rarr;
                 </Link>
               </Button>
@@ -339,15 +342,21 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <BlurFade delay={0.25} duration={1} inView>
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2.5 text-center md:space-y-0 md:text-left">
-              <h2 className="text-3xl leading-10 font-bold tracking-tight md:text-5xl md:leading-tight">
+              <h2 className="text-center text-3xl leading-10 font-bold tracking-tight md:text-5xl md:leading-tight">
                 추천 블로그
               </h2>
-              <p className="text-foreground max-w-2xl font-light md:text-xl">
+              <p className="text-foreground text-center text-lg font-light md:text-xl">
                 <span className="font-bold">Evidence Base</span>의 최신 프리미엄
                 블로그 포스트
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
-                <Link to="/blog"> Explore all blog posts &rarr;</Link>
+                <Link
+                  to="/blog"
+                  className="block w-full text-center md:text-center"
+                >
+                  {" "}
+                  Explore all blog posts &rarr;
+                </Link>
               </Button>
             </div>
             {loaderData.blogPosts.map((blogPost) => (
@@ -366,15 +375,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <BlurFade delay={0.25} duration={1} inView>
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2.5 text-center md:space-y-0 md:text-left">
-              <h2 className="text-3xl leading-10 font-bold tracking-tight md:text-5xl md:leading-tight">
+              <h2 className="text-center text-3xl leading-10 font-bold tracking-tight md:text-5xl md:leading-tight">
                 천연물질
               </h2>
-              <p className="text-foreground text-lg font-light md:text-xl">
+              <p className="text-foreground text-center text-lg font-light md:text-xl">
                 <span className="font-bold">Evidence Base</span>에서 주목받고
                 있는 천연물질
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
-                <Link to="/products/leaderboards">
+                <Link
+                  to="/products/leaderboards"
+                  className="block w-full text-center md:text-center"
+                >
                   Explore all natural products &rarr;
                 </Link>
               </Button>

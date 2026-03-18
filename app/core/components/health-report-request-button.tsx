@@ -484,6 +484,17 @@ export function HealthReportRequestButton({
                 />
               </div>
 
+              {/* 베타 안내 (결제 버튼 바로 위) */}
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-xs dark:border-amber-900 dark:bg-amber-950/20">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  현재 서비스는 베타 테스트 단계입니다.
+                </p>
+                <p className="text-muted-foreground mt-1">
+                  일부 분석 결과는 보완 중일 수 있으며, 결과는 건강관리 참고용으로 제공됩니다.
+                  문제 발생 시 신속히 재검토 또는 환불해드립니다.
+                </p>
+              </div>
+
               <DialogFooter>
                 <Button
                   type="button"
