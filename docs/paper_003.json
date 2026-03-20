@@ -1,0 +1,26 @@
+{
+  "paper_id": "paper_003",
+  "title": "Exercise in prevention and management of cancer",
+  "url": "https://link.springer.com/article/10.1007/s11864-008-0065-1",
+  "study_type": "mechanistic",
+  "candidates": [
+    {
+      "ingredient_slug": "exercise",
+      "target_slug": "cardiorespiratory_fitness",
+      "effect": "activate",
+      "disease": "general_cancer",
+      "outcome": "reduced cancer incidence",
+      "outcome_direction": "positive",
+      "evidence_sentence_candidate": "exercise may reduce cancer incidence by 40%"
+    },
+    {
+      "ingredient_slug": "exercise",
+      "target_slug": "depression",
+      "effect": "inhibit",
+      "disease": "general_cancer",
+      "outcome": "reduced anxiety and depression",
+      "outcome_direction": "positive",
+      "evidence_sentence_candidate": "exercise improves psychological health including reduced anxiety and depression"
+    }
+  ]
+}

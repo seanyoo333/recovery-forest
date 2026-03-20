@@ -290,6 +290,9 @@ export const routineDailyGridLogs = pgTable(
  *
  * 천연물 성분 (커큐민, 퀘르세틴 등)
  * 공개 읽기 전용: 모든 사용자가 읽을 수 있음, 관리자만 수정 가능
+ *
+ * safety_notes: 이 성분 단독 사용 시 주의사항 (임산부, 혈압약 등)
+ * interaction_notes: 다른 성분·약물과의 상호작용 (시너지, 상쇄, 주의)
  */
 export const naturalIngredients = pgTable(
   "natural_ingredients",
@@ -298,6 +301,12 @@ export const naturalIngredients = pgTable(
     slug: text().notNull().unique(),
     display_name: text().notNull(),
     synonyms: text().array().default([]),
+    tagline: text().default(""),
+    description: text().default(""),
+    mechanism: text().default(""),
+    safety_notes: text().default(""),
+    interaction_notes: text().default(""), // 다른 성분·약물과의 상호작용 (시너지, 상쇄 등)
+    picture: text().default(""),
     ...timestamps,
   },
   (table) => [
@@ -515,10 +524,105 @@ export const targetToMetaAxis = pgTable(
 );
 
 /**
+ * Diseases Table (정규화된 암/질병 유형)
+ *
+ * disease_slug 텍스트 산재 방지 (breast cancer, breast_cancer, HER2+ 등 통일)
+ * - slug: diseases.slug에 매핑 (candidates.disease_slug, ites.disease_id)
+ * - synonyms: 동의어 배열 (breast cancer, mammary carcinoma, 유방암 등) - 검색/매칭용
+ * - parent_id: 계층 구조 (예: breast_cancer → her2_positive_breast_cancer)
+ * - disease_group: solid_tumor, carcinoma 등 분류
+ */
+export const diseases = pgTable(
+  "diseases",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    slug: text().notNull().unique(),
+    display_name: text().notNull(),
+    synonyms: text().array().default([]), // 동의어 (breast cancer, mammary carcinoma, 유방암 등)
+    parent_id: uuid().references((): any => diseases.id, { onDelete: "set null" }),
+    disease_group: text(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("diseases_slug_idx").on(table.slug),
+    index("diseases_parent_id_idx").on(table.parent_id),
+    index("diseases_disease_group_idx").on(table.disease_group),
+    pgPolicy("diseases-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("diseases-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("diseases-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+      withCheck: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+    pgPolicy("diseases-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`EXISTS (
+        SELECT 1 FROM admin_permissions
+        WHERE admin_id = ${authUid}
+        AND admin_role IN ('super_admin', 'content_admin')
+        AND is_active = true
+      )`,
+    }),
+  ],
+);
+
+/**
+ * Dose Info: 용량/투여 정보 (dose_info_candidates, ites.dose_info 공통)
+ * MVP: species(동물→인간 해석), form(생체이용률) 필수
+ */
+export type DoseInfo = {
+  amount?: number;
+  unit?: string; // mg, mg/kg, g 등
+  route?: string; // oral, iv, ip, topical 등
+  frequency?: string; // daily, bid, weekly 등
+  duration?: string; // 4 weeks, 12 weeks 등
+  species?: string; // human, mouse, rat, dog 등
+  form?: string; // powder, extract, capsule, nanoparticle 등
+  notes?: string; // "with piperine", "95% curcuminoids" 등
+  [key: string]: unknown;
+};
+
+/**
  * Evidence Sources Table
  *
  * 논문 단위 정보를 저장하는 테이블
  * PubMed, Crossref 등에서 가져온 논문 정보를 중앙 관리
+ *
+ * n8n 추출 흐름: 논문 → candidates(예상 성분·표적) → 인간 검수 → ite/ites 연결
+ * candidates.disease_slug → diseases.slug 매핑 (ites.disease_id로 저장)
  *
  * 한 논문이 여러 ingredient-target 조합에 재사용될 수 있음
  */
@@ -540,10 +644,22 @@ export const evidenceSources = pgTable(
     snippet: text(),
     candidates: jsonb().$type<
       Array<{
+        /** 예상 성분 slug (natural_ingredients.slug). n8n 추출 → 인간 검수 후 ite/ites 연결 */
         ingredient_slug: string;
         target_slug: string;
-        note: string;
+        note?: string;
+        effect?: "inhibit" | "activate" | "unclear";
+        outcome_direction?: "positive" | "negative" | "neutral";
+        /** 질병 slug (diseases.slug). 정규화용 - 인간 검수 시 disease_id로 매핑 */
+        disease_slug?: string;
+        outcome_text?: string;
+        confidence?: number;
+        extraction_note?: string;
       }>
+    >(),
+    /** 용량 정보 (candidates와 분리). dose_info_candidates[i] ↔ candidates[i] 또는 candidate_index로 매칭 */
+    dose_info_candidates: jsonb().$type<
+      Array<DoseInfo & { candidate_index?: number }>
     >(),
     status: text(),
     study_type: text()
@@ -727,12 +843,22 @@ export const evidenceFigures = pgTable(
 );
 
 /**
- * Ingredient-Target Effect: inhibit(억제) vs activate(활성화)
+ * Ingredient-Target Effect: inhibit(억제) vs activate(활성화) vs unclear(불명)
  */
 export const ingredientTargetEffectEnum = pgEnum(
   "ingredient_target_evidence_effect",
-  ["inhibit", "activate"],
+  ["inhibit", "activate", "unclear"],
 );
+
+/**
+ * Outcome Direction: 논문/매핑별 결과 방향
+ * positive=유리, negative=불리, neutral=중립(불명 포함)
+ */
+export const outcomeDirectionEnum = pgEnum("outcome_direction_enum", [
+  "positive",
+  "negative",
+  "neutral",
+]);
 
 /**
  * Ingredient Target Evidence Table (Aggregate)
@@ -743,7 +869,8 @@ export const ingredientTargetEffectEnum = pgEnum(
  * - 성분-표적 조합은 1행만 유지 (ingredient_id + target_id unique)
  * - strength는 연결된 논문들의 max(strength)로 자동 계산 (트리거 사용 권장)
  * - study_type은 연결된 논문들의 최고 study_type으로 자동 계산 (트리거 사용 권장)
- * - effect: 해당 성분이 표적을 inhibit(억제)하는지 activate(활성화)하는지 구분
+ * - effect: 해당 성분이 표적을 inhibit(억제)/activate(활성화)/unclear(불명) 구분
+ * - outcome_direction: 결과 방향 (positive/negative/neutral)
  *
  * 사용 예시:
  * - 커큐민 → NF-κB (여러 논문이 연결될 수 있음)
@@ -759,6 +886,7 @@ export const ingredientTargetEvidence = pgTable(
       .notNull()
       .references(() => naturalTargets.id, { onDelete: "cascade" }),
     effect: ingredientTargetEffectEnum(),
+    outcome_direction: outcomeDirectionEnum(),
     strength: doublePrecision().notNull().default(1),
     study_type: text()
       .notNull()
@@ -843,6 +971,9 @@ export const ingredientTargetEvidence = pgTable(
  * 제약사항:
  * - is_primary = true인 행은 각 ingredient_target_evidence_id당 딱 1개만 존재 가능
  * - 같은 ingredient_target_evidence_id와 evidence_source_id 조합은 중복 불가
+ *
+ * 흐름: n8n 추출 → evidence_sources.candidates → 인간 검수 → ite/ites 연결
+ * disease_id: diseases 테이블 FK (candidates.disease_slug로 매칭 후 저장)
  */
 export const ingredientTargetEvidenceSources = pgTable(
   "ingredient_target_evidence_sources",
@@ -857,6 +988,9 @@ export const ingredientTargetEvidenceSources = pgTable(
     is_primary: boolean().notNull().default(false), // 주요 근거인지 여부
     extracted_strength_override: doublePrecision(), // 이 매핑에서만 사용하는 strength 오버라이드 (null이면 evidence_sources.strength 사용)
     note: text(), // 이 매핑에 대한 추가 설명
+    disease_id: uuid().references(() => diseases.id, { onDelete: "set null" }), // 정규화된 질병/적응증 (diseases.slug와 candidates.disease_slug 매칭)
+    outcome_text: text(), // 논문별 결과 요약
+    dose_info: jsonb().$type<DoseInfo>(), // 용량/투여 정보 (dose_info_candidates와 동일 구조)
     created_at: timestamp().notNull().defaultNow(),
   },
   (table) => [

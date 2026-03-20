@@ -778,6 +778,41 @@
       "when": 1773814757561,
       "tag": "0110_cheerful_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1773900000000,
+      "tag": "0111_add_natural_ingredients_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1774000000000,
+      "tag": "0112_evidence_effect_outcome_extensions",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1774100000000,
+      "tag": "0113_diseases_table_and_ites_disease_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1774200000000,
+      "tag": "0114_diseases_synonyms_dose_info_candidates",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1774300000000,
+      "tag": "0115_natural_ingredients_interaction_notes",
+      "breakpoints": true
     }
   ]
 }

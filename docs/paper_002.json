@@ -1,0 +1,26 @@
+{
+  "paper_id": "paper_002",
+  "title": "Inhibitory effects of berberine on lymphocytes",
+  "url": "http://www.cmi.ustc.edu.cn/2/4/295.pdf",
+  "study_type": "cell",
+  "candidates": [
+    {
+      "ingredient_slug": "berberine",
+      "target_slug": "cd69",
+      "effect": "inhibit",
+      "disease": "general_disease",
+      "outcome": "reduced T cell activation",
+      "outcome_direction": "positive",
+      "evidence_sentence_candidate": "berberine significantly inhibited CD69 expression on T cells"
+    },
+    {
+      "ingredient_slug": "berberine",
+      "target_slug": "cell_cycle",
+      "effect": "inhibit",
+      "disease": "general_disease",
+      "outcome": "blocked cell cycle progression",
+      "outcome_direction": "positive",
+      "evidence_sentence_candidate": "berberine blocked lymphocyte cell cycle progression"
+    }
+  ]
+}

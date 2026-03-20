@@ -678,6 +678,7 @@ export const bloodTestResults = pgTable(
  * 재사용을 위해 여기서 re-export합니다.
  */
 export {
+  diseases,
   gridOptionKindEnum,
   habitCategoryEnum,
   habitTimeBlockEnum,

@@ -1,4 +1,3 @@
-import { FEATURES } from "~/core/config/features";
 import {
   BookOpenIcon,
   BotIcon,
@@ -33,6 +32,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "~/core/components/ui/sidebar";
+import { FEATURES } from "~/core/config/features";
 
 import MessageRoomCard from "./message-room-card";
 import SidebarMain from "./sidebar-main";
@@ -84,12 +84,16 @@ const data = {
     },
     {
       title: "천연물질",
-      url: "#",
+      url: "/natural-ingredients",
       icon: LineChartIcon,
       items: [
         {
-          title: "표적 프로필",
-          url: "#",
+          title: "전체 천연물질",
+          url: "/natural-ingredients",
+        },
+        {
+          title: "표적별 모음",
+          url: "/natural-ingredients/targets",
         },
         {
           title: "대사 안정화",

@@ -884,6 +884,47 @@ export type Database = {
           },
         ]
       }
+      diseases: {
+        Row: {
+          created_at: string
+          disease_group: string | null
+          display_name: string
+          id: string
+          parent_id: string | null
+          slug: string
+          synonyms: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          disease_group?: string | null
+          display_name: string
+          id?: string
+          parent_id?: string | null
+          slug: string
+          synonyms?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          disease_group?: string | null
+          display_name?: string
+          id?: string
+          parent_id?: string | null
+          slug?: string
+          synonyms?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diseases_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "diseases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -1021,6 +1062,7 @@ export type Database = {
           created_at: string
           doi: string | null
           doi_norm: string | null
+          dose_info_candidates: Json | null
           id: string
           journal: string | null
           pmid: number | null
@@ -1044,6 +1086,7 @@ export type Database = {
           created_at?: string
           doi?: string | null
           doi_norm?: string | null
+          dose_info_candidates?: Json | null
           id?: string
           journal?: string | null
           pmid?: number | null
@@ -1067,6 +1110,7 @@ export type Database = {
           created_at?: string
           doi?: string | null
           doi_norm?: string | null
+          dose_info_candidates?: Json | null
           id?: string
           journal?: string | null
           pmid?: number | null
@@ -1269,6 +1313,9 @@ export type Database = {
           id: string
           ingredient_id: string
           notes: string | null
+          outcome_direction:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           strength: number
           study_type: string
           target_id: string
@@ -1282,6 +1329,9 @@ export type Database = {
           id?: string
           ingredient_id: string
           notes?: string | null
+          outcome_direction?:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           strength?: number
           study_type?: string
           target_id: string
@@ -1295,6 +1345,9 @@ export type Database = {
           id?: string
           ingredient_id?: string
           notes?: string | null
+          outcome_direction?:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           strength?: number
           study_type?: string
           target_id?: string
@@ -1320,32 +1373,48 @@ export type Database = {
       ingredient_target_evidence_sources: {
         Row: {
           created_at: string
+          disease_id: string | null
+          dose_info: Json | null
           evidence_source_id: string
           extracted_strength_override: number | null
           id: string
           ingredient_target_evidence_id: string
           is_primary: boolean
           note: string | null
+          outcome_text: string | null
         }
         Insert: {
           created_at?: string
+          disease_id?: string | null
+          dose_info?: Json | null
           evidence_source_id: string
           extracted_strength_override?: number | null
           id?: string
           ingredient_target_evidence_id: string
           is_primary?: boolean
           note?: string | null
+          outcome_text?: string | null
         }
         Update: {
           created_at?: string
+          disease_id?: string | null
+          dose_info?: Json | null
           evidence_source_id?: string
           extracted_strength_override?: number | null
           id?: string
           ingredient_target_evidence_id?: string
           is_primary?: boolean
           note?: string | null
+          outcome_text?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ingredient_target_evidence_sources_disease_id_fkey"
+            columns: ["disease_id"]
+            isOneToOne: false
+            referencedRelation: "diseases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingredient_target_evidence_sources_evidence_source_id_evidence_"
             columns: ["evidence_source_id"]
@@ -1633,26 +1702,44 @@ export type Database = {
       natural_ingredients: {
         Row: {
           created_at: string
+          description: string | null
           display_name: string
           id: string
+          interaction_notes: string | null
+          mechanism: string | null
+          picture: string | null
+          safety_notes: string | null
           slug: string
           synonyms: string[] | null
+          tagline: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
           display_name: string
           id?: string
+          interaction_notes?: string | null
+          mechanism?: string | null
+          picture?: string | null
+          safety_notes?: string | null
           slug: string
           synonyms?: string[] | null
+          tagline?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
           display_name?: string
           id?: string
+          interaction_notes?: string | null
+          mechanism?: string | null
+          picture?: string | null
+          safety_notes?: string | null
           slug?: string
           synonyms?: string[] | null
+          tagline?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3565,6 +3652,9 @@ export type Database = {
           ingredient_name: string | null
           ingredient_slug: string | null
           meta_axis: string | null
+          outcome_direction:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           primary_evidence_count: number | null
           strength: number | null
           study_type: string | null
@@ -3611,13 +3701,6 @@ export type Database = {
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "health_profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "health_profiles_view"
@@ -3627,7 +3710,7 @@ export type Database = {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "health_profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
@@ -3640,13 +3723,20 @@ export type Database = {
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
@@ -3904,7 +3994,7 @@ export type Database = {
       habit_time_block: "am" | "noon" | "pm" | "bed"
       habit_time_slot: "am" | "noon" | "pm" | "bed"
       health_report_pdf_status: "pdf_generating" | "pdf_ready"
-      ingredient_target_evidence_effect: "inhibit" | "activate"
+      ingredient_target_evidence_effect: "inhibit" | "activate" | "unclear"
       level: "1" | "2" | "3" | "4" | "5"
       location:
         | "seoul"
@@ -3925,6 +4015,7 @@ export type Database = {
         | "gyeongnam"
         | "jeju"
       notification_type: "follow" | "review" | "reply" | "health_report"
+      outcome_direction_enum: "positive" | "negative" | "neutral"
       patient_medication_status: "none" | "active"
       patient_treatment_status: "ongoing" | "completed" | "follow_up"
       photo_type:
@@ -4089,7 +4180,7 @@ export const Constants = {
       habit_time_block: ["am", "noon", "pm", "bed"],
       habit_time_slot: ["am", "noon", "pm", "bed"],
       health_report_pdf_status: ["pdf_generating", "pdf_ready"],
-      ingredient_target_evidence_effect: ["inhibit", "activate"],
+      ingredient_target_evidence_effect: ["inhibit", "activate", "unclear"],
       level: ["1", "2", "3", "4", "5"],
       location: [
         "seoul",
@@ -4111,6 +4202,7 @@ export const Constants = {
         "jeju",
       ],
       notification_type: ["follow", "review", "reply", "health_report"],
+      outcome_direction_enum: ["positive", "negative", "neutral"],
       patient_medication_status: ["none", "active"],
       patient_treatment_status: ["ongoing", "completed", "follow_up"],
       photo_type: [

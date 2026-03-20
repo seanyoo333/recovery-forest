@@ -36,11 +36,8 @@ import { getClinics } from "~/features/clinic/queries";
 import { PostCard } from "~/features/community/components/post-card";
 import { getPosts } from "~/features/community/queries";
 import { BlogCard } from "~/features/home/components/blog-card";
-import { ProductCard } from "~/features/products/components/product-card";
-import {
-  getProductsByDateRange,
-  getProductsByPopularity,
-} from "~/features/products/queries";
+import { IngredientCard } from "~/features/natural-ingredients/components/ingredient-card";
+import { getNaturalIngredients } from "~/features/natural-ingredients/queries";
 import { TeamCard } from "~/features/teams/components/team-card";
 import { getTeams } from "~/features/teams/queries";
 
@@ -109,7 +106,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     data: { user },
   } = await client.auth.getUser();
 
-  const products = await getProductsByPopularity(client, {
+  const ingredients = await getNaturalIngredients(client, {
     limit: 7,
   });
 
@@ -134,12 +131,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   const clinics = await getClinics(client, { limit: 11 });
   const teams = await getTeams(client, { limit: 7 });
 
-  // Return translated strings and product data
+  // Return translated strings and ingredient data
   return {
     title: t("home.title"),
     subtitle: t("home.subtitle"),
     isAuthenticated: !!user,
-    products,
+    ingredients,
     blogPosts: recentBlogPosts,
     posts,
     clinics,
@@ -384,26 +381,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               </p>
               <Button variant="link" asChild className="p-0 text-lg">
                 <Link
-                  to="/products/leaderboards"
+                  to="/natural-ingredients"
                   className="block w-full text-center md:text-center"
                 >
-                  Explore all natural products &rarr;
+                  전체 천연물질 보기 &rarr;
                 </Link>
               </Button>
             </div>
-            {loaderData.products.map((product, index) => (
-              <ProductCard
-                key={product.product_id.toString()}
-                id={product.product_id.toString()}
-                name={product.name}
-                description={product.tagline}
-                reviewsCount={(product.stats as { reviews: number }).reviews}
-                viewsCount={(product.stats as { views: number }).views}
-                promotedFrom={product.promoted_from}
-                isUpvoted={
-                  (product.stats as { is_upvoted: boolean }).is_upvoted
+            {loaderData.ingredients.map((ingredient) => (
+              <IngredientCard
+                key={ingredient.id}
+                slug={ingredient.slug}
+                name={ingredient.display_name}
+                description={
+                  ingredient.tagline ?? ingredient.description ?? undefined
                 }
-                votesCount={(product.stats as { upvotes: number }).upvotes}
+                tagline={ingredient.tagline}
+                picture={ingredient.picture}
               />
             ))}
           </div>

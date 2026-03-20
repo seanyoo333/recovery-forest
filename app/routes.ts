@@ -57,10 +57,7 @@ export default [
       "/health-report-complete-payment",
       "features/users/api/health-report-complete-payment.tsx",
     ),
-    route(
-      "/health-report-pdf",
-      "features/users/api/health-report-pdf.tsx",
-    ),
+    route("/health-report-pdf", "features/users/api/health-report-pdf.tsx"),
     route(
       "/health-report-pdf-download",
       "features/users/api/health-report-pdf-download.tsx",
@@ -114,90 +111,101 @@ export default [
     route("/contact", "features/contact/screens/contact-us.tsx"),
 
     // 커뮤니티, 천연물질, 블로그: 로그인 필요
-    layout(
-      "core/layouts/private.layout.tsx",
-      { id: "private-community" },
-      [
-        ...prefix("community", [
-          index("features/community/pages/community-page.tsx"),
-          route("/submit", "features/community/pages/submit-post-page.tsx"),
-          route("/:postId", "features/community/pages/post-page.tsx"),
-          route("/:postId/edit", "features/community/pages/edit-post-page.tsx"),
-          route(
-            "/:postId/upvote",
-            "features/community/pages/upvote-post-page.tsx",
-          ),
-        ]),
-      ],
-    ),
-
-    layout(
-      "core/layouts/private.layout.tsx",
-      { id: "private-products" },
-      [
-    ...prefix("products", [
-      index("features/products/pages/products-page.tsx"),
-      layout("features/products/layouts/leaderboard-layout.tsx", [
-        ...prefix("leaderboards", [
-          index("features/products/pages/leaderboard-page.tsx"),
-          route(
-            "/daily/:year/:month/:day",
-            "features/products/pages/daily-leaderboard-page.tsx",
-          ),
-          route(
-            "/weekly/:year/:week",
-            "features/products/pages/weekly-leaderboard-page.tsx",
-          ),
-          route(
-            "/monthly/:year/:month",
-            "features/products/pages/monthly-leaderboard-page.tsx",
-          ),
-          route(
-            "/yearly/:year",
-            "features/products/pages/yearly-leaderboard-page.tsx",
-          ),
-          route(
-            "/:period",
-            "features/products/pages/leaderboards-redirection-page.tsx",
-          ),
-        ]),
+    layout("core/layouts/private.layout.tsx", { id: "private-community" }, [
+      ...prefix("community", [
+        index("features/community/pages/community-page.tsx"),
+        route("/submit", "features/community/pages/submit-post-page.tsx"),
+        route("/:postId", "features/community/pages/post-page.tsx"),
+        route("/:postId/edit", "features/community/pages/edit-post-page.tsx"),
+        route(
+          "/:postId/upvote",
+          "features/community/pages/upvote-post-page.tsx",
+        ),
       ]),
-
-      ...prefix("/:productId", [
-        index("features/products/pages/product-redirect-page.tsx"),
-        layout("features/products/layouts/product-overview-layout.tsx", [
-          route(
-            "/overview",
-            "features/products/pages/product-overview-page.tsx",
-          ),
-          ...prefix("/reviews", [
-            index("features/products/pages/product-reviews-page.tsx"),
-          ]),
-        ]),
-        route("/visit", "features/products/pages/product-visit-page.tsx"),
-        route("/upvote", "features/products/pages/product-upvote-page.tsx"),
-      ]),
-
-      ...prefix("categories", [
-        index("features/products/pages/categories-page.tsx"),
-        route("/:category", "features/products/pages/category-page.tsx"),
-      ]),
-      ...prefix("search", [index("features/products/pages/search-page.tsx")]),
-
-      // 관리자 전용 제품 등록 페이지
-      layout(
-        "core/layouts/private.layout.tsx",
-        { id: "private-admin-products" },
-        [
-          ...prefix("submit", [
-            index("features/products/pages/submit-product.tsx"),
-          ]),
-          ...prefix("promote", [
-            index("features/products/pages/promote-product.tsx"),
-          ]),
-        ],
-      ),
     ]),
+
+    layout("core/layouts/private.layout.tsx", { id: "private-products" }, [
+      // 천연물질 (natural_ingredients 기반 지식 정보)
+      ...prefix("natural-ingredients", [
+        index("features/natural-ingredients/pages/ingredients-index-page.tsx"),
+        route(
+          "/targets",
+          "features/natural-ingredients/pages/targets-index-page.tsx",
+        ),
+        route(
+          "/targets/:targetSlug",
+          "features/natural-ingredients/pages/target-detail-page.tsx",
+        ),
+        route("/search", "features/natural-ingredients/pages/search-page.tsx"),
+        route(
+          "/:slug",
+          "features/natural-ingredients/pages/ingredient-detail-page.tsx",
+        ),
+      ]),
+
+      ...prefix("products", [
+        index("features/products/pages/products-page.tsx"),
+        layout("features/products/layouts/leaderboard-layout.tsx", [
+          ...prefix("leaderboards", [
+            index("features/products/pages/leaderboard-page.tsx"),
+            route(
+              "/daily/:year/:month/:day",
+              "features/products/pages/daily-leaderboard-page.tsx",
+            ),
+            route(
+              "/weekly/:year/:week",
+              "features/products/pages/weekly-leaderboard-page.tsx",
+            ),
+            route(
+              "/monthly/:year/:month",
+              "features/products/pages/monthly-leaderboard-page.tsx",
+            ),
+            route(
+              "/yearly/:year",
+              "features/products/pages/yearly-leaderboard-page.tsx",
+            ),
+            route(
+              "/:period",
+              "features/products/pages/leaderboards-redirection-page.tsx",
+            ),
+          ]),
+        ]),
+
+        ...prefix("/:productId", [
+          index("features/products/pages/product-redirect-page.tsx"),
+          layout("features/products/layouts/product-overview-layout.tsx", [
+            route(
+              "/overview",
+              "features/products/pages/product-overview-page.tsx",
+            ),
+            ...prefix("/reviews", [
+              index("features/products/pages/product-reviews-page.tsx"),
+            ]),
+          ]),
+          route("/visit", "features/products/pages/product-visit-page.tsx"),
+          route("/upvote", "features/products/pages/product-upvote-page.tsx"),
+        ]),
+
+        ...prefix("categories", [
+          index("features/products/pages/categories-page.tsx"),
+          route("/:category", "features/products/pages/category-page.tsx"),
+        ]),
+        ...prefix("search", [index("features/products/pages/search-page.tsx")]),
+
+        // 관리자 전용 제품 등록 페이지
+        layout(
+          "core/layouts/private.layout.tsx",
+          { id: "private-admin-products" },
+          [
+            ...prefix("submit", [
+              index("features/products/pages/submit-product.tsx"),
+            ]),
+            ...prefix("promote", [
+              index("features/products/pages/promote-product.tsx"),
+            ]),
+          ],
+        ),
+      ]),
     ]),
 
     ...prefix("teams", [

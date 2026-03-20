@@ -32,9 +32,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { cn } from "~/lib/utils";
+
 import { FEATURES } from "~/core/config/features";
 import { getCheckoutUrl } from "~/core/lib/payment-constants";
-import { cn } from "~/lib/utils";
 
 import LangSwitcher from "./lang-switcher";
 import ThemeSwitcher from "./theme-switcher";
@@ -153,28 +154,22 @@ const menus = [
   },
   {
     name: "천연물질",
-    to: "/products",
+    to: "/natural-ingredients",
     items: [
       {
         name: "전체 천연물질",
-        description: "등록된 모든 천연물질(Natural Products)을 확인하세요",
-        to: "/products",
+        description: "등록된 모든 천연물질(성분)을 확인하세요",
+        to: "/natural-ingredients",
       },
       {
-        name: "인기 천연물질",
-        description:
-          "주간, 월간, 연간 인기 천연물질(Natural Products)을 확인하세요",
-        to: "/products/leaderboards",
-      },
-      {
-        name: "카테고리",
-        description: "각 천연물질의 카테고리를 확인하세요",
-        to: "/products/categories",
+        name: "표적별 모음",
+        description: "표적별로 연결된 천연물질(성분) 목록을 확인하세요",
+        to: "/natural-ingredients/targets",
       },
       {
         name: "검색",
-        description: "천연물질(Natural Products)을 검색하세요",
-        to: "/products/search",
+        description: "천연물질(성분)을 검색하세요",
+        to: "/natural-ingredients/search",
       },
     ],
   },
@@ -199,7 +194,7 @@ const menus = [
       },
     ],
   }, */
- /*  {
+  /*  {
     name: "EVIDENCE BASE AI 챗봇",
     to: "/chat",
   },
@@ -207,7 +202,7 @@ const menus = [
     name: "결제",
     to: "/payments/checkout",
   }, */
-/*   {
+  /*   {
     name: "법적 문서",
     to: "/legal/terms",
   }, */
@@ -268,8 +263,7 @@ function UserMenu({
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link to="/my/dashboard">
-              <BarChart3Icon className="mr-2 size-4" />
-              내 건강 대시보드
+              <BarChart3Icon className="mr-2 size-4" />내 건강 대시보드
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
