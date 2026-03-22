@@ -152,9 +152,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     try {
       const userId = user?.id;
       blogMeta = await getBlogPostMetaBySlug(client, params.slug, userId);
-    } catch (error) {
+    } catch {
       // If Supabase query fails, continue without metadata
-      console.warn("Failed to fetch blog post metadata:", error);
     }
 
     // Merge frontmatter with Supabase metadata (prefer Supabase for dynamic fields)

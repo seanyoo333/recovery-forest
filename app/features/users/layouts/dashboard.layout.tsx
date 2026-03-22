@@ -19,7 +19,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   } = await client.auth.getUser();
   const userId = await getLoggedInUserId(client);
   const messages = await getMessages(client, { userId });
-  console.log("messages", messages);
 
   return {
     user,

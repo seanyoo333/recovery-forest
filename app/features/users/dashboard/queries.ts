@@ -9,7 +9,14 @@ import type {
   SectionTemplate,
 } from "./types";
 
+import {
+  type BloodTestDescription,
+  normalizeBloodTestDescriptions,
+} from "./blood-test-metadata";
+
 import { normalizeStandardName } from "./constants";
+
+export type { BloodTestDescription } from "./blood-test-metadata";
 
 export type MedicalRecordTranscriptEntry = {
   test_date: string;
@@ -46,13 +53,12 @@ export type BloodTestSummary = {
   clinicalSignificance: string | null;
   referenceMin: number | null;
   referenceMax: number | null;
-  descriptions: {
-    description?: string;
-    significance?: {
-      up?: string[];
-      down?: string[];
-    };
-  } | null;
+  /** 기본 참고범위에 대한 주의(성별·연령·기관별 차이 등) */
+  referenceNote: string | null;
+  isDerivedMetric: boolean;
+  derivedFormula: string | null;
+  evidenceSourceIds: string[];
+  descriptions: BloodTestDescription;
 };
 
 export type BloodTestOverview = {
@@ -275,6 +281,10 @@ export async function getBloodTestOverview(
         }
         const unit =
           item.result_unit ?? item.type_unit ?? definition?.unit ?? null;
+        const evidenceRaw = item.type_evidence_source_ids;
+        const evidenceSourceIds = Array.isArray(evidenceRaw)
+          ? evidenceRaw.map(String)
+          : [];
         return [
           {
             test_date: item.test_date,
@@ -284,14 +294,11 @@ export async function getBloodTestOverview(
             clinical_significance: item.clinical_significance ?? null,
             reference_min: item.reference_min ?? null,
             reference_max: item.reference_max ?? null,
-            descriptions:
-              (item.type_descriptions as {
-                description?: string;
-                significance?: {
-                  up?: string[];
-                  down?: string[];
-                };
-              } | null) ?? null,
+            reference_note: item.type_reference_note ?? null,
+            is_derived_metric: Boolean(item.type_is_derived_metric),
+            derived_formula: item.type_derived_formula ?? null,
+            evidence_source_ids: evidenceSourceIds,
+            descriptions: normalizeBloodTestDescriptions(item.type_descriptions),
           },
         ];
       }
@@ -314,13 +321,11 @@ export async function getBloodTestOverview(
       clinical_significance: string | null;
       reference_min: number | null;
       reference_max: number | null;
-      descriptions: {
-        description?: string;
-        significance?: {
-          up?: string[];
-          down?: string[];
-        };
-      } | null;
+      reference_note: string | null;
+      is_derived_metric: boolean;
+      derived_formula: string | null;
+      evidence_source_ids: string[];
+      descriptions: BloodTestDescription;
     }
   >();
 
@@ -345,6 +350,10 @@ export async function getBloodTestOverview(
         clinical_significance: result.clinical_significance ?? null,
         reference_min: result.reference_min ?? null,
         reference_max: result.reference_max ?? null,
+        reference_note: result.reference_note ?? null,
+        is_derived_metric: result.is_derived_metric,
+        derived_formula: result.derived_formula ?? null,
+        evidence_source_ids: result.evidence_source_ids,
         descriptions: result.descriptions,
       });
     }
@@ -441,6 +450,10 @@ export async function getBloodTestOverview(
         clinicalSignificance: summary.clinical_significance,
         referenceMin: summary.reference_min,
         referenceMax: summary.reference_max,
+        referenceNote: summary.reference_note,
+        isDerivedMetric: summary.is_derived_metric,
+        derivedFormula: summary.derived_formula,
+        evidenceSourceIds: summary.evidence_source_ids,
         descriptions: summary.descriptions,
       });
     }
@@ -459,6 +472,10 @@ export async function getBloodTestOverview(
         clinicalSignificance: summary.clinical_significance,
         referenceMin: summary.reference_min,
         referenceMax: summary.reference_max,
+        referenceNote: summary.reference_note,
+        isDerivedMetric: summary.is_derived_metric,
+        derivedFormula: summary.derived_formula,
+        evidenceSourceIds: summary.evidence_source_ids,
         descriptions: summary.descriptions,
       });
     }
@@ -518,6 +535,10 @@ export async function getBloodTestOverview(
           clinicalSignificance: result.clinical_significance,
           referenceMin: result.reference_min,
           referenceMax: result.reference_max,
+          referenceNote: result.reference_note,
+          isDerivedMetric: result.is_derived_metric,
+          derivedFormula: result.derived_formula,
+          evidenceSourceIds: result.evidence_source_ids,
           descriptions: result.descriptions,
         });
       }
@@ -540,6 +561,10 @@ export async function getBloodTestOverview(
           clinicalSignificance: result.clinical_significance,
           referenceMin: result.reference_min,
           referenceMax: result.reference_max,
+          referenceNote: result.reference_note,
+          isDerivedMetric: result.is_derived_metric,
+          derivedFormula: result.derived_formula,
+          evidenceSourceIds: result.evidence_source_ids,
           descriptions: result.descriptions,
         });
       } else {
@@ -554,7 +579,13 @@ export async function getBloodTestOverview(
           clinicalSignificance: latestValue?.clinical_significance ?? null,
           referenceMin: latestValue?.reference_min ?? null,
           referenceMax: latestValue?.reference_max ?? null,
-          descriptions: latestValue?.descriptions ?? null,
+          referenceNote: latestValue?.reference_note ?? null,
+          isDerivedMetric: latestValue?.is_derived_metric ?? false,
+          derivedFormula: latestValue?.derived_formula ?? null,
+          evidenceSourceIds: latestValue?.evidence_source_ids ?? [],
+          descriptions:
+            latestValue?.descriptions ??
+            normalizeBloodTestDescriptions(null),
         });
       }
     });
@@ -897,13 +928,9 @@ async function matchLabelToIngredient(
 
   // 최고 점수가 0.7 이상이면 매칭 성공
   if (bestMatch && bestMatch.score >= 0.7) {
-    console.log(
-      `[매칭] "${label}" → ${bestMatch.matchType} (점수: ${bestMatch.score.toFixed(2)})`,
-    );
     return bestMatch.id;
   }
 
-  console.log(`[매칭] 실패: "${label}" - 매칭되는 성분 없음`);
   return null;
 }
 
@@ -916,8 +943,6 @@ export async function getTodayIngredientEvidence(
   userId: string,
   logDate: string,
 ) {
-  console.log(`[레이더 차트 디버깅] getTodayIngredientEvidence 시작 - userId: ${userId}, logDate: ${logDate}`);
-  
   // 오늘 복용한 보조제 기록 (template_id와 time_block 포함)
   const { data: todayLogs, error: logsError } = await client
     .from("routine_daily_grid_logs")
@@ -928,17 +953,10 @@ export async function getTodayIngredientEvidence(
     .not("template_id", "is", null);
 
   if (logsError) {
-    console.error(`[레이더 차트 디버깅] routine_daily_grid_logs 조회 에러:`, logsError);
     throw logsError;
   }
-  
-  console.log(`[레이더 차트 디버깅] 1단계 - 오늘 보조제 기록:`, {
-    count: todayLogs?.length ?? 0,
-    logs: todayLogs,
-  });
-  
+
   if (!todayLogs || todayLogs.length === 0) {
-    console.log(`[레이더 차트 디버깅] 오늘 보조제 기록 없음 - 빈 배열 반환`);
     return [];
   }
 
@@ -946,13 +964,7 @@ export async function getTodayIngredientEvidence(
     .map((log) => log.template_id)
     .filter((id): id is string => id !== null);
 
-  console.log(`[레이더 차트 디버깅] 2단계 - 템플릿 IDs:`, {
-    count: templateIds.length,
-    templateIds,
-  });
-
   if (templateIds.length === 0) {
-    console.log(`[레이더 차트 디버깅] 템플릿 ID 없음 - 빈 배열 반환`);
     return [];
   }
 
@@ -963,17 +975,10 @@ export async function getTodayIngredientEvidence(
     .in("template_id", templateIds);
 
   if (itemsError) {
-    console.error(`[레이더 차트 디버깅] routine_items 조회 에러:`, itemsError);
     throw itemsError;
   }
 
-  console.log(`[레이더 차트 디버깅] 3단계 - 템플릿 아이템:`, {
-    count: routineItems?.length ?? 0,
-    items: routineItems,
-  });
-
   if (!routineItems || routineItems.length === 0) {
-    console.log(`[레이더 차트 디버깅] 템플릿 아이템 없음 - 빈 배열 반환`);
     return [];
   }
 
@@ -982,19 +987,11 @@ export async function getTodayIngredientEvidence(
   const itemsNeedingMatch = routineItems.filter((item) => !item.ingredient_id);
 
   if (itemsNeedingMatch.length > 0) {
-    console.log(`[레이더 차트 디버깅] 3-1단계 - 매칭 필요한 항목:`, {
-      count: itemsNeedingMatch.length,
-      labels: itemsNeedingMatch.map((item) => item.label),
-    });
-
     // 각 label을 natural_ingredients와 매칭
     for (const item of itemsNeedingMatch) {
       const matchedId = await matchLabelToIngredient(client, item.label);
       if (matchedId) {
         labelToIngredientId.set(item.label, matchedId);
-        console.log(
-          `[레이더 차트 디버깅] 매칭 성공: "${item.label}" → ${matchedId}`,
-        );
       }
     }
   }
@@ -1008,9 +1005,6 @@ export async function getTodayIngredientEvidence(
       item.ingredient_id || labelToIngredientId.get(item.label);
 
     if (!ingredientId) {
-      console.log(
-        `[레이더 차트 디버깅] ingredient_id를 찾을 수 없음: "${item.label}"`,
-      );
       continue;
     }
 
@@ -1044,13 +1038,7 @@ export async function getTodayIngredientEvidence(
 
   const ingredientIds = Array.from(ingredientDoseCount.keys());
 
-  console.log(`[레이더 차트 디버깅] 4단계 - Ingredient IDs 및 Dose Count:`, {
-    ingredientIds,
-    doseCountMap: Object.fromEntries(ingredientDoseCount),
-  });
-
   if (ingredientIds.length === 0) {
-    console.log(`[레이더 차트 디버깅] Ingredient ID 없음 - 빈 배열 반환`);
     return [];
   }
 
@@ -1062,20 +1050,10 @@ export async function getTodayIngredientEvidence(
     .in("ingredient_id", ingredientIds);
 
   if (error) {
-    console.error(`[레이더 차트 디버깅] ingredient_target_evidence_full_view 조회 에러:`, error);
     throw error;
   }
-  
-  console.log(`[레이더 차트 디버깅] 5단계 - VIEW 조회 결과:`, {
-    count: data?.length ?? 0,
-    data: data?.slice(0, 5), // 처음 5개만 로그
-    allIngredientIds: ingredientIds,
-    foundIngredientIds: data ? [...new Set(data.map((d: any) => d.ingredient_id))] : [],
-  });
-  
+
   if (!data || data.length === 0) {
-    console.log(`[레이더 차트 디버깅] VIEW에서 데이터 없음 - 빈 배열 반환`);
-    console.log(`[레이더 차트 디버깅] 조회한 ingredient_ids:`, ingredientIds);
     return [];
   }
 
@@ -1129,16 +1107,6 @@ export async function getTodayIngredientEvidence(
       dose_count: doseCount,
     });
   }
-
-  console.log(`[레이더 차트 디버깅] 6단계 - 최종 결과:`, {
-    count: result.length,
-    result: result.slice(0, 10), // 처음 10개만 로그
-    summary: {
-      uniqueIngredients: [...new Set(result.map((r) => r.ingredient_name))],
-      uniqueTargets: [...new Set(result.map((r) => r.target_slug))],
-      uniqueAxes: [...new Set(result.map((r) => r.meta_axis))],
-    },
-  });
 
   return result;
 }

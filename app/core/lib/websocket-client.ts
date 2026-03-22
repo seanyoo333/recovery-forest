@@ -23,14 +23,11 @@ export class WebSocketClient {
     try {
       // WebSocket URL에 사용자 ID를 쿼리 파라미터로 추가
       const url = `${this.wsUrl}?userId=${userId}`;
-      
-      console.log('Django WebSocket 연결 시도:', url);
-      
+
       // Django WebSocket 연결 (헤더 없이)
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        console.log('Django WebSocket 연결됨');
         this.reconnectAttempts = 0;
         this.connectionCallbacks.forEach(callback => callback(true));
       };
@@ -54,18 +51,14 @@ export class WebSocketClient {
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket 연결 종료:', event.code, event.reason);
         this.connectionCallbacks.forEach(callback => callback(false));
-        
+
         // 자동 재연결 시도 (연결 실패 시에만)
         if (event.code === 1006 && this.reconnectAttempts < this.maxReconnectAttempts) {
-          console.log(`재연결 시도 ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts}`);
           setTimeout(() => {
             this.reconnectAttempts++;
             this.connect(userId);
           }, this.reconnectDelay * this.reconnectAttempts);
-        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          console.log('최대 재연결 시도 횟수 초과. 서버 상태를 확인해주세요.');
         }
       };
 

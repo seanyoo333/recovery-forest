@@ -212,25 +212,6 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
     turnstileSiteKey && turnstileSiteKey.trim() !== "",
   );
 
-  // Debug: Log sitekey status (only in development)
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log("=== Turnstile Debug Info ===");
-      console.log("Site Key exists:", !!turnstileSiteKey);
-      console.log(
-        "Site Key value:",
-        turnstileSiteKey
-          ? `${turnstileSiteKey.substring(0, 10)}...`
-          : "undefined",
-      );
-      console.log("Has valid site key:", hasValidSiteKey);
-      console.log("Render captcha:", renderCaptcha);
-      console.log("Is mounted:", isMountedRef.current);
-      console.log("Turnstile token:", turnstileToken ? "exists" : "empty");
-      console.log("===========================");
-    }
-  }, [turnstileSiteKey, hasValidSiteKey, renderCaptcha, turnstileToken]);
-
   /**
    * Effect for handling form submission results
    *
@@ -249,9 +230,8 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
       if (turnstile && typeof turnstile.reset === "function") {
         turnstile.reset();
       }
-    } catch (error) {
+    } catch {
       // Ignore errors if Turnstile is not available
-      console.debug("Turnstile reset error:", error);
     }
 
     if (isMountedRef.current) {
@@ -423,20 +403,12 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
                     key="turnstile-widget"
                     sitekey={turnstileSiteKey}
                     onVerify={(token) => {
-                      if (import.meta.env.DEV) {
-                        console.log(
-                          "✅ Turnstile verified! Token received:",
-                          token.substring(0, 20) + "...",
-                        );
-                      }
                       if (isMountedRef.current) {
                         setTurnstileToken(token);
                       }
                     }}
                     onError={(error) => {
-                      // Log errors for debugging
                       if (!isMountedRef.current) return;
-                      console.error("❌ Turnstile error:", error);
                       // Show user-friendly error message in development
                       if (import.meta.env.DEV) {
                         toast.error(
@@ -445,16 +417,8 @@ export default function ContactUs({ actionData }: Route.ComponentProps) {
                       }
                     }}
                     onExpire={() => {
-                      if (import.meta.env.DEV) {
-                        console.log("⚠️ Turnstile token expired");
-                      }
                       if (isMountedRef.current) {
                         setTurnstileToken("");
-                      }
-                    }}
-                    onLoad={() => {
-                      if (import.meta.env.DEV) {
-                        console.log("✅ Turnstile widget loaded successfully");
                       }
                     }}
                   />

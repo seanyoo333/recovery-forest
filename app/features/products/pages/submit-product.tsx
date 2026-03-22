@@ -62,8 +62,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
     return { formError: { picture: ["Failed to upload picture"] } };
   }
 
-  console.log("Uploaded file path:", uploadData.path);
-
   // Public URL 사용 (버킷이 public으로 설정됨)
   const {
     data: { publicUrl },
@@ -72,8 +70,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
   if (!publicUrl) {
     return { formError: { picture: ["Failed to get public URL"] } };
   }
-
-  console.log("Public URL:", publicUrl);
 
   const productId = await createProduct(client, {
     name: rest.name,

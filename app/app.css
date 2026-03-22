@@ -206,7 +206,7 @@ body {
     position: relative;
     transition: all 0.3s ease;
     overflow: visible;
-    background-color: hsl(var(--background));
+    background-color: var(--background);
   }
 
   .neon-card::before {
@@ -283,7 +283,7 @@ body {
   .neon-card > * {
     position: relative;
     z-index: 1;
-    background-color: hsl(var(--background));
+    background-color: var(--background);
   }
 
   /* Rainbow gradient border effect for service cards */

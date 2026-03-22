@@ -263,7 +263,7 @@ function UserMenu({
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link to="/my/dashboard">
-              <BarChart3Icon className="mr-2 size-4" />내 건강 대시보드
+              <BarChart3Icon className="mr-2 size-4" />건강 대시보드
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">

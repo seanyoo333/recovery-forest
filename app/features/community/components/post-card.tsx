@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/core/components/ui/card";
+import { NEON_CARD_BASE_CLASS } from "~/core/lib/neon-card";
 import { cn } from "~/core/lib/utils";
 
 interface PostCardProps {
@@ -74,7 +75,8 @@ export function PostCard({
     <Link to={`/community/${id}`} className="relative z-10 block h-full">
       <Card
         className={cn(
-          "neon-card !bg-background h-full cursor-pointer border transition-colors !shadow-none",
+          NEON_CARD_BASE_CLASS,
+          "h-full",
           expanded
             ? "flex flex-row flex-wrap items-center justify-between"
             : "",

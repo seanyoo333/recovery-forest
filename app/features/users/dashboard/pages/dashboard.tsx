@@ -34,6 +34,7 @@ import { initializeDefaultGridOptions } from "../mutations";
 import {
   type BloodTestChartPoint,
   type BloodTestSummary,
+  type MedicalRecordTranscriptEntry,
   METRIC_DEFINITIONS,
   type PatientHealthProfile,
   getBloodTestOverview,
@@ -153,34 +154,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     // 생활습관 점수 (5축) - 오늘
     const todayLifeAxisScores = computeLifestyleAxisScores(habitScores);
-    console.log(
-      `[레이더 차트 디버깅] 생활습관 점수 (5축):`,
-      todayLifeAxisScores,
-    );
 
     // 천연물 점수 (5축) - 오늘
-    console.log(`[레이더 차트 디버깅] todayIngredientEvidence 입력:`, {
-      count: todayIngredientEvidence.length,
-      data: todayIngredientEvidence.slice(0, 5), // 처음 5개만 로그
-    });
-
     const todaySuppAxisScores = computeSupplementAxisScores(
       todayIngredientEvidence as any,
     );
-    console.log(`[레이더 차트 디버깅] 천연물 점수 (5축):`, todaySuppAxisScores);
 
     // 최종 레이더 점수 (80% 천연물 + 20% 생활습관) - 오늘
     const todayFinalAxisScores = combineAxisScores(
       todaySuppAxisScores,
       todayLifeAxisScores,
     );
-    console.log(
-      `[레이더 차트 디버깅] 최종 레이더 점수 (5축):`,
-      todayFinalAxisScores,
-    );
 
     const todayRadarData = toRadarData(todayFinalAxisScores);
-    console.log(`[레이더 차트 디버깅] 레이더 차트 데이터:`, todayRadarData);
 
     // 기준선 계산: 최근 7일(0.7) + 최근 30일(0.3) 가중 평균
     // 날짜별로 그룹화하여 각 날짜의 축 점수 계산
@@ -322,17 +308,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       baselineAxisScores[axis] = 0.7 * week7Avg + 0.3 * month30Avg;
     }
 
-    console.log(`[레이더 차트 디버깅] 기준선 계산 결과:`, {
-      week7AvgAxisScores,
-      month30AvgAxisScores,
-      baselineAxisScores,
-    });
-
     const baselineRadarData = toRadarData(baselineAxisScores as any);
-    console.log(
-      `[레이더 차트 디버깅] 기준선 레이더 차트 데이터:`,
-      baselineRadarData,
-    );
 
     // 기준선 대비 변화량 계산 (평균)
     const avgDelta =
@@ -341,20 +317,16 @@ export async function loader({ request }: Route.LoaderArgs) {
         return sum + (item.score - (baselineItem?.score ?? 0));
       }, 0) / todayRadarData.length;
 
-    console.log(`[레이더 차트 디버깅] 기준선 대비 변화량:`, avgDelta);
-
     // 가장 낮은 축 찾기
     const lowestAxis = todayRadarData.reduce((min, item) =>
       item.score < min.score ? item : min,
     );
-    console.log(`[레이더 차트 디버깅] 가장 낮은 축:`, lowestAxis);
 
     // 상위 기여 성분
     const topIngredients = topContributingIngredients(
       todayIngredientEvidence as any,
       2,
     );
-    console.log(`[레이더 차트 디버깅] 상위 기여 성분:`, topIngredients);
 
     // 상태 판정 (기준선 대비)
     let status: "gray" | "green" | "yellow" | "red" = "gray";
@@ -372,13 +344,6 @@ export async function loader({ request }: Route.LoaderArgs) {
       status = "yellow";
       statusMessage = "평균 근처. 작은 한 가지로 '좋은 날' 만들기";
     }
-
-    console.log(`[레이더 차트 디버깅] 상태 판정:`, {
-      status,
-      statusMessage,
-      todayIngredientEvidenceCount: todayIngredientEvidence.length,
-      avgDelta,
-    });
 
     return {
       healthHabitsData: {
@@ -409,6 +374,7 @@ export async function loader({ request }: Route.LoaderArgs) {
               chartData: bloodTestOverview?.chartData ?? [],
               availableMetrics: bloodTestOverview?.availableMetrics ?? [],
               referenceRanges: bloodTestOverview?.referenceRanges ?? {},
+              lastTestDate: bloodTestOverview?.lastTestDate ?? null,
               patientProfile,
             }
           : null,
@@ -460,6 +426,11 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
           {loaderData.bloodTestData ? (
             <BloodTestSummaryCard
               latestSummary={loaderData.bloodTestData.latestSummary}
+              lastTestDate={loaderData.bloodTestData.lastTestDate}
+              medicalRecords={
+                loaderData.bloodTestData.patientProfile
+                  ?.medical_record_transcripts ?? []
+              }
             />
           ) : (
             <DashboardFallbackCard
@@ -571,6 +542,9 @@ interface BloodTestProfileCardProps {
 
 interface BloodTestSummaryCardProps {
   latestSummary: BloodTestSummary[];
+  /** 최근 혈액검사 요약이 기준으로 삼는 검사일 (없으면 요약 항목의 testDate로 폴백) */
+  lastTestDate: string | null;
+  medicalRecords: MedicalRecordTranscriptEntry[];
 }
 
 interface TumorMarkerTrendCardProps {
@@ -875,44 +849,196 @@ function BloodTestProfileCard({ patientProfile }: BloodTestProfileCardProps) {
   );
 }
 
-function BloodTestSummaryCard({ latestSummary }: BloodTestSummaryCardProps) {
+function getLatestMedicalByDate(records: MedicalRecordTranscriptEntry[]) {
+  if (records.length === 0) {
+    return { date: null as string | null, entries: [] as MedicalRecordTranscriptEntry[] };
+  }
+  const dates = [...new Set(records.map((r) => r.test_date))].sort((a, b) =>
+    b.localeCompare(a),
+  );
+  const date = dates[0] ?? null;
+  const entries = date
+    ? records.filter((r) => r.test_date === date)
+    : [];
+  return { date, entries };
+}
+
+function truncatePreview(text: string, maxLen: number) {
+  const t = text.trim();
+  if (!t) return "";
+  if (t.length <= maxLen) return t;
+  return `${t.slice(0, maxLen)}…`;
+}
+
+function BloodTestSummaryCard({
+  latestSummary,
+  lastTestDate,
+  medicalRecords,
+}: BloodTestSummaryCardProps) {
   const previewItems = latestSummary.slice(0, 8);
+  const summaryTestDate =
+    lastTestDate ?? previewItems[0]?.testDate ?? null;
+  const formattedBloodDate =
+    summaryTestDate &&
+    !Number.isNaN(new Date(summaryTestDate).getTime())
+      ? new Date(summaryTestDate).toLocaleDateString("ko-KR")
+      : null;
+
+  const { date: latestMedicalDate, entries: latestMedicalEntries } =
+    getLatestMedicalByDate(medicalRecords);
+  const formattedMedicalDate =
+    latestMedicalDate &&
+    !Number.isNaN(new Date(latestMedicalDate).getTime())
+      ? new Date(latestMedicalDate).toLocaleDateString("ko-KR")
+      : null;
+
+  const hasBlood = previewItems.length > 0;
+  const hasMedical = latestMedicalEntries.length > 0;
 
   return (
     <Card className="flex h-full flex-col overflow-hidden">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle>최근 검사 결과 요약</CardTitle>
-            <CardDescription>최근 검사 기준</CardDescription>
+            <CardDescription>
+              혈액검사·의무기록 중 최근 등록된 결과를 요약해 보여줍니다.
+            </CardDescription>
           </div>
-          <Link to="/my/dashboard/health/consent">
-            <Button variant="outline" size="sm">
-              혈액검사 입력
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/my/dashboard/health/consent">
+              <Button variant="outline" size="sm">
+                병원 검사 입력
+              </Button>
+            </Link>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3">
-        {previewItems.length > 0 ? (
-          <div className="space-y-3 text-sm">
-            {previewItems.map((item) => (
-              <div
-                key={item.metric}
-                className="flex items-center justify-between gap-2"
-              >
-                <div className="text-muted-foreground">{item.label}</div>
-                <div className="font-medium">
-                  {item.value === null
-                    ? "데이터 없음"
-                    : `${item.value} ${item.unit}`}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+        {!hasBlood && !hasMedical ? (
           <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
             최근 검사 결과가 없습니다.
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+            {hasBlood ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2 border-b pb-1">
+                  <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    혈액검사
+                  </span>
+                  {formattedBloodDate ? (
+                    <span className="text-muted-foreground text-xs">
+                      검사일{" "}
+                      <span className="text-foreground font-medium">
+                        {formattedBloodDate}
+                      </span>
+                    </span>
+                  ) : null}
+                </div>
+                <div className="space-y-3 text-sm">
+                  {previewItems.map((item) => (
+                    <div
+                      key={item.metric}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <div className="text-muted-foreground">{item.label}</div>
+                      <div className="font-medium">
+                        {item.value === null
+                          ? "데이터 없음"
+                          : `${item.value} ${item.unit}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                등록된 혈액검사 요약이 없습니다.
+              </p>
+            )}
+
+            {hasMedical ? (
+              <div className="space-y-2 border-t pt-2">
+                <div className="flex items-center justify-between gap-2 border-b pb-1">
+                  <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    의무기록
+                  </span>
+                  {formattedMedicalDate ? (
+                    <span className="text-muted-foreground text-xs">
+                      검사일{" "}
+                      <span className="text-foreground font-medium">
+                        {formattedMedicalDate}
+                      </span>
+                    </span>
+                  ) : null}
+                </div>
+                <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1 text-sm">
+                  {latestMedicalEntries.map((rec, idx) => (
+                    <div
+                      key={`${rec.test_date}-${idx}`}
+                      className="bg-muted/50 space-y-1.5 rounded-md border p-2.5 text-xs"
+                    >
+                      {latestMedicalEntries.length > 1 ? (
+                        <div className="text-muted-foreground text-[10px]">
+                          항목 {idx + 1}
+                        </div>
+                      ) : null}
+                      {rec.test_content ? (
+                        <div>
+                          <span className="font-medium text-foreground">
+                            검사내용
+                          </span>
+                          <p className="text-muted-foreground mt-0.5 line-clamp-4 whitespace-pre-wrap">
+                            {truncatePreview(rec.test_content, 400)}
+                          </p>
+                        </div>
+                      ) : null}
+                      {rec.clinical_information ? (
+                        <div>
+                          <span className="font-medium text-foreground">
+                            Clinical Information
+                          </span>
+                          <p className="text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
+                            {truncatePreview(rec.clinical_information, 200)}
+                          </p>
+                        </div>
+                      ) : null}
+                      {rec.finding ? (
+                        <div>
+                          <span className="font-medium text-foreground">
+                            Finding
+                          </span>
+                          <p className="text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
+                            {truncatePreview(rec.finding, 200)}
+                          </p>
+                        </div>
+                      ) : null}
+                      {rec.conclusion ? (
+                        <div>
+                          <span className="font-medium text-foreground">
+                            Conclusion
+                          </span>
+                          <p className="text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
+                            {truncatePreview(rec.conclusion, 200)}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <Link
+                  to="/my/dashboard/health"
+                  className="text-primary inline-block text-xs font-medium underline-offset-4 hover:underline"
+                >
+                  건강 정보에서 전체 보기
+                </Link>
+              </div>
+            ) : (
+              <p className="text-muted-foreground border-t pt-2 text-xs">
+                등록된 의무기록이 없습니다.
+              </p>
+            )}
           </div>
         )}
       </CardContent>

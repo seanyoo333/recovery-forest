@@ -99,6 +99,88 @@ export const appendMedicalRecordTranscript = async (
   if (updateError) throw updateError;
 };
 
+/** 해당 검사일의 의무기록 항목을 모두 교체 (수정) */
+export const setMedicalRecordsForDate = async (
+  client: SupabaseClient<Database>,
+  {
+    patientId,
+    testDate,
+    entries,
+  }: {
+    patientId: string;
+    testDate: string;
+    entries: Array<
+      Pick<
+        MedicalRecordTranscriptEntry,
+        | "test_content"
+        | "clinical_information"
+        | "finding"
+        | "conclusion"
+      >
+    >;
+  },
+) => {
+  const { data: existing, error: fetchError } = await client
+    .from("patient_health_profiles")
+    .select("medical_record_transcripts")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+
+  const current =
+    (existing?.medical_record_transcripts as MedicalRecordTranscriptEntry[]) ??
+    [];
+  const filtered = current.filter((e) => e.test_date !== testDate);
+  const withDate: MedicalRecordTranscriptEntry[] = entries.map((e) => ({
+    test_date: testDate,
+    test_content: e.test_content,
+    clinical_information: e.clinical_information,
+    finding: e.finding,
+    conclusion: e.conclusion,
+  }));
+  const updated = [...filtered, ...withDate];
+
+  const { error: updateError } = await client
+    .from("patient_health_profiles")
+    .update({ medical_record_transcripts: updated })
+    .eq("patient_id", patientId);
+
+  if (updateError) throw updateError;
+};
+
+/** 해당 검사일의 의무기록 항목을 모두 삭제 */
+export const deleteMedicalRecordsForDate = async (
+  client: SupabaseClient<Database>,
+  {
+    patientId,
+    testDate,
+  }: {
+    patientId: string;
+    testDate: string;
+  },
+) => {
+  const { data: existing, error: fetchError } = await client
+    .from("patient_health_profiles")
+    .select("medical_record_transcripts")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+
+  const current =
+    (existing?.medical_record_transcripts as MedicalRecordTranscriptEntry[]) ??
+    [];
+  const filtered = current.filter((e) => e.test_date !== testDate);
+
+  const { error: updateError } = await client
+    .from("patient_health_profiles")
+    .update({ medical_record_transcripts: filtered })
+    .eq("patient_id", patientId);
+
+  if (updateError) throw updateError;
+};
+
 export const upsertBloodTestImage = async (
   client: SupabaseClient<Database>,
   {
@@ -194,7 +276,12 @@ export const upsertBloodTestTypes = async (
       unit: string;
       reference_min?: number | null;
       reference_max?: number | null;
+      reference_note?: string | null;
       clinical_significance?: string | null;
+      descriptions?: Record<string, unknown>;
+      is_derived_metric?: boolean;
+      derived_formula?: string | null;
+      evidence_source_ids?: string[];
     }>;
   },
 ) => {

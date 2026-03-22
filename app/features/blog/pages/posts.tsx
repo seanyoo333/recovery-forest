@@ -189,9 +189,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   let blogPostsMeta: Awaited<ReturnType<typeof getBlogPostsMeta>> = [];
   try {
     blogPostsMeta = await getBlogPostsMeta(client, user.id, sorting);
-  } catch (error) {
+  } catch {
     // If Supabase query fails, continue without metadata
-    console.warn("Failed to fetch blog posts metadata:", error);
   }
 
   // Create a map of slug to metadata for quick lookup

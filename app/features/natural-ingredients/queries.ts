@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "~/core/lib/supa-client.server";
 
 import { PAGE_SIZE } from "./constants";
+import type { NaturalTargetWithMappings } from "./group-targets-by-meta-axis";
 
 /** natural_ingredients 목록 (display_name 순) - 마이그레이션 0111 후 tagline, description, picture 사용 가능 */
 export async function getNaturalIngredients(
@@ -55,7 +56,7 @@ export async function getNaturalIngredientBySlug(
   return data;
 }
 
-/** natural_targets 목록 (표적별 모음용) */
+/** natural_targets 목록 (매핑 없이 평면 목록) */
 export async function getNaturalTargets(client: SupabaseClient<Database>) {
   const { data, error } = await client
     .from("natural_targets")
@@ -63,6 +64,23 @@ export async function getNaturalTargets(client: SupabaseClient<Database>) {
     .order("display_name", { ascending: true });
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * natural_targets + `target_to_meta_axis` (표적별 모음 5축 그룹용, DB와 정합)
+ */
+export async function getNaturalTargetsWithMetaAxis(
+  client: SupabaseClient<Database>,
+): Promise<NaturalTargetWithMappings[]> {
+  const { data, error } = await client
+    .from("natural_targets")
+    .select(
+      `id, slug, display_name, description,
+      target_to_meta_axis ( meta_axis, axis_weight )`,
+    )
+    .order("display_name", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as NaturalTargetWithMappings[];
 }
 
 /** 특정 표적에 연결된 성분 목록 (ingredient_target_evidence 기반) */
@@ -196,5 +214,6 @@ export async function searchNaturalIngredients(
 export const getIngredients = getNaturalIngredients;
 export const getIngredientPages = getNaturalIngredientsPages;
 export const getIngredientBySlug = getNaturalIngredientBySlug;
-export const getTargets = getNaturalTargets;
+/** 표적별 모음 페이지: 5축 매핑 포함 */
+export const getTargets = getNaturalTargetsWithMetaAxis;
 export const searchIngredients = searchNaturalIngredients;

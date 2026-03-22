@@ -292,11 +292,6 @@ export default function App({ loaderData }: Route.ComponentProps) {
   const data = useRouteLoaderData("root");
   const isLoggedIn = loaderData.user !== null;
 
-  // 콘솔에서 root 데이터 확인하기
-  console.log("=== Root Data ===");
-  console.log("loaderData:", loaderData);
-  console.log("==================");
-
   // Initialize NProgress with spinner for better UX during navigation
   useEffect(() => {
     NProgress.configure({ showSpinner: true });

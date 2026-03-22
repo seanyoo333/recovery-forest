@@ -94,16 +94,6 @@ export function NaturalTargetRadarChart({
   statusMessage,
   topIngredients,
 }: NaturalTargetRadarChartProps) {
-  console.log(`[레이더 차트 디버깅] NaturalTargetRadarChart 컴포넌트 렌더링:`, {
-    todayData,
-    baselineData,
-    avgDelta,
-    lowestAxis,
-    status,
-    statusMessage,
-    topIngredients,
-  });
-
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {

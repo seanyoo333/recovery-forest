@@ -284,33 +284,19 @@ export const action = async ({ request }: Route.ActionArgs) => {
       // 🔹 해시 기반 캐시 확인 (Edge Function 호출 전에 먼저 확인)
       // 동일한 hash가 있으면 OCR/OpenAI를 거치지 않고 기존 데이터 반환
       if (imageHash) {
-        console.log("🔹 [Server Action] 캐시 확인 시작");
-        console.log("  - imageHash:", imageHash);
-        console.log("  - patientId:", userId);
         try {
           const existingImage = await getBloodTestImageByHash(client, {
             patientId: userId,
             imageHash,
           });
 
-          console.log(
-            "  - existingImage:",
-            existingImage ? `found (image_id: ${existingImage.image_id})` : "not found",
-          );
-
           if (existingImage) {
-            console.log("✅ [Server Action] 기존 이미지 발견, image_id:", existingImage.image_id);
-
             const allResults = await getBloodTestResultsByImageId(client, {
               patientId: userId,
               imageId: existingImage.image_id,
             });
 
-            console.log("  - allResults:", allResults ? `found (${allResults.length} items)` : "not found");
-
             if (allResults && allResults.length > 0) {
-              console.log("✅ [Server Action] 캐시된 결과 발견, 개수:", allResults.length);
-
               const testDate = existingImage.test_date || "";
 
               // Edge Function과 동일한 구조로 모든 필드 초기화
@@ -438,23 +424,15 @@ export const action = async ({ request }: Route.ActionArgs) => {
                 }
               }
 
-              console.log("✅ [Server Action] 캐시된 데이터 반환 (OCR/OpenAI 건너뜀)");
               return jsonData({
                 structured,
                 cached: true,
               });
-            } else {
-              console.log("⚠️ [Server Action] 이미지는 있지만 결과 데이터가 없음, OCR 진행");
             }
-          } else {
-            console.log("⚠️ [Server Action] 캐시된 이미지 없음, OCR 진행");
           }
-        } catch (cacheError) {
-          // 캐시 관련 에러는 로깅만 하고, OCR 계속 진행
-          console.error("❌ [Server Action] Cache lookup error:", cacheError);
+        } catch {
+          // 캐시 조회 실패 시 OCR 계속 진행
         }
-      } else {
-        console.log("⚠️ [Server Action] imageHash가 없어 캐시 확인 건너뜀");
       }
 
       // 캐시가 없으면 Edge Function 호출 (OCR + OpenAI)
@@ -471,17 +449,11 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
       const supabaseUrl = process.env.SUPABASE_URL;
       if (!supabaseUrl) {
-        console.error("SUPABASE_URL is not set in environment");
         return jsonData({ error: "서버 설정 오류(SUPABASE_URL 누락)" }, { status: 500 });
       }
 
       // Supabase Edge Function 호출 (ocr_gpt)
       // Edge Function 이름이 'ocr_gpt'이므로 URL에 정확히 맞춰야 함
-      console.log("🔹 [Server Action] Edge Function 호출 시작");
-      console.log("URL:", `${supabaseUrl}/functions/v1/ocr_gpt`);
-      console.log("Image hash:", imageHash);
-      console.log("Base64 길이:", base64.length);
-
       const isMedicalRecord = intent === "ocr_medical_record";
       const ocrRes = await fetch(`${supabaseUrl}/functions/v1/ocr_gpt`, {
         method: "POST",
@@ -497,21 +469,12 @@ export const action = async ({ request }: Route.ActionArgs) => {
         }),
       });
 
-      console.log("🔹 [Server Action] Edge Function 응답 받음");
-      console.log("Response status:", ocrRes.status);
-      console.log("Response ok:", ocrRes.ok);
-      console.log("Response headers:", Object.fromEntries(ocrRes.headers.entries()));
-
       if (!ocrRes.ok) {
         const errorText = await ocrRes.text();
-        console.error("❌ [Server Action] Edge Function 에러 응답");
-        console.error("Error status:", ocrRes.status);
-        console.error("Error text:", errorText);
         let errorMessage = "OCR 처리에 실패했습니다.";
         try {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.error || errorMessage;
-          console.error("Error JSON:", errorJson);
         } catch {
           errorMessage = errorText || errorMessage;
         }
@@ -521,14 +484,11 @@ export const action = async ({ request }: Route.ActionArgs) => {
       let ocrJson: any;
       try {
         ocrJson = await ocrRes.json();
-      } catch (parseError) {
-        console.error("❌ [Server Action] Edge Function 응답 JSON 파싱 실패:", parseError);
+      } catch {
         return jsonData({ error: "Edge Function 응답을 파싱할 수 없습니다." }, { status: 500 });
       }
 
       if (ocrJson.error) {
-        console.error("❌ [Server Action] OCR JSON에 error 필드 존재");
-        console.error("Error:", ocrJson.error);
         return jsonData({ error: ocrJson.error }, { status: 500 });
       }
 
@@ -550,39 +510,25 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
       // Edge Function에서 캐시된 데이터를 반환한 경우 (혈액검사)
       if (ocrJson.cached && ocrJson.structured) {
-        console.log("✅ [Server Action] Edge Function에서 캐시된 데이터 반환");
         return jsonData({
           structured: ocrJson.structured,
           cached: true,
         });
       }
 
-      console.log("🔹 [Server Action] structured 필드 확인");
-      console.log("structured 존재:", "structured" in ocrJson);
-      console.log("structured 값:", ocrJson.structured);
-      console.log("structured 타입:", typeof ocrJson.structured);
-
       if (!ocrJson.structured) {
-        console.error("❌ [Server Action] structured 필드가 없습니다!");
-        console.error("OCR JSON:", JSON.stringify(ocrJson, null, 2));
         return jsonData({ error: "OCR 결과에 structured 데이터가 없습니다." }, { status: 500 });
       }
 
       // 🔹 이미지를 Storage에 업로드하고 blood_test_images에 저장 (혈액검사만)
-      console.log("🔹 [Server Action] 이미지 Storage 업로드 및 메타데이터 저장 시작");
-
-      if (!imageHash) {
-        console.warn("⚠️ [Server Action] imageHash가 없어 이미지 저장을 건너뜁니다.");
-      } else {
+      if (imageHash) {
         try {
           // Storage에 업로드할 파일 경로 생성 (userId/imageHash.확장자)
           const fileExtension = file.name.split(".").pop() || "jpg";
           const storagePath = `${userId}/${imageHash}.${fileExtension}`;
 
-          console.log("🔹 [Server Action] Storage 업로드:", storagePath);
-
           // Storage에 업로드
-          const { data: uploadData, error: uploadError } = await client.storage
+          const { error: uploadError } = await client.storage
             .from("image_hash")
             .upload(storagePath, file, {
               contentType: file.type,
@@ -590,54 +536,30 @@ export const action = async ({ request }: Route.ActionArgs) => {
             });
 
           if (uploadError) {
-            console.error("❌ [Server Action] Storage 업로드 실패:", uploadError);
             // 업로드 실패해도 OCR 결과는 반환
           } else {
-            console.log("✅ [Server Action] Storage 업로드 성공");
-
             // 업로드된 이미지의 Public URL 가져오기
             const { data: urlData } = await client.storage.from("image_hash").getPublicUrl(storagePath);
             const imageUrl = urlData.publicUrl;
-
-            console.log("🔹 [Server Action] Public URL:", imageUrl);
 
             // blood_test_images 테이블에 저장
             // 사용자가 입력한 날짜를 우선 사용, 없으면 OCR에서 추출한 날짜, 그것도 없으면 오늘 날짜
             const testDateToSave =
               userTestDate || ocrJson.structured?.testDate || new Date().toISOString().split("T")[0];
 
-            console.log("🔹 [Server Action] blood_test_images 저장:", {
-              patient_id: userId,
-              image_hash: imageHash,
-              image_url: imageUrl,
-              test_date: testDateToSave,
-              user_test_date: userTestDate,
-              ocr_test_date: ocrJson.structured?.testDate,
-            });
-
             try {
-              const imageId = await upsertBloodTestImage(client, {
+              await upsertBloodTestImage(client, {
                 patientId: userId,
                 imageHash,
                 imageUrl,
                 testDate: testDateToSave,
               });
-              console.log("✅ [Server Action] blood_test_images 저장 성공, image_id:", imageId);
-            } catch (imageError: any) {
-              console.error("❌ [Server Action] blood_test_images 저장 실패:", imageError);
-              // 중복 키 에러 등은 무시 (이미 저장된 경우)
-              if (
-                imageError.message &&
-                !imageError.message.includes("duplicate") &&
-                !imageError.message.includes("unique")
-              ) {
-                console.error("저장 실패 상세:", imageError);
-              }
+            } catch {
+              // 중복 키 등은 무시 (이미 저장된 경우)
             }
           }
-        } catch (imageError) {
-          // 이미지 저장 관련 에러는 로깅만 하고 계속 진행 (OCR 결과는 반환)
-          console.error("❌ [Server Action] 이미지 저장 중 오류:", imageError);
+        } catch {
+          // 이미지 저장 실패해도 OCR 결과는 반환
         }
       }
 
@@ -647,12 +569,9 @@ export const action = async ({ request }: Route.ActionArgs) => {
         structured: ocrJson.structured,
         cached: !!ocrJson.cached,
       };
-      console.log("🔹 [Server Action] OCR 결과 반환 (blood_test_results는 저장 안 함):");
-      console.log("Response data:", JSON.stringify(responseData, null, 2));
 
       return jsonData(responseData);
     } catch (error) {
-      console.error("OCR action error:", error);
       const errorMessage = error instanceof Error ? error.message : "OCR 처리 중 오류 발생";
       const errorStack = error instanceof Error ? error.stack : String(error);
 
@@ -866,7 +785,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
   let imageId: number | null = null;
 
   if (imageHash) {
-    console.log("🔹 [Server Action] imageHash로 image_id 찾기:", imageHash);
     try {
       const imageData = await getBloodTestImageByHash(client, {
         patientId: userId,
@@ -875,7 +793,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
       if (imageData) {
         imageId = imageData.image_id;
-        console.log("✅ [Server Action] image_id 찾음:", imageId);
         // test_date 업데이트 (폼에서 입력한 날짜로)
         if (testDate) {
           try {
@@ -883,14 +800,12 @@ export const action = async ({ request }: Route.ActionArgs) => {
               imageId,
               testDate,
             });
-            console.log("✅ [Server Action] test_date 업데이트 성공");
-          } catch (updateError) {
-            console.error("❌ [Server Action] Failed to update test_date:", updateError);
+          } catch {
+            // 날짜 업데이트 실패는 저장 흐름을 막지 않음
           }
         }
       } else {
         // imageHash가 있는데 이미지를 찾지 못한 경우는 오류
-        console.error("❌ [Server Action] imageHash에 해당하는 이미지를 찾지 못함");
         return {
           formErrors: {
             image: ["이미지 정보를 찾을 수 없습니다. OCR을 다시 시도해주세요."],
@@ -1260,10 +1175,6 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
       const arrayBuffer = await fileToArrayBuffer(file);
       const imageHash = await calculateSHA256(arrayBuffer);
 
-      console.log("🔹 [Client] 이미지 해시 계산 완료:", imageHash);
-      console.log("🔹 [Client] 파일명:", file.name);
-      console.log("🔹 [Client] 파일 크기:", file.size);
-
       // imageHash를 상태에 저장 (폼 제출 시 사용)
       setCurrentImageHash(imageHash);
 
@@ -1280,15 +1191,12 @@ export default function DashboardHealthSubmit({ actionData, loaderData }: Route.
       formData.append("testDate", testDate);
       formData.append("_intent", examType === "medical_record" ? "ocr_medical_record" : "ocr");
 
-      console.log("🔹 [Client] OCR 요청 전송 시작");
-
       // useFetcher를 통해 요청 (React Router가 JSON으로 응답)
       ocrFetcher.submit(formData, {
         method: "post",
         encType: "multipart/form-data",
       });
-    } catch (error) {
-      console.error("❌ [Client] OCR processing failed:", error);
+    } catch {
       alert("이미지 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
   };

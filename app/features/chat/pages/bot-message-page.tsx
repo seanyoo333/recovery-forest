@@ -215,15 +215,11 @@ export default function BotMessagePage({
     isWriterStreamingRef.current = false;
 
     streamChat(botMessageRoomId, actionData.message, userId, {
-      onStart: (conversationId) => {
-        console.log("[SSE] Conversation started:", conversationId);
-      },
+      onStart: () => {},
       onStatus: (text) => {
-        console.log("[SSE] Status:", text);
         setStatus(text);
       },
       onSectionStart: (section) => {
-        console.log("[SSE] Section start:", section);
         // writer 스트리밍 시작 감지
         if (!isWriterStreamingRef.current) {
           isWriterStreamingRef.current = true;
@@ -310,8 +306,7 @@ export default function BotMessagePage({
           return cleanedText;
         });
       },
-      onSectionDone: (section) => {
-        console.log("[SSE] Section done:", section);
+      onSectionDone: () => {
         // 섹션 완료 시 줄바꿈 추가하고 전체 텍스트 정리
         setStreamingText((prev) => {
           const newText = prev + "\n\n";
@@ -364,7 +359,6 @@ export default function BotMessagePage({
         });
       },
       onComplete: (outputPayload) => {
-        console.log("[SSE] Complete:", outputPayload);
         setOutput(outputPayload);
         setStatus("완료!");
         // 최종 결과를 하나의 텍스트로 합치기
@@ -380,7 +374,6 @@ export default function BotMessagePage({
         setIsAILoading(false);
       },
       onSaved: () => {
-        console.log("[SSE] Saved");
         setSaved(true);
         setIsStreaming(false);
         setIsWriterStreaming(false);

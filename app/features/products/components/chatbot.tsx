@@ -50,14 +50,12 @@ export function ChatBot({
 
   const connectWebSocket = () => {
     try {
-      console.log("Attempting to connect to WebSocket...");
       if (!websocketUrl) {
         throw new Error("WebSocket URL is not configured");
       }
       ws.current = new WebSocket(websocketUrl);
 
       ws.current.onopen = () => {
-        console.log("Successfully connected to WebSocket");
         setIsConnected(true);
       };
 
@@ -71,7 +69,6 @@ export function ChatBot({
       };
 
       ws.current.onclose = () => {
-        console.log("WebSocket connection closed");
         setIsConnected(false);
       };
     } catch (error) {

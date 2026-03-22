@@ -1,4 +1,17 @@
+import {
+  AXIS_LABEL,
+  type MetaAxis,
+  META_AXES,
+} from "~/core/meta-axis";
+
 import type { Category, GridOptionKind, TimeBlock } from "./types";
+
+import {
+  type StandardBloodTestType,
+  standardBloodTestType,
+} from "./blood-test-metadata";
+
+export { AXIS_LABEL, type MetaAxis, META_AXES };
 
 /**
  * 카테고리별 허용 시간대 정의
@@ -109,30 +122,6 @@ export const TRAFFIC_LIGHT_THRESHOLDS = {
  */
 export const RECORD_SUCCESS_THRESHOLD = 2; // filled_count >= 2
 export const GRACE_PER_WEEK = 1; // 주 1회 보호
-
-/**
- * 레이더 차트 메타축 정의 (5축)
- */
-export const META_AXES = [
-  "metabolic_stability", // 대사 안정화
-  "immune_balance", // 면역 균형
-  "abnormal_signals", // 비정상 신호조절
-  "neuro_stress", // 신경·스트레스 개입
-  "recovery", // 회복증진
-] as const;
-
-export type MetaAxis = (typeof META_AXES)[number];
-
-/**
- * 메타축 라벨
- */
-export const AXIS_LABEL: Record<MetaAxis, string> = {
-  metabolic_stability: "대사 안정화",
-  immune_balance: "면역 균형",
-  abnormal_signals: "비정상 신호조절",
-  neuro_stress: "신경·스트레스",
-  recovery: "회복증진",
-};
 
 /**
  * 생활습관 카테고리 → 메타축 가중치 매핑 (5축)
@@ -314,7 +303,7 @@ export const STUDY_TYPE_STRENGTH: Record<
  * 표준 혈액검사 항목 정의
  * 모든 standard_name은 소문자로 통일하여 관리
  */
-export const STANDARD_BLOOD_TEST_TYPES = [
+const STANDARD_BLOOD_TEST_TYPES_RAW = [
   // 일반 메트릭
   {
     standard_name: "lmr",
@@ -322,6 +311,8 @@ export const STANDARD_BLOOD_TEST_TYPES = [
     reference_min: null,
     reference_max: null,
     clinical_significance: null,
+    is_derived_metric: true,
+    derived_formula: "Lymphocyte / Monocyte",
   },
   {
     standard_name: "nlr",
@@ -329,6 +320,8 @@ export const STANDARD_BLOOD_TEST_TYPES = [
     reference_min: null,
     reference_max: null,
     clinical_significance: null,
+    is_derived_metric: true,
+    derived_formula: "Neutrophil / Lymphocyte",
   },
   {
     standard_name: "glucose",
@@ -664,6 +657,10 @@ export const STANDARD_BLOOD_TEST_TYPES = [
     clinical_significance: "정상 범위: 1.5 ng/mL 이하",
   },
 ] as const;
+
+/** 표준 혈액검사 항목 (메타데이터 전체 구조로 정규화) */
+export const STANDARD_BLOOD_TEST_TYPES: StandardBloodTestType[] =
+  STANDARD_BLOOD_TEST_TYPES_RAW.map((row) => standardBloodTestType(row as any));
 
 /**
  * standard_name 정규화 함수 (소문자로 통일)

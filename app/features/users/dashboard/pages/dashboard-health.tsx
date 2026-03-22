@@ -1,6 +1,6 @@
 import type { Route } from "./+types/dashboard-health";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link, useFetcher } from "react-router";
 import { Area, ComposedChart, Line, ReferenceArea } from "recharts";
 import { CartesianGrid, XAxis, YAxis } from "recharts";
@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/core/components/ui/select";
+import { Textarea } from "~/core/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +32,7 @@ import {
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
+import { hasBloodTestTooltipContent } from "../blood-test-metadata";
 import {
   type BloodTestSummary,
   type MedicalRecordTranscriptEntry,
@@ -207,17 +209,215 @@ function getChartYDomain(
     const minRequiredMax = referenceMax + rangePadding;
     max = Math.max(max, minRequiredMax);
 
-    // 디버깅: referenceMax만 있을 때 도메인이 올바르게 확장되었는지 확인
     if (referenceMin === null && max <= referenceMax) {
-      console.warn(
-        `[getChartYDomain] Warning: referenceMax (${referenceMax}) 위쪽에 공간이 부족합니다. max: ${max}, minRequiredMax: ${minRequiredMax}`,
-      );
       // 강제로 최소한의 공간 확보
       max = referenceMax * 1.5;
     }
   }
 
   return [min, max];
+}
+
+function bloodTestTooltipInput(item: BloodTestSummary) {
+  return {
+    clinicalSignificance: item.clinicalSignificance,
+    referenceNote: item.referenceNote,
+    descriptions: item.descriptions,
+    isDerivedMetric: item.isDerivedMetric,
+    derivedFormula: item.derivedFormula,
+    evidenceSourceIds: item.evidenceSourceIds,
+  };
+}
+
+function BloodTestTooltipSectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="text-muted-foreground mb-1 text-xs font-semibold tracking-tight">
+      {children}
+    </div>
+  );
+}
+
+/** 패널 스타일 툴팁 — 가독성·스크롤 영역 통일 */
+function BloodTestTooltipContent({ children }: { children: ReactNode }) {
+  return (
+    <TooltipContent
+      variant="panel"
+      side="top"
+      sideOffset={10}
+      collisionPadding={24}
+      className="max-h-[min(70vh,28rem)] max-w-md min-w-[min(100vw-2rem,20rem)] overflow-hidden p-0"
+    >
+      <div className="max-h-[min(70vh,28rem)] overflow-y-auto overscroll-y-contain px-4 py-4 [scrollbar-gutter:stable]">
+        {children}
+      </div>
+    </TooltipContent>
+  );
+}
+
+/** 최근 검사 결과 요약·그래프 제목 등에서 공통으로 쓰는 혈액검사 설명 툴팁 본문 */
+function BloodTestSummaryTooltipBody({ item }: { item: BloodTestSummary }) {
+  const outOfRange =
+    item.value !== null &&
+    item.value !== undefined &&
+    ((item.referenceMin !== null && item.value < item.referenceMin) ||
+      (item.referenceMax !== null && item.value > item.referenceMax));
+
+  return (
+    <div className="text-foreground space-y-4">
+      <header className="border-border border-b pb-3">
+        <h3 className="text-lg leading-snug font-semibold tracking-tight">
+          {item.label}
+        </h3>
+        {item.unit ? (
+          <p className="text-muted-foreground mt-1 text-xs">단위: {item.unit}</p>
+        ) : null}
+      </header>
+
+      {item.clinicalSignificance ? (
+        <section className="space-y-1.5">
+          <BloodTestTooltipSectionLabel>임상적 의의</BloodTestTooltipSectionLabel>
+          <p className="text-foreground/95 text-sm leading-relaxed">
+            {item.clinicalSignificance}
+          </p>
+        </section>
+      ) : null}
+
+      {(item.referenceMin !== null || item.referenceMax !== null) && (
+        <section className="bg-muted/50 border-border rounded-lg border px-3 py-2.5">
+          <BloodTestTooltipSectionLabel>기본 참고 범위</BloodTestTooltipSectionLabel>
+          <p className="text-base font-semibold tabular-nums tracking-tight">
+            {item.referenceMin !== null && item.referenceMax !== null ? (
+              <>
+                {item.referenceMin} ~ {item.referenceMax}
+                {item.unit ? ` ${item.unit}` : ""}
+              </>
+            ) : item.referenceMin !== null ? (
+              <>
+                {item.referenceMin}
+                {item.unit ? ` ${item.unit}` : ""}
+              </>
+            ) : item.referenceMax !== null ? (
+              <>
+                {item.referenceMax}
+                {item.unit ? ` ${item.unit}` : ""}
+              </>
+            ) : null}
+          </p>
+        </section>
+      )}
+
+      {item.referenceNote ? (
+        <section className="border-border space-y-1.5 border-t pt-3">
+          <BloodTestTooltipSectionLabel>범위 해석 참고</BloodTestTooltipSectionLabel>
+          <p className="text-foreground/95 text-sm leading-relaxed">
+            {item.referenceNote}
+          </p>
+        </section>
+      ) : null}
+
+      {item.isDerivedMetric && item.derivedFormula ? (
+        <section className="border-border space-y-1.5 border-t pt-3">
+          <BloodTestTooltipSectionLabel>계산 지표</BloodTestTooltipSectionLabel>
+          <p className="bg-muted/40 border-border font-mono text-sm leading-relaxed break-words rounded-md border px-2.5 py-2">
+            {item.derivedFormula}
+          </p>
+        </section>
+      ) : null}
+
+      {item.value !== null && item.value !== undefined && (
+        <section
+          className={
+            outOfRange
+              ? "border-destructive/40 bg-destructive/5 rounded-lg border px-3 py-2.5"
+              : "border-emerald-600/30 bg-emerald-500/5 rounded-lg border px-3 py-2.5 dark:border-emerald-500/40"
+          }
+        >
+          <BloodTestTooltipSectionLabel>선택일 기준 값</BloodTestTooltipSectionLabel>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span
+              className={`text-lg font-semibold tabular-nums ${
+                outOfRange
+                  ? "text-destructive"
+                  : "text-emerald-700 dark:text-emerald-400"
+              }`}
+            >
+              {item.value}
+              {item.unit ? ` ${item.unit}` : ""}
+            </span>
+            {outOfRange ? (
+              <span className="text-destructive bg-destructive/10 rounded px-1.5 py-0.5 text-xs font-medium">
+                참고 범위 밖
+              </span>
+            ) : (
+              <span className="text-emerald-700 dark:text-emerald-400 text-xs font-medium">
+                참고 범위 내
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      {item.descriptions.description ? (
+        <section className="border-border space-y-1.5 border-t pt-3">
+          <BloodTestTooltipSectionLabel>상세 설명</BloodTestTooltipSectionLabel>
+          <p className="text-foreground/95 text-sm leading-relaxed">
+            {item.descriptions.description}
+          </p>
+        </section>
+      ) : null}
+
+      {item.descriptions.significance.up.length > 0 && (
+        <section className="border-border space-y-2 border-t pt-3">
+          <BloodTestTooltipSectionLabel>증가 시 의의</BloodTestTooltipSectionLabel>
+          <ul className="text-foreground/95 list-outside space-y-2 pl-4 text-sm leading-relaxed marker:text-primary">
+            {item.descriptions.significance.up.map((line, index) => (
+              <li key={index} className="pl-0.5">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {item.descriptions.significance.down.length > 0 && (
+        <section className="border-border space-y-2 border-t pt-3">
+          <BloodTestTooltipSectionLabel>감소 시 의의</BloodTestTooltipSectionLabel>
+          <ul className="text-foreground/95 list-outside space-y-2 pl-4 text-sm leading-relaxed marker:text-primary">
+            {item.descriptions.significance.down.map((line, index) => (
+              <li key={index} className="pl-0.5">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {item.descriptions.interpretation_cautions.length > 0 && (
+        <section className="border-border space-y-2 border-t pt-3">
+          <BloodTestTooltipSectionLabel>해석 시 주의</BloodTestTooltipSectionLabel>
+          <ul className="text-foreground/95 list-outside space-y-2 pl-4 text-sm leading-relaxed marker:text-amber-600 dark:marker:text-amber-500">
+            {item.descriptions.interpretation_cautions.map((line, index) => (
+              <li key={index} className="pl-0.5">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {item.evidenceSourceIds.length > 0 && (
+        <footer className="text-muted-foreground border-border border-t pt-3 text-[11px] leading-relaxed">
+          <span className="font-medium">근거 출처 ID</span>
+          <span className="ml-1.5 font-mono">
+            {item.evidenceSourceIds.slice(0, 4).join(", ")}
+            {item.evidenceSourceIds.length > 4
+              ? ` 외 ${item.evidenceSourceIds.length - 4}건`
+              : ""}
+          </span>
+        </footer>
+      )}
+    </div>
+  );
 }
 
 export const meta: Route.MetaFunction = () => {
@@ -274,12 +474,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
       }
     });
 
-    console.log("[Action] Updating blood test results:", {
-      testDate,
-      values,
-      userId,
-    });
-
     if (Object.keys(values).length === 0) {
       return { error: "수정할 값이 없습니다." };
     }
@@ -292,9 +486,6 @@ export const action = async ({ request }: Route.ActionArgs) => {
           if (Number.isNaN(numericValue)) {
             throw new Error(`${metric}의 값이 유효하지 않습니다.`);
           }
-          console.log(
-            `[Action] Updating ${metric} to ${numericValue} for date ${testDate}`,
-          );
           return updateBloodTestResult(client, {
             patientId: userId,
             testDate,
@@ -303,10 +494,8 @@ export const action = async ({ request }: Route.ActionArgs) => {
           });
         }),
       );
-      console.log("[Action] Successfully updated blood test results");
       return { success: true };
     } catch (error) {
-      console.error("[Action] Failed to update blood test results:", error);
       return {
         error:
           error instanceof Error
@@ -325,26 +514,105 @@ export const action = async ({ request }: Route.ActionArgs) => {
       return { error: "검사 날짜가 필요합니다." };
     }
 
-    console.log("[Action] Deleting blood test results for date:", {
-      testDate,
-      userId,
-    });
-
     try {
       const { deleteBloodTestResultsByDate } = await import("../mutations");
       await deleteBloodTestResultsByDate(client, {
         patientId: userId,
         testDate,
       });
-      console.log("[Action] Successfully deleted blood test results");
       return { success: true };
     } catch (error) {
-      console.error("[Action] Failed to delete blood test results:", error);
       return {
         error:
           error instanceof Error
             ? error.message
             : "검사 결과 삭제에 실패했습니다.",
+      };
+    }
+  }
+
+  if (intent === "updateMedicalRecords") {
+    const [client] = makeServerClient(request);
+    const userId = await getLoggedInUserId(client);
+    const testDate = formData.get("testDate")?.toString();
+    const entriesJson = formData.get("entriesJson")?.toString();
+
+    if (!testDate) {
+      return { error: "검사 날짜가 필요합니다." };
+    }
+    if (!entriesJson) {
+      return { error: "저장할 항목이 없습니다." };
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(entriesJson);
+    } catch {
+      return { error: "데이터 형식이 올바르지 않습니다." };
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return { error: "최소 한 개의 항목이 필요합니다." };
+    }
+
+    try {
+      const entries = parsed.map((row: unknown) => {
+        if (!row || typeof row !== "object") {
+          throw new Error("항목 형식이 올바르지 않습니다.");
+        }
+        const r = row as Record<string, unknown>;
+        return {
+          test_content: String(r.test_content ?? ""),
+          clinical_information: String(r.clinical_information ?? ""),
+          finding: String(r.finding ?? ""),
+          conclusion: String(r.conclusion ?? ""),
+        };
+      });
+
+      const valid = entries.filter((e) => e.test_content.trim());
+      if (valid.length === 0) {
+        return { error: "검사내용은 필수입니다." };
+      }
+
+      const { setMedicalRecordsForDate } = await import("../mutations");
+      await setMedicalRecordsForDate(client, {
+        patientId: userId,
+        testDate,
+        entries: valid,
+      });
+      return { success: true };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "의무기록 수정에 실패했습니다.",
+      };
+    }
+  }
+
+  if (intent === "deleteMedicalRecords") {
+    const [client] = makeServerClient(request);
+    const userId = await getLoggedInUserId(client);
+    const testDate = formData.get("testDate")?.toString();
+
+    if (!testDate) {
+      return { error: "검사 날짜가 필요합니다." };
+    }
+
+    try {
+      const { deleteMedicalRecordsForDate } = await import("../mutations");
+      await deleteMedicalRecordsForDate(client, {
+        patientId: userId,
+        testDate,
+      });
+      return { success: true };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "의무기록 삭제에 실패했습니다.",
       };
     }
   }
@@ -393,10 +661,8 @@ export const action = async ({ request }: Route.ActionArgs) => {
         heightCm: Number(heightCm),
         weightKg: Number(weightKg),
       });
-      console.log("[Action] Successfully updated patient profile");
       return { success: true };
     } catch (error) {
-      console.error("[Action] Failed to update patient profile:", error);
       return {
         error:
           error instanceof Error
@@ -446,6 +712,22 @@ export default function DashboardHealth({
       setSelectedMedicalDate(medicalRecordDates[0]);
     }
   }, [medicalRecordDates, selectedMedicalDate]);
+
+  const [isEditingMedical, setIsEditingMedical] = useState(false);
+  const [editedMedicalEntries, setEditedMedicalEntries] = useState<
+    Array<{
+      test_content: string;
+      clinical_information: string;
+      finding: string;
+      conclusion: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    setIsEditingMedical(false);
+    setEditedMedicalEntries([]);
+  }, [effectiveMedicalDate]);
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<{
     age: string;
@@ -474,12 +756,12 @@ export default function DashboardHealth({
   // fetcher.data가 성공 응답이면 페이지 새로고침
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data) {
-      console.log("[Component] Fetcher data received:", fetcher.data);
       if (typeof fetcher.data === "object" && fetcher.data !== null) {
         if ("success" in fetcher.data && fetcher.data.success) {
-          console.log("[Component] Update successful, reloading page");
           setIsEditing(false);
           setEditedValues({});
+          setIsEditingMedical(false);
+          setEditedMedicalEntries([]);
           setIsEditingProfile(false);
           setEditedProfile({
             age: "",
@@ -494,18 +776,19 @@ export default function DashboardHealth({
           });
           window.location.reload();
         } else if ("error" in fetcher.data && fetcher.data.error) {
-          console.error("[Component] Update error:", fetcher.data.error);
           alert(String(fetcher.data.error));
           // 에러 시 편집 모드 유지
           if (isEditingProfile) {
             setIsEditingProfile(true);
+          } else if (isEditingMedical) {
+            setIsEditingMedical(true);
           } else {
             setIsEditing(true);
           }
         }
       }
     }
-  }, [fetcher.data, fetcher.state, isEditingProfile]);
+  }, [fetcher.data, fetcher.state, isEditingProfile, isEditingMedical]);
 
   const hasChartData = chartData.length > 0;
 
@@ -702,7 +985,6 @@ export default function DashboardHealth({
       }
     });
 
-    console.log("Saving values:", Object.fromEntries(formData.entries()));
     fetcher.submit(formData, { method: "post" });
     // 저장 완료는 useEffect에서 처리
   };
@@ -729,8 +1011,73 @@ export default function DashboardHealth({
     formData.append("_intent", "deleteResults");
     formData.append("testDate", selectedDate);
 
-    console.log("Deleting results for date:", selectedDate);
     fetcher.submit(formData, { method: "post" });
+  };
+
+  const handleEditMedical = () => {
+    if (selectedMedicalRecords.length === 0) return;
+    setIsEditingMedical(true);
+    setEditedMedicalEntries(
+      selectedMedicalRecords.map((r) => ({
+        test_content: r.test_content ?? "",
+        clinical_information: r.clinical_information ?? "",
+        finding: r.finding ?? "",
+        conclusion: r.conclusion ?? "",
+      })),
+    );
+  };
+
+  const handleCancelMedical = () => {
+    setIsEditingMedical(false);
+    setEditedMedicalEntries([]);
+  };
+
+  const handleSaveMedical = () => {
+    if (!effectiveMedicalDate) {
+      alert("검사 날짜를 선택해주세요.");
+      return;
+    }
+    if (editedMedicalEntries.length === 0) {
+      alert("수정할 항목이 없습니다.");
+      return;
+    }
+    const valid = editedMedicalEntries.filter((e) => e.test_content.trim());
+    if (valid.length === 0) {
+      alert("검사내용은 필수입니다.");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("_intent", "updateMedicalRecords");
+    formData.append("testDate", effectiveMedicalDate);
+    formData.append("entriesJson", JSON.stringify(valid));
+    fetcher.submit(formData, { method: "post" });
+  };
+
+  const handleDeleteMedical = () => {
+    if (!effectiveMedicalDate) {
+      alert("검사 날짜를 선택해주세요.");
+      return;
+    }
+    const confirmMessage = `선택한 날짜(${new Date(effectiveMedicalDate).toLocaleDateString("ko-KR")})의 의무기록을 모두 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    const formData = new FormData();
+    formData.append("_intent", "deleteMedicalRecords");
+    formData.append("testDate", effectiveMedicalDate);
+    fetcher.submit(formData, { method: "post" });
+  };
+
+  const handleMedicalFieldChange = (
+    index: number,
+    field: keyof (typeof editedMedicalEntries)[0],
+    value: string,
+  ) => {
+    setEditedMedicalEntries((prev) =>
+      prev.map((entry, i) =>
+        i === index ? { ...entry, [field]: value } : entry,
+      ),
+    );
   };
 
   const handleEditProfile = () => {
@@ -780,7 +1127,6 @@ export default function DashboardHealth({
     formData.append("height_cm", editedProfile.height_cm);
     formData.append("weight_kg", editedProfile.weight_kg);
 
-    console.log("Saving profile:", Object.fromEntries(formData.entries()));
     fetcher.submit(formData, { method: "post" });
   };
 
@@ -1113,53 +1459,175 @@ export default function DashboardHealth({
             {summaryViewMode === "medical_record" ? (
               medicalRecords.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground text-sm">검사일:</span>
-                    <Select
-                      value={effectiveMedicalDate}
-                      onValueChange={setSelectedMedicalDate}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="날짜 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {medicalRecordDates.map((date: string) => (
-                          <SelectItem key={date} value={date}>
-                            {new Date(date).toLocaleDateString("ko-KR")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">검사일:</span>
+                      <Select
+                        value={effectiveMedicalDate}
+                        onValueChange={setSelectedMedicalDate}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="날짜 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {medicalRecordDates.map((date: string) => (
+                            <SelectItem key={date} value={date}>
+                              {new Date(date).toLocaleDateString("ko-KR")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2">
+                      {isEditingMedical ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelMedical}
+                          >
+                            취소
+                          </Button>
+                          <Button size="sm" onClick={handleSaveMedical}>
+                            저장
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleEditMedical}
+                          >
+                            수정
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDeleteMedical}
+                            disabled={fetcher.state === "submitting"}
+                          >
+                            삭제
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-4">
-                    {selectedMedicalRecords.map((rec, idx) => (
-                      <div key={idx} className="bg-muted/50 space-y-2 rounded-lg border p-3 text-sm">
-                        {rec.test_content && (
-                          <div>
-                            <span className="font-medium">검사내용:</span>
-                            <p className="text-muted-foreground mt-1">{rec.test_content}</p>
+                    {isEditingMedical
+                      ? editedMedicalEntries.map((rec, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-muted/50 space-y-3 rounded-lg border p-3 text-sm"
+                          >
+                            {editedMedicalEntries.length > 1 ? (
+                              <p className="text-muted-foreground text-xs">
+                                항목 {idx + 1}
+                              </p>
+                            ) : null}
+                            <div className="space-y-1">
+                              <span className="font-medium">검사내용</span>
+                              <Textarea
+                                value={rec.test_content}
+                                onChange={(e) =>
+                                  handleMedicalFieldChange(
+                                    idx,
+                                    "test_content",
+                                    e.target.value,
+                                  )
+                                }
+                                rows={3}
+                                className="min-h-[60px]"
+                                placeholder="검사내용(필수)"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="font-medium">
+                                Clinical Information
+                              </span>
+                              <Textarea
+                                value={rec.clinical_information}
+                                onChange={(e) =>
+                                  handleMedicalFieldChange(
+                                    idx,
+                                    "clinical_information",
+                                    e.target.value,
+                                  )
+                                }
+                                rows={2}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="font-medium">Finding</span>
+                              <Textarea
+                                value={rec.finding}
+                                onChange={(e) =>
+                                  handleMedicalFieldChange(
+                                    idx,
+                                    "finding",
+                                    e.target.value,
+                                  )
+                                }
+                                rows={2}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="font-medium">Conclusion</span>
+                              <Textarea
+                                value={rec.conclusion}
+                                onChange={(e) =>
+                                  handleMedicalFieldChange(
+                                    idx,
+                                    "conclusion",
+                                    e.target.value,
+                                  )
+                                }
+                                rows={2}
+                              />
+                            </div>
                           </div>
-                        )}
-                        {rec.clinical_information && (
-                          <div>
-                            <span className="font-medium">Clinical Information:</span>
-                            <p className="text-muted-foreground mt-1">{rec.clinical_information}</p>
+                        ))
+                      : selectedMedicalRecords.map((rec, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-muted/50 space-y-2 rounded-lg border p-3 text-sm"
+                          >
+                            {rec.test_content && (
+                              <div>
+                                <span className="font-medium">검사내용:</span>
+                                <p className="text-muted-foreground mt-1">
+                                  {rec.test_content}
+                                </p>
+                              </div>
+                            )}
+                            {rec.clinical_information && (
+                              <div>
+                                <span className="font-medium">
+                                  Clinical Information:
+                                </span>
+                                <p className="text-muted-foreground mt-1">
+                                  {rec.clinical_information}
+                                </p>
+                              </div>
+                            )}
+                            {rec.finding && (
+                              <div>
+                                <span className="font-medium">Finding:</span>
+                                <p className="text-muted-foreground mt-1">
+                                  {rec.finding}
+                                </p>
+                              </div>
+                            )}
+                            {rec.conclusion && (
+                              <div>
+                                <span className="font-medium">Conclusion:</span>
+                                <p className="text-muted-foreground mt-1">
+                                  {rec.conclusion}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {rec.finding && (
-                          <div>
-                            <span className="font-medium">Finding:</span>
-                            <p className="text-muted-foreground mt-1">{rec.finding}</p>
-                          </div>
-                        )}
-                        {rec.conclusion && (
-                          <div>
-                            <span className="font-medium">Conclusion:</span>
-                            <p className="text-muted-foreground mt-1">{rec.conclusion}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        ))}
                   </div>
                 </div>
               ) : (
@@ -1288,136 +1756,12 @@ export default function DashboardHealth({
                           )}
                         </div>
                       </TooltipTrigger>
-                      {(item.clinicalSignificance || item.descriptions) && (
-                        <TooltipContent
-                          side="top"
-                          sideOffset={8}
-                          collisionPadding={20}
-                          className="max-w-sm space-y-3 p-4"
-                        >
-                          {/* 제목 */}
-                          <div className="border-b pb-2 text-base font-semibold">
-                            {item.label}
-                          </div>
-
-                          {/* 정상 범위 */}
-                          {(item.referenceMin !== null ||
-                            item.referenceMax !== null) && (
-                            <div className="space-y-1">
-                              <div className="text-muted-foreground text-xs font-medium">
-                                정상 범위
-                              </div>
-                              <div className="text-sm font-medium">
-                                {item.referenceMin !== null
-                                  ? `${item.referenceMin}`
-                                  : "~"}
-                                {item.unit && ` ${item.unit}`}
-                                {item.referenceMin !== null &&
-                                item.referenceMax !== null
-                                  ? " ~ "
-                                  : ""}
-                                {item.referenceMax !== null
-                                  ? `${item.referenceMax}`
-                                  : ""}
-                                {item.unit && item.referenceMin === null
-                                  ? ` ${item.unit}`
-                                  : ""}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 현재 값 상태 */}
-                          {item.value !== null && item.value !== undefined && (
-                            <div className="space-y-1">
-                              <div className="text-muted-foreground text-xs font-medium">
-                                현재 값
-                              </div>
-                              <div
-                                className={`text-sm font-medium ${
-                                  (item.referenceMin !== null &&
-                                    item.value < item.referenceMin) ||
-                                  (item.referenceMax !== null &&
-                                    item.value > item.referenceMax)
-                                    ? "text-destructive"
-                                    : "text-green-600"
-                                }`}
-                              >
-                                {item.value} {item.unit}
-                                {((item.referenceMin !== null &&
-                                  item.value < item.referenceMin) ||
-                                  (item.referenceMax !== null &&
-                                    item.value > item.referenceMax)) && (
-                                  <span className="ml-2 text-xs">
-                                    ⚠️ 범위 초과
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 설명 */}
-                          {item.descriptions?.description && (
-                            <div className="space-y-1 border-t pt-2">
-                              <div className="text-muted-foreground text-xs font-medium">
-                                설명
-                              </div>
-                              <p className="text-sm leading-relaxed">
-                                {item.descriptions.description}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* 의의 - 증가 (UP) */}
-                          {item.descriptions?.significance?.up &&
-                            item.descriptions.significance.up.length > 0 && (
-                              <div className="space-y-1 border-t pt-2">
-                                <div className="text-muted-foreground text-xs font-medium">
-                                  증가 시 의의
-                                </div>
-                                <ul className="list-inside list-disc space-y-1 text-sm">
-                                  {item.descriptions.significance.up.map(
-                                    (item, index) => (
-                                      <li
-                                        key={index}
-                                        className="leading-relaxed"
-                                      >
-                                        {item}
-                                      </li>
-                                    ),
-                                  )}
-                                </ul>
-                              </div>
-                            )}
-
-                          {/* 의의 - 감소 (DOWN) */}
-                          {item.descriptions?.significance?.down &&
-                            item.descriptions.significance.down.length > 0 && (
-                              <div className="space-y-1 border-t pt-2">
-                                <div className="text-muted-foreground text-xs font-medium">
-                                  감소 시 의의
-                                </div>
-                                <ul className="list-inside list-disc space-y-1 text-sm">
-                                  {item.descriptions.significance.down.map(
-                                    (item, index) => (
-                                      <li
-                                        key={index}
-                                        className="leading-relaxed"
-                                      >
-                                        {item}
-                                      </li>
-                                    ),
-                                  )}
-                                </ul>
-                              </div>
-                            )}
-
-                          {/* 기본 clinical_significance (descriptions가 없을 때만) */}
-                          {!item.descriptions && item.clinicalSignificance && (
-                            <div className="text-muted-foreground border-t pt-2 text-xs">
-                              {item.clinicalSignificance}
-                            </div>
-                          )}
-                        </TooltipContent>
+                      {hasBloodTestTooltipContent(
+                        bloodTestTooltipInput(item),
+                      ) && (
+                        <BloodTestTooltipContent>
+                          <BloodTestSummaryTooltipBody item={item} />
+                        </BloodTestTooltipContent>
                       )}
                     </Tooltip>
                   ))}
@@ -1478,12 +1822,36 @@ export default function DashboardHealth({
                 const hasReferenceRange =
                   refRange && (refRange.min !== null || refRange.max !== null);
 
+                const summaryForChart = currentSummary.find(
+                  (s: BloodTestSummary) => s.metric === metric,
+                );
+                const showChartTitleTooltip =
+                  summaryForChart &&
+                  hasBloodTestTooltipContent(
+                    bloodTestTooltipInput(summaryForChart),
+                  );
+
                 return (
                   <Card key={metric}>
                     <CardHeader>
-                      <CardTitle>
-                        {METRIC_DEFINITIONS[metric].label} 추이
-                      </CardTitle>
+                      {showChartTitleTooltip ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <CardTitle className="w-fit cursor-help">
+                              {METRIC_DEFINITIONS[metric].label} 추이
+                            </CardTitle>
+                          </TooltipTrigger>
+                          <BloodTestTooltipContent>
+                            <BloodTestSummaryTooltipBody
+                              item={summaryForChart}
+                            />
+                          </BloodTestTooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <CardTitle>
+                          {METRIC_DEFINITIONS[metric].label} 추이
+                        </CardTitle>
+                      )}
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {/* 커스텀 범례 - 그래프 위에 표시 */}

@@ -59,7 +59,7 @@ export default function SidebarMain({
           <SidebarMenuButton asChild>
             <Link to="/my/dashboard">
               <LayoutDashboard />
-              <span>건강 현황</span>
+              <span>건강 대시보드</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

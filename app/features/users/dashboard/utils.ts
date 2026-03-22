@@ -781,11 +781,6 @@ function saturationFunction(x: number, k: number): number {
 export function computeSupplementAxisScores(
   rows: JoinedEvidenceRow[],
 ): Record<MetaAxis, number> {
-  console.log(`[레이더 차트 디버깅] computeSupplementAxisScores 시작:`, {
-    inputRowsCount: rows.length,
-    sampleRows: rows.slice(0, 3),
-  });
-
   const { KC, KD, ALPHA, KS, TOP_K } = SUPPLEMENT_CALCULATION_CONSTANTS;
 
   // 1. 같은 성분-표적의 효과는 최고 근거 효과만 채택
@@ -809,12 +804,6 @@ export function computeSupplementAxisScores(
     // dose_count 저장
     ingredientDoseCount.set(row.ingredient_id, row.dose_count);
   }
-
-  console.log(`[레이더 차트 디버깅] computeSupplementAxisScores 중간 결과:`, {
-    ingredientTargetEffect: Object.fromEntries(ingredientTargetEffect),
-    ingredientTargetCount: Object.fromEntries(ingredientTargetCount),
-    ingredientDoseCount: Object.fromEntries(ingredientDoseCount),
-  });
 
   // confidence 계산 (포화 함수)
   ingredientTargetCount.forEach((count, key) => {
@@ -903,11 +892,6 @@ export function computeSupplementAxisScores(
     const rawAxis = rawAxisScores[axis];
     suppAxisScores[axis] = 100 * saturationFunction(rawAxis, KS);
   }
-
-  console.log(`[레이더 차트 디버깅] computeSupplementAxisScores 최종 결과:`, {
-    rawAxisScores,
-    suppAxisScores,
-  });
 
   return suppAxisScores;
 }

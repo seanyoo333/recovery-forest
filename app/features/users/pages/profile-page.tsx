@@ -39,9 +39,8 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
       },
       profile_id: user?.id ?? undefined,
     });
-  } catch (err) {
+  } catch {
     // 트래킹 실패 시에도 페이지는 렌더링 (analytics는 best-effort)
-    console.warn("[profile-page] track_event failed:", err);
   }
 
   return {};

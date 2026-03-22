@@ -525,16 +525,25 @@ export const bloodTestTypes = pgTable(
     unit: text().notNull(),
     reference_min: doublePrecision(),
     reference_max: doublePrecision(),
+    /** 기본 참고범위에 대한 주의(성별·연령·기관별 차이 등) */
+    reference_note: text(),
     clinical_significance: text(),
     descriptions: jsonb()
       .$type<{
-        description?: string;
+        description?: string | null;
         significance?: {
           up?: string[];
           down?: string[];
         };
+        interpretation_cautions?: string[];
       }>()
       .default({}),
+    is_derived_metric: boolean().notNull().default(false),
+    derived_formula: text(),
+    evidence_source_ids: uuid()
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
     ...timestamps,
   },
   (table) => [

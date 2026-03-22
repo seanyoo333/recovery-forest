@@ -128,8 +128,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         });
         report = { ...report, report_html: html };
       }
-    } catch (err) {
-      console.warn("Health report JSON→HTML conversion/upsert failed:", err);
+    } catch {
+      // HTML 변환/저장 실패 시 MDX 경로로 폴백
     }
   }
 
@@ -163,11 +163,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         });
         mdxCode = code;
       }
-    } catch (err) {
-      console.warn(
-        "Health report MDX compilation failed, using fallback:",
-        err,
-      );
+    } catch {
+      // MDX 번들 실패 시 폴백
     }
   }
 

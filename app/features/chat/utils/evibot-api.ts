@@ -147,7 +147,6 @@ export async function streamChat(
 
           try {
             const msg = JSON.parse(trimmedLine) as ServerEvent;
-            console.log("[SSE Event]", msg.type, msg);
 
             if (msg.type === "start") {
               callbacks.onStart?.(msg.data.conversation_id);
@@ -166,8 +165,8 @@ export async function streamChat(
             } else if (msg.type === "error") {
               callbacks.onError?.(new Error(msg.data.message));
             }
-          } catch (parseError) {
-            console.warn("[SSE] Parse error:", trimmedLine, parseError);
+          } catch {
+            // ignore malformed SSE lines
           }
         }
       }

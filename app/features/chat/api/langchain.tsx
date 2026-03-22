@@ -53,8 +53,6 @@ export async function action({ request }: Route.ActionArgs) {
       LLM_SERVER_URL = `${LLM_SERVER_URL}:8000`;
     }
 
-    console.log("AWS 챗봇 API 호출:", `${LLM_SERVER_URL}/api/langchain/`);
-
     const llmResponse = await fetch(`${LLM_SERVER_URL}/api/langchain/`, {
       method: "POST",
       headers: {
@@ -75,7 +73,6 @@ export async function action({ request }: Route.ActionArgs) {
     }
 
     const llmData = await llmResponse.json();
-    console.log("AI 응답:", llmData);
 
     if (llmData.status === "success" && llmData.message) {
       // AI 응답을 Supabase에 저장
