@@ -29,6 +29,7 @@ import {
 } from "~/core/components/ui/card";
 import { Ripple } from "~/core/components/ui/ripple";
 import i18next from "~/core/lib/i18next.server";
+import { NEON_CARD_BASE_CLASS } from "~/core/lib/neon-card";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { getBlogPostsMeta } from "~/features/blog/queries";
 import { ClinicCard } from "~/features/clinic/components/clinic-card";
@@ -221,7 +222,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       "AI 기반 분석과 전문가 연결을 통해 혼자 판단하기 어려운 건강관리의 부담을 줄입니다.",
                   },
                 ].map((item) => (
-                  <Card key={item.step} className="neon-card h-full border">
+                  <Card
+                    key={item.step}
+                    className={`${NEON_CARD_BASE_CLASS} h-full`}
+                  >
                     <CardHeader>
                       <div className="text-primary text-sm font-semibold">
                         {item.step}
@@ -238,7 +242,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
             <BlurFade delay={0.3} duration={0.8} inView>
               <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-                <Card className="neon-card border">
+                <Card className={NEON_CARD_BASE_CLASS}>
                   <CardHeader>
                     <CardTitle className="text-2xl">
                       이런 분들을 위한 서비스입니다

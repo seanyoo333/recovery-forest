@@ -137,10 +137,26 @@ export default [
           "features/natural-ingredients/pages/target-detail-page.tsx",
         ),
         route("/search", "features/natural-ingredients/pages/search-page.tsx"),
-        route(
-          "/:slug",
-          "features/natural-ingredients/pages/ingredient-detail-page.tsx",
-        ),
+        ...prefix("/:slug", [
+          index("features/natural-ingredients/pages/ingredient-redirect-page.tsx"),
+          layout(
+            "features/natural-ingredients/layouts/ingredient-overview-layout.tsx",
+            [
+              route(
+                "/overview",
+                "features/natural-ingredients/pages/ingredient-overview-page.tsx",
+              ),
+              route(
+                "/evidence",
+                "features/natural-ingredients/pages/ingredient-evidence-page.tsx",
+              ),
+              route(
+                "/discussion",
+                "features/natural-ingredients/pages/ingredient-discussion-page.tsx",
+              ),
+            ],
+          ),
+        ]),
       ]),
 
       ...prefix("products", [

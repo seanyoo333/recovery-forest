@@ -56,6 +56,22 @@ export async function getNaturalIngredientBySlug(
   return data;
 }
 
+/** 특정 성분의 근거 요약 목록 (view 기반) */
+export async function getIngredientEvidenceBySlug(
+  client: SupabaseClient<Database>,
+  { slug }: { slug: string },
+) {
+  const { data, error } = await client
+    .from("ingredient_target_evidence_full_view")
+    .select(
+      "evidence_id, target_id, target_slug, target_name, target_description, meta_axis, effect, outcome_direction, strength, study_type, evidence_notes, evidence_count, primary_evidence_count",
+    )
+    .eq("ingredient_slug", slug)
+    .order("strength", { ascending: false, nullsFirst: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** natural_targets 목록 (매핑 없이 평면 목록) */
 export async function getNaturalTargets(client: SupabaseClient<Database>) {
   const { data, error } = await client

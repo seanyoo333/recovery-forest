@@ -16,7 +16,9 @@ import {
 } from "~/core/components/ui/card";
 import { Ripple } from "~/core/components/ui/ripple";
 import { Separator } from "~/core/components/ui/separator";
+import { NEON_CARD_BASE_CLASS } from "~/core/lib/neon-card";
 import makeServerClient from "~/core/lib/supa-client.server";
+import { cn } from "~/core/lib/utils";
 
 /**
  * Target Audience Item Interface
@@ -47,9 +49,11 @@ function TargetAudienceCard({
   return (
     <BlurFade delay={0.3 + index * 0.1} duration={0.6} inView>
       <Card
-        className={`neon-card h-full cursor-pointer transition-all duration-200 ${
-          isSelected ? "neon-card-active" : ""
-        }`}
+        className={cn(
+          NEON_CARD_BASE_CLASS,
+          "h-full transition-all duration-200",
+          isSelected && "neon-card-active",
+        )}
         onClick={onSelect}
       >
         <CardHeader>
@@ -342,7 +346,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 duration={0.6}
                 inView
               >
-                <Card className="neon-card h-full cursor-pointer">
+                <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                   <CardHeader>
                     <CardTitle className="text-lg">{item.title}</CardTitle>
                     <CardDescription className="text-sm">
@@ -377,7 +381,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <BlurFade delay={0.3} duration={0.6} inView>
-            <Card className="neon-card cursor-pointer">
+            <Card className={NEON_CARD_BASE_CLASS}>
               <CardHeader>
                 <div className="mb-2 text-3xl">🔬</div>
                 <CardTitle>근거 기반 정리</CardTitle>
@@ -390,7 +394,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           </BlurFade>
 
           <BlurFade delay={0.4} duration={0.6} inView>
-            <Card className="neon-card cursor-pointer">
+            <Card className={NEON_CARD_BASE_CLASS}>
               <CardHeader>
                 <div className="mb-2 text-3xl">👥</div>
                 <CardTitle>전문가 네트워크</CardTitle>
@@ -403,7 +407,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           </BlurFade>
 
           <BlurFade delay={0.5} duration={0.6} inView>
-            <Card className="neon-card cursor-pointer">
+            <Card className={NEON_CARD_BASE_CLASS}>
               <CardHeader>
                 <div className="mb-2 text-3xl">📊</div>
                 <CardTitle>생활관리 관점 분석</CardTitle>
@@ -416,7 +420,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           </BlurFade>
 
           <BlurFade delay={0.6} duration={0.6} inView>
-            <Card className="neon-card cursor-pointer">
+            <Card className={NEON_CARD_BASE_CLASS}>
               <CardHeader>
                 <div className="mb-2 text-3xl">🌲</div>
                 <CardTitle>산림치유 정보</CardTitle>
@@ -429,7 +433,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           </BlurFade>
 
           <BlurFade delay={0.7} duration={0.6} inView>
-            <Card className="neon-card cursor-pointer">
+            <Card className={NEON_CARD_BASE_CLASS}>
               <CardHeader>
                 <div className="mb-2 text-3xl">💊</div>
                 <CardTitle>일반 건강관리용 보조제 정보</CardTitle>
@@ -442,7 +446,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
           </BlurFade>
 
           <BlurFade delay={0.8} duration={0.6} inView>
-            <Card className="neon-card cursor-pointer">
+            <Card className={NEON_CARD_BASE_CLASS}>
               <CardHeader>
                 <div className="mb-2 text-3xl">🔄</div>
                 <CardTitle>지속적인 업데이트</CardTitle>
@@ -474,7 +478,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
 
           <div className="grid gap-8 md:grid-cols-4">
             <BlurFade delay={0.3} duration={0.6} inView>
-              <Card className="neon-card h-full cursor-pointer">
+              <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                 <CardContent className="pt-6 text-center">
                   <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                     1
@@ -489,7 +493,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </BlurFade>
 
             <BlurFade delay={0.4} duration={0.6} inView>
-              <Card className="neon-card h-full cursor-pointer">
+              <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                 <CardContent className="pt-6 text-center">
                   <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                     2
@@ -506,7 +510,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </BlurFade>
 
             <BlurFade delay={0.5} duration={0.6} inView>
-              <Card className="neon-card h-full cursor-pointer">
+              <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                 <CardContent className="pt-6 text-center">
                   <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                     3
@@ -523,7 +527,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
             </BlurFade>
 
             <BlurFade delay={0.6} duration={0.6} inView>
-              <Card className="neon-card h-full cursor-pointer">
+              <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                 <CardContent className="pt-6 text-center">
                   <div className="bg-primary text-primary-foreground mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
                     4
@@ -1009,7 +1013,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               duration={0.6}
               inView
             >
-              <Card className="neon-card cursor-pointer">
+              <Card className={NEON_CARD_BASE_CLASS}>
                 <CardHeader>
                   <div className="mb-2 text-3xl">{feature.icon}</div>
                   <CardTitle>{feature.title}</CardTitle>
@@ -1065,7 +1069,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               duration={0.6}
               inView
             >
-              <Card className="neon-card h-full cursor-pointer">
+              <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                 <CardHeader>
                   <CardTitle className="text-lg">{item.title}</CardTitle>
                   <CardDescription>{item.description}</CardDescription>
@@ -1171,7 +1175,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                       </h3>
                       <div className="space-y-4">
                         {/* 타임라인 아이템 1 */}
-                        <Card className="neon-card cursor-pointer">
+                        <Card className={NEON_CARD_BASE_CLASS}>
                           <CardContent className="pt-4">
                             <div className="flex gap-3">
                               <div className="from-primary mt-1 h-10 w-1 rounded-full bg-gradient-to-b to-emerald-400" />
@@ -1193,7 +1197,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                         </Card>
 
                         {/* 타임라인 아이템 2 */}
-                        <Card className="neon-card cursor-pointer">
+                        <Card className={NEON_CARD_BASE_CLASS}>
                           <CardContent className="pt-4">
                             <div className="flex gap-3">
                               <div className="to-primary/60 mt-1 h-10 w-1 rounded-full bg-gradient-to-b from-emerald-400" />
@@ -1215,7 +1219,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                         </Card>
 
                         {/* 타임라인 아이템 3 */}
-                        <Card className="neon-card cursor-pointer">
+                        <Card className={NEON_CARD_BASE_CLASS}>
                           <CardContent className="pt-4">
                             <div className="flex gap-3">
                               <div className="from-primary/70 mt-1 h-10 w-1 rounded-full bg-gradient-to-b to-amber-400" />
@@ -1318,7 +1322,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
                 duration={0.5}
                 inView
               >
-                <Card className="neon-card cursor-pointer">
+                <Card className={NEON_CARD_BASE_CLASS}>
                   <CardHeader>
                     <CardTitle className="text-sm md:text-base">
                       Q. {item.question}
@@ -1376,7 +1380,7 @@ export default function Landing({ loaderData }: Route.ComponentProps) {
               duration={0.6}
               inView
             >
-              <Card className="neon-card h-full cursor-pointer">
+              <Card className={cn(NEON_CARD_BASE_CLASS, "h-full")}>
                 <CardHeader>
                   <CardTitle className="text-lg">{notice.title}</CardTitle>
                   <CardDescription className="text-sm leading-relaxed">
