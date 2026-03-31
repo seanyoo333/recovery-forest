@@ -11,7 +11,7 @@
 import { MailIcon, PhoneIcon } from "lucide-react";
 import { Link } from "react-router";
 
-/** 푸터에 표시할 회사 정보 (필요 시 수정) */
+/** 푸터에 표시할 회사 정보 (필요 시 수정) 확인 */
 const FOOTER_CONFIG = {
   companyName: "EvidenceBase Inc.",
   companyNameKo: "에비던스베이스 주식회사",
@@ -122,7 +122,7 @@ export default function Footer() {
               viewTransition
               className="hover:text-foreground underline transition-colors"
             >
-              문의하기
+              문의하기 123
             </Link>
           </div>
         </div>
