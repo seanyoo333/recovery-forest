@@ -202,6 +202,7 @@ export async function searchNaturalIngredients(
     description?: string | null;
     mechanism?: string | null;
     interaction_notes?: string | null;
+    picture?: string | null;
     synonyms?: string[] | null;
   }>;
 

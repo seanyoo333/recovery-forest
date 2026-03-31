@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database as DbTypes } from "database.types";
+import type { Database as DbTypes, Json } from "database.types";
 
 import type {
   Category,
@@ -260,6 +260,58 @@ export const updateBloodTestImageTestDate = async (
   }
 };
 
+type BloodTestTypeUpsertInput = {
+  standard_name: string;
+  unit: string;
+  reference_min?: number | null;
+  reference_max?: number | null;
+  reference_note?: string | null;
+  clinical_significance?: string | null;
+  descriptions?: Record<string, unknown>;
+  is_derived_metric?: boolean;
+  derived_formula?: string | null;
+  evidence_source_ids?: string[];
+};
+
+type BloodTestTypeInsertRow =
+  Database["public"]["Tables"]["blood_test_types"]["Insert"];
+
+/**
+ * 스키마에 없는 필드(reference_note, 파생 지표 메타 등)는 `descriptions` JSON에 합칩니다.
+ */
+function mergeBloodTestTypeDescriptions(
+  input: Omit<BloodTestTypeUpsertInput, "standard_name" | "unit">,
+): Json | null {
+  const merged: Record<string, unknown> = { ...(input.descriptions ?? {}) };
+  if (input.reference_note != null && input.reference_note !== "") {
+    merged.reference_note = input.reference_note;
+  }
+  if (input.is_derived_metric !== undefined) {
+    merged.is_derived_metric = input.is_derived_metric;
+  }
+  if (input.derived_formula != null && input.derived_formula !== "") {
+    merged.derived_formula = input.derived_formula;
+  }
+  if (input.evidence_source_ids && input.evidence_source_ids.length > 0) {
+    merged.evidence_source_ids = input.evidence_source_ids;
+  }
+  if (Object.keys(merged).length === 0) return null;
+  return JSON.parse(JSON.stringify(merged)) as Json;
+}
+
+function toBloodTestTypeInsertRow(
+  type: BloodTestTypeUpsertInput,
+): BloodTestTypeInsertRow {
+  return {
+    standard_name: type.standard_name.toLowerCase().trim(),
+    unit: type.unit,
+    reference_min: type.reference_min ?? null,
+    reference_max: type.reference_max ?? null,
+    clinical_significance: type.clinical_significance ?? null,
+    descriptions: mergeBloodTestTypeDescriptions(type),
+  };
+}
+
 /**
  * 혈액검사 타입을 upsert합니다.
  * standard_name이 이미 존재하면 업데이트하지 않고, 없으면 생성합니다.
@@ -271,30 +323,15 @@ export const upsertBloodTestTypes = async (
   {
     types,
   }: {
-    types: Array<{
-      standard_name: string;
-      unit: string;
-      reference_min?: number | null;
-      reference_max?: number | null;
-      reference_note?: string | null;
-      clinical_significance?: string | null;
-      descriptions?: Record<string, unknown>;
-      is_derived_metric?: boolean;
-      derived_formula?: string | null;
-      evidence_source_ids?: string[];
-    }>;
+    types: BloodTestTypeUpsertInput[];
   },
 ) => {
-  // standard_name을 소문자로 정규화
-  const normalizedTypes = types.map((type) => ({
-    ...type,
-    standard_name: type.standard_name.toLowerCase().trim(),
-  }));
+  const insertRows = types.map(toBloodTestTypeInsertRow);
 
   // Upsert 사용 (ON CONFLICT DO NOTHING - 기존 값이 있으면 업데이트하지 않음)
   const { data, error } = await client
     .from("blood_test_types")
-    .upsert(normalizedTypes, {
+    .upsert(insertRows, {
       onConflict: "standard_name",
       ignoreDuplicates: true, // 기존 값이 있으면 무시
     })
