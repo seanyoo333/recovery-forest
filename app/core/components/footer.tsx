@@ -122,7 +122,7 @@ export default function Footer() {
               viewTransition
               className="hover:text-foreground underline transition-colors"
             >
-              문의하기 123
+              문의하기
             </Link>
           </div>
         </div>
