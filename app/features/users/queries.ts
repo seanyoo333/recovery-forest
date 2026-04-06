@@ -430,7 +430,9 @@ export const getHealthReportByRequestId = async (
 ) => {
   const { data: req } = await client
     .from("report_requests")
-    .select("id, user_id, status, created_at")
+    .select(
+      "id, user_id, status, created_at, current_step, last_error_message, updated_at, retry_count",
+    )
     .eq("id", requestId)
     .eq("user_id", userId)
     .single();

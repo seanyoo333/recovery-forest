@@ -32,8 +32,8 @@ import {
   getHealthReportProductPath,
   HEALTH_REPORT_CARDS_PER_PAGE,
   HEALTH_REPORT_PAGE_PATH,
-  HEALTH_REPORT_FAILED_MESSAGE,
-  HEALTH_REPORT_PENDING_MESSAGE,
+  getReportRequestUserMessage,
+  isReportRequestInProgress,
   REPORT_REQUEST_STATUS_CONFIG,
   REPORT_STATUS_PROGRESS,
   REPORT_STATUS_WITH_GREEN_DOT,
@@ -415,6 +415,7 @@ function ReportRequestCard({
     id: string;
     status: string;
     created_at: string;
+    current_step?: string | null;
     input_json?: unknown;
     healthReport?: {
       id: string;
@@ -448,8 +449,14 @@ function ReportRequestCard({
     description: "",
     order: 0,
   };
-  const isPending =
-    request.status === "requested" || request.status === "under_review";
+  const userMsg = getReportRequestUserMessage(
+    request.status,
+    request.current_step,
+  );
+  const showProgressSpinner = isReportRequestInProgress(
+    request.status,
+    request.current_step,
+  );
   const isFailed = request.status === "failed";
   const hasReport =
     !!request.healthReport &&
@@ -531,7 +538,9 @@ function ReportRequestCard({
           className="flex shrink-0 items-center gap-1"
           onClick={(e) => e.stopPropagation()}
         >
-          {isPending && <Loader2 className="size-4 animate-spin" />}
+          {showProgressSpinner && (
+            <Loader2 className="size-4 animate-spin" />
+          )}
           {isFailed && <AlertCircle className="size-4 text-destructive" />}
           <DeleteForm method="post">
             <input type="hidden" name="action" value="delete" />
@@ -604,16 +613,11 @@ function ReportRequestCard({
           </Collapsible>
         )}
 
-        {/* 상태별 안내 */}
-        {isFailed && (
-          <p className="text-destructive text-xs">
-            {String(statusConfig.description ?? "")} {HEALTH_REPORT_FAILED_MESSAGE}
-          </p>
-        )}
-        {isPending && !isFailed && (
-          <p className="text-muted-foreground text-xs">
-            {String(statusConfig.description || HEALTH_REPORT_PENDING_MESSAGE)}
-          </p>
+        {/* status + current_step 기준 단일 안내 문구 */}
+        {isFailed ? (
+          <p className="text-destructive text-xs">{userMsg.primary}</p>
+        ) : (
+          <p className="text-muted-foreground text-xs">{userMsg.primary}</p>
         )}
       </CardContent>
     </Card>
