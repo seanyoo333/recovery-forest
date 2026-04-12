@@ -39,11 +39,22 @@ type ReportCoverProps = {
 type ReportHeroSummaryProps = {
   headline: string;
   summary: string;
-  keyPoints?: string[];
   tone?: Tone;
 };
 
+type ReportTableOfContentsItem = {
+  id: string;
+  label: string;
+  step?: string;
+};
+
+type ReportTableOfContentsProps = {
+  title?: string;
+  items: ReportTableOfContentsItem[];
+};
+
 type InsightPanelProps = {
+  titlePrefix?: string;
   title: string;
   content: string;
   takeaway?: string;
@@ -81,12 +92,14 @@ type ActionTimelineProps = {
 };
 
 type DoctorQuestionBoxProps = {
+  step?: string;
   title?: string;
   intro?: string;
   questions: string[];
 };
 
 type WarningPanelProps = {
+  step?: string;
   title?: string;
   items: string[];
   emergencyNote?: string;
@@ -199,6 +212,118 @@ function getConfidenceClasses(level: ConfidenceLevel) {
   }
 }
 
+const UNORDERED_MARKER_RE = /^[-•▪▸●]\s+/;
+const ORDERED_MARKER_RE = /^\d+\s*[\.\)](?:\s*[\)\].:-])?\s*/;
+
+type SmartListKind = "unordered" | "ordered";
+
+function stripListMarker(line: string, kind: SmartListKind): string {
+  const trimmed = line.trim();
+  if (kind === "ordered") {
+    return trimmed
+      .replace(ORDERED_MARKER_RE, "")
+      .replace(UNORDERED_MARKER_RE, "")
+      .trim();
+  }
+  return trimmed
+    .replace(UNORDERED_MARKER_RE, "")
+    .replace(ORDERED_MARKER_RE, "")
+    .trim();
+}
+
+function extractSmartList(text: string): { kind: SmartListKind; items: string[] } | null {
+  const normalized = text.replace(/\r\n/g, "\n").trim();
+  if (!normalized) return null;
+
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return null;
+
+  // 1) 명시적 불릿/번호 리스트
+  const orderedCount = lines.filter((line) => ORDERED_MARKER_RE.test(line)).length;
+  const unorderedCount = lines.filter((line) => UNORDERED_MARKER_RE.test(line)).length;
+  if (orderedCount + unorderedCount >= 2) {
+    const kind: SmartListKind = orderedCount > unorderedCount ? "ordered" : "unordered";
+    const items = lines
+      .map((line) => stripListMarker(line, kind))
+      .filter(Boolean);
+    if (items.length >= 2) {
+      return { kind, items };
+    }
+  }
+
+  // 2) 줄바꿈으로 충분히 분리된 짧은 문장들(개조식 후보)
+  if (lines.length >= 3 && lines.every((line) => line.length <= 90)) {
+    return { kind: "unordered", items: lines };
+  }
+
+  // 3) 세미콜론으로 구분된 나열형 문장
+  const semicolonItems = normalized
+    .split(/[;；]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (semicolonItems.length >= 2) {
+    return { kind: "unordered", items: semicolonItems };
+  }
+
+  return null;
+}
+
+function SmartBodyText({
+  text,
+  paragraphClassName,
+  listClassName = "space-y-2 text-sm",
+  itemClassName = "flex gap-3 leading-6",
+  orderedListClassName = "list-decimal space-y-2 pl-5 text-sm",
+  orderedItemClassName = "leading-6",
+  bulletClassName = "mt-1 text-xs",
+}: {
+  text: string;
+  paragraphClassName: string;
+  listClassName?: string;
+  itemClassName?: string;
+  orderedListClassName?: string;
+  orderedItemClassName?: string;
+  bulletClassName?: string;
+}) {
+  const value = text.trim();
+  if (!value) return null;
+
+  const smartList = extractSmartList(value);
+  if (smartList?.kind === "ordered") {
+    return (
+      <ol className={orderedListClassName}>
+        {smartList.items.map((item, index) => (
+          <li key={index} className={orderedItemClassName}>
+            {item}
+          </li>
+        ))}
+      </ol>
+    );
+  }
+
+  if (smartList?.kind === "unordered") {
+    return (
+      <ul className={listClassName}>
+        {smartList.items.map((item, index) => (
+          <li key={index} className={itemClassName}>
+            <span className={bulletClassName}>●</span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <p className={paragraphClassName}>
+      {value}
+    </p>
+  );
+}
+
 export function ReportCover({
   title,
   subtitle,
@@ -252,40 +377,24 @@ export function ReportCover({
 export function ReportHeroSummary({
   headline,
   summary,
-  keyPoints = [],
   tone = "focus",
 }: ReportHeroSummaryProps) {
   const styles = getToneClasses(tone);
 
   return (
     <section className={`rounded-2xl border px-6 py-6 shadow-sm ${styles.wrap}`}>
-      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-        <div>
-          <p className={`mb-2 text-sm font-semibold tracking-wide uppercase ${styles.title}`}>
-            핵심 한눈 요약
-          </p>
-          <h2 className="text-2xl font-bold tracking-tight">{headline}</h2>
-          <p className="mt-4 leading-7 text-foreground/90">{summary}</p>
-        </div>
-
-        <div className="rounded-xl border bg-background/80 p-4 dark:bg-background/40">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            핵심 관리 포인트
-          </p>
-          {keyPoints.length ? (
-            <ul className="space-y-3 text-sm">
-              {keyPoints.map((point, index) => (
-                <li key={index} className="flex gap-3 leading-6">
-                  <span className="mt-1 text-xs">●</span>
-                  <span>{point}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm leading-6 text-muted-foreground">
-              핵심 포인트 데이터가 아직 없습니다.
-            </p>
-          )}
+      <div>
+        <p className={`mb-2 text-sm font-semibold tracking-wide uppercase ${styles.title}`}>
+          핵심 한눈 요약
+        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{headline}</h2>
+        <div className="mt-4">
+          <SmartBodyText
+            text={summary}
+            paragraphClassName="leading-7 text-foreground/90"
+            listClassName="space-y-3"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
         </div>
       </div>
     </section>
@@ -302,15 +411,19 @@ export function SectionCard({
     <section className="my-8">
       <Card className="overflow-hidden rounded-2xl shadow-sm">
         <CardHeader className="border-b bg-muted/30">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-start gap-3">
             {step ? (
-              <Badge variant="outline" className="text-xs uppercase tracking-wide">
+              <span className="bg-primary/12 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-primary/25 text-sm font-bold">
                 {step}
-              </Badge>
+              </span>
             ) : null}
-            <CardTitle className="text-2xl tracking-tight">{title}</CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-2xl tracking-tight">{title}</CardTitle>
+              {description ? (
+                <CardDescription className="text-sm leading-6">{description}</CardDescription>
+              ) : null}
+            </div>
           </div>
-          {description ? <CardDescription className="pt-1 text-sm leading-6">{description}</CardDescription> : null}
         </CardHeader>
         <CardContent className="space-y-6 p-6">{children}</CardContent>
       </Card>
@@ -318,7 +431,49 @@ export function SectionCard({
   );
 }
 
+export function ReportTableOfContents({
+  title = "보고서 목차",
+  items,
+}: ReportTableOfContentsProps) {
+  if (!items.length) return null;
+
+  return (
+    <Card className="rounded-2xl border bg-muted/20 shadow-sm">
+      <CardHeader className="border-b bg-background/70">
+        <CardTitle className="text-lg tracking-tight">{title}</CardTitle>
+        <CardDescription>
+          항목을 누르면 해당 섹션으로 바로 이동합니다.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-5">
+        <ul className="grid gap-2 text-sm md:grid-cols-2">
+          {items.map((item) => (
+            <li key={item.id}>
+              <a
+                href={`#${item.id}`}
+                className="text-foreground/90 hover:text-foreground hover:bg-background flex items-center gap-3 rounded-lg px-3 py-2 leading-6 transition-colors"
+              >
+                {item.step ? (
+                  <span className="bg-primary/10 text-primary inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-primary/20 text-xs font-bold">
+                    {item.step}
+                  </span>
+                ) : (
+                  <span className="bg-muted text-muted-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full text-xs">
+                    -
+                  </span>
+                )}
+                <span>{item.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function InsightPanel({
+  titlePrefix,
   title,
   content,
   takeaway,
@@ -333,14 +488,34 @@ export function InsightPanel({
 
   return (
     <div className={`rounded-2xl border p-5 ${variantClass}`}>
-      <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
-      <p className="mt-3 leading-7 text-foreground/90">{content}</p>
+      <h3 className="text-lg tracking-tight">
+        {titlePrefix ? <span className="font-semibold">{titlePrefix}</span> : null}
+        {titlePrefix && title ? <span className="mx-1" /> : null}
+        <span className={titlePrefix ? "font-normal text-foreground/90" : "font-semibold"}>
+          {title}
+        </span>
+      </h3>
+      <div className="mt-3">
+        <SmartBodyText
+          text={content}
+          paragraphClassName="leading-7 text-foreground/90"
+          listClassName="space-y-3 text-sm"
+          itemClassName="flex gap-3 leading-7 text-foreground/90"
+        />
+      </div>
       {takeaway ? (
         <div className="mt-4 rounded-xl border bg-background/80 p-4 dark:bg-background/50">
           <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             핵심 의미
           </p>
-          <p className="mt-2 text-sm leading-6">{takeaway}</p>
+          <div className="mt-2">
+            <SmartBodyText
+              text={takeaway}
+              paragraphClassName="text-sm leading-6"
+              listClassName="space-y-2 text-sm"
+              itemClassName="flex gap-3 leading-6"
+            />
+          </div>
         </div>
       ) : null}
     </div>
@@ -397,7 +572,12 @@ export function PriorityTargetCard({
         </div>
 
         <div className="rounded-xl border bg-background/80 p-4 dark:bg-background/40">
-          <p className="leading-7 text-foreground/90">{explanation}</p>
+          <SmartBodyText
+            text={explanation}
+            paragraphClassName="leading-7 text-foreground/90"
+            listClassName="space-y-3 text-sm"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
         </div>
       </CardContent>
     </Card>
@@ -421,7 +601,12 @@ export function EvidenceBridge({
           <CardTitle className="text-lg tracking-tight">{relationTitle}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-foreground/90">{relationContent}</p>
+          <SmartBodyText
+            text={relationContent}
+            paragraphClassName="text-sm leading-7 text-foreground/90"
+            listClassName="space-y-3 text-sm"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
         </CardContent>
       </Card>
 
@@ -430,7 +615,12 @@ export function EvidenceBridge({
           <CardTitle className="text-lg tracking-tight">{paperSummaryTitle}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-foreground/90">{paperSummary}</p>
+          <SmartBodyText
+            text={paperSummary}
+            paragraphClassName="text-sm leading-7 text-foreground/90"
+            listClassName="space-y-3 text-sm"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
         </CardContent>
       </Card>
 
@@ -439,7 +629,12 @@ export function EvidenceBridge({
           <CardTitle className="text-lg tracking-tight">{relevanceTitle}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-7 text-foreground/90">{relevanceContent}</p>
+          <SmartBodyText
+            text={relevanceContent}
+            paragraphClassName="text-sm leading-7 text-foreground/90"
+            listClassName="space-y-3 text-sm"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
         </CardContent>
       </Card>
 
@@ -449,7 +644,12 @@ export function EvidenceBridge({
             <CardTitle className="text-base tracking-tight">{extraEvidenceTitle}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-7 text-muted-foreground">{extraEvidenceContent}</p>
+            <SmartBodyText
+              text={extraEvidenceContent}
+              paragraphClassName="text-sm leading-7 text-muted-foreground"
+              listClassName="space-y-3 text-sm"
+              itemClassName="flex gap-3 leading-7 text-muted-foreground"
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -474,7 +674,12 @@ export function ActionTimeline({
           <CardTitle className="text-xl tracking-tight">{goalTitle}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="leading-7 text-foreground/90">{goalContent}</p>
+          <SmartBodyText
+            text={goalContent}
+            paragraphClassName="leading-7 text-foreground/90"
+            listClassName="space-y-3 text-sm"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
         </CardContent>
       </Card>
 
@@ -485,7 +690,12 @@ export function ActionTimeline({
             <CardDescription>초반 리듬 회복과 기록 안정화에 집중합니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-7 text-foreground/90">{firstWeekContent}</p>
+            <SmartBodyText
+              text={firstWeekContent}
+              paragraphClassName="text-sm leading-7 text-foreground/90"
+              listClassName="space-y-3 text-sm"
+              itemClassName="flex gap-3 leading-7 text-foreground/90"
+            />
             {firstWeekChecklist.length ? <RoutineChecklist title="7일 체크리스트" items={firstWeekChecklist} /> : null}
           </CardContent>
         </Card>
@@ -496,7 +706,12 @@ export function ActionTimeline({
             <CardDescription>작은 행동을 반복 가능한 시스템으로 만듭니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-7 text-foreground/90">{eightWeekContent}</p>
+            <SmartBodyText
+              text={eightWeekContent}
+              paragraphClassName="text-sm leading-7 text-foreground/90"
+              listClassName="space-y-3 text-sm"
+              itemClassName="flex gap-3 leading-7 text-foreground/90"
+            />
             {eightWeekChecklist.length ? <RoutineChecklist title="8주 핵심 실행" items={eightWeekChecklist} /> : null}
           </CardContent>
         </Card>
@@ -506,6 +721,7 @@ export function ActionTimeline({
 }
 
 export function DoctorQuestionBox({
+  step,
   title = "상담 시 참고 질문",
   intro,
   questions,
@@ -515,7 +731,14 @@ export function DoctorQuestionBox({
   return (
     <Card className="rounded-2xl border-sky-200/60 bg-sky-50/50 shadow-sm dark:border-sky-900/50 dark:bg-sky-950/20">
       <CardHeader>
-        <CardTitle className="text-xl tracking-tight">{title}</CardTitle>
+        <div className="flex items-start gap-3">
+          {step ? (
+            <span className="bg-primary/12 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-primary/25 text-sm font-bold">
+              {step}
+            </span>
+          ) : null}
+          <CardTitle className="pt-1 text-xl tracking-tight">{title}</CardTitle>
+        </div>
         {intro ? <CardDescription className="leading-6">{intro}</CardDescription> : null}
       </CardHeader>
       <CardContent>
@@ -533,6 +756,7 @@ export function DoctorQuestionBox({
 }
 
 export function WarningPanel({
+  step,
   title = "주의사항",
   items,
   emergencyNote,
@@ -541,7 +765,16 @@ export function WarningPanel({
 
   return (
     <Alert variant="destructive" className="my-6 rounded-2xl">
-      <AlertTitle className="mb-3 text-lg font-semibold tracking-tight">{title}</AlertTitle>
+      <AlertTitle className="mb-3">
+        <div className="flex items-start gap-3">
+          {step ? (
+            <span className="bg-destructive/10 text-destructive inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-destructive/30 text-sm font-bold">
+              {step}
+            </span>
+          ) : null}
+          <span className="pt-1 text-lg font-semibold tracking-tight">{title}</span>
+        </div>
+      </AlertTitle>
       <AlertDescription>
         {items.length ? (
           <ul className="space-y-3 text-sm">
@@ -571,7 +804,14 @@ export function ReportClosing({
   return (
     <section className="rounded-2xl border bg-muted/20 px-6 py-6 shadow-sm">
       <h2 className="text-2xl font-bold tracking-tight">마무리 안내</h2>
-      <p className="mt-4 leading-7 text-foreground/90">{message}</p>
+      <div className="mt-4">
+        <SmartBodyText
+          text={message}
+          paragraphClassName="leading-7 text-foreground/90"
+          listClassName="space-y-3 text-sm"
+          itemClassName="flex gap-3 leading-7 text-foreground/90"
+        />
+      </div>
 
       {nextStepItems.length ? (
         <div className="mt-6 rounded-xl border bg-background p-4">
