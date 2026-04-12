@@ -73,7 +73,7 @@ export const HEALTH_REPORT_PRODUCT_DESCRIPTION =
   HEALTH_REPORT_PRODUCTS[0]?.description ??
   "개인 기록 기반 건강 분석, 생활습관 및 영양 전략 제공, PDF 리포트 제공";
 
-/** 진행 중 상태일 때 표시할 안내 (DB에서 status requested 등 확인 후에만 사용) */
+/** 진행 중 상태일 때 표시할 안내 (레거시·폴백 — 우선 getReportRequestUserMessage 사용) */
 export const HEALTH_REPORT_PENDING_MESSAGE =
   "건강 리포트를 생성하고 있습니다. 1~3시간 정도 소요됩니다.";
 
@@ -89,37 +89,96 @@ export const HEALTH_REPORT_PDF_FAILED_MESSAGE =
 export const HEALTH_REPORT_FAILED_MESSAGE =
   "리포트 생성 중 오류가 발생했습니다. 잠시 후 다시 요청해 주세요.";
 
-/** report_requests.status별 설정 (진행 흐름: requested → draft_ready → completed, failed 분기) */
+/** report_requests.status별 설정 (배지·단계 칩·툴팁 — 본문 문구는 getReportRequestUserMessage) */
 export const REPORT_REQUEST_STATUS_CONFIG: Record<
   string,
   { label: string; description: string; order: number }
 > = {
   requested: {
     label: "요청됨",
-    description: "요청이 접수되었습니다. 워크플로우가 처리 중입니다.",
+    description: "접수 후 단계별 진행 (sub1/sub2)",
     order: 1,
   },
   draft_ready: {
-    label: "초안 완성",
-    description: "최종 리포트 JSON이 DB에 저장되었습니다. 초안을 확인할 수 있습니다.",
+    label: "초안 준비",
+    description: "초안 완료 후 최종 생성(sub3) 등",
     order: 2,
   },
   under_review: {
     label: "검수 중",
-    description: "AI 검토 및 품질 점검 중입니다.",
+    description: "문제가 발생해 관리자 확인 중입니다",
     order: 3,
   },
   completed: {
     label: "완료",
-    description: "AI 검토를 통과했습니다. 최종 리포트를 확인하세요.",
+    description: "리포트 생성이 완료되었습니다",
     order: 4,
   },
   failed: {
-    label: "요청 실패",
-    description: "리포트 생성 중 오류가 발생했습니다.",
+    label: "실패",
+    description: "리포트 생성에 실패했습니다",
     order: -1,
   },
 };
+
+/**
+ * 프론트 안내 문구 — DB의 status + current_step 조합 (메인 워크플로와 동일한 식별자 사용)
+ *
+ * - requested + sub1_health | sub2_health
+ * - draft_ready + sub3_health
+ * - 그 외 status는 current_step 없이 고정 문구
+ */
+export function getReportRequestUserMessage(
+  status: string,
+  currentStep: string | null | undefined,
+): { primary: string } {
+  const step = currentStep?.trim() || undefined;
+
+  if (status === "requested") {
+    if (step === "sub1_health") {
+      return { primary: "건강 정보 분석 중입니다" };
+    }
+    if (step === "sub2_health") {
+      return { primary: "리포트 초안 생성 중입니다" };
+    }
+    return { primary: "리포트 생성 요청이 접수되었습니다." };
+  }
+
+  if (status === "draft_ready") {
+    if (step === "sub3_health") {
+      return { primary: "최종 리포트 생성 중입니다" };
+    }
+    return { primary: "리포트 초안이 준비되었습니다." };
+  }
+
+  if (status === "under_review") {
+    return { primary: "문제가 발생해 관리자 확인 중입니다" };
+  }
+  if (status === "completed") {
+    return { primary: "리포트 생성이 완료되었습니다" };
+  }
+  if (status === "failed") {
+    return { primary: "리포트 생성에 실패했습니다" };
+  }
+
+  const cfg = REPORT_REQUEST_STATUS_CONFIG[status];
+  return {
+    primary: cfg?.description ?? HEALTH_REPORT_PENDING_MESSAGE,
+  };
+}
+
+/** 진행 중(스피너)으로 볼 status·단계 — 완료·실패 제외 */
+export function isReportRequestInProgress(
+  status: string,
+  currentStep: string | null | undefined,
+): boolean {
+  if (status === "failed" || status === "completed") return false;
+  if (status === "requested" || status === "under_review") return true;
+  if (status === "draft_ready" && currentStep?.trim() === "sub3_health") {
+    return true;
+  }
+  return false;
+}
 
 /**
  * report_html 생성이 허용되는 status

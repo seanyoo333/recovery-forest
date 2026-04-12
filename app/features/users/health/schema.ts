@@ -1150,6 +1150,12 @@ export const reportRequests = pgTable(
       .notNull()
       .references(() => authUsers.id, { onDelete: "cascade" }),
     status: reportRequestStatusEnum().notNull().default("requested"),
+    /** 메인 워크플로에서만 갱신: requested 시 sub1_health·sub2_health, draft_ready 시 sub3_health 등 */
+    current_step: text(),
+    /** 실패 시 운영 복구용 (n8n/자동화에서 기록) */
+    last_error_message: text(),
+    /** 재시도 횟수 (선택 운영 지표) */
+    retry_count: integer().notNull().default(0),
     input_json: jsonb().$type<Record<string, unknown>>().notNull(),
     sub1_input_json: jsonb().$type<Record<string, unknown>>(),
     snapshot_json: jsonb().$type<Record<string, unknown>>(),

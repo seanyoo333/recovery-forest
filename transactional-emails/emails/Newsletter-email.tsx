@@ -30,13 +30,13 @@ const previewProps: NewsletterProps = {
       title: "몸이 지친 날에도 이어갈 수 있는 회복 루틴",
       description:
         "무리하지 않으면서도 오늘 바로 실천할 수 있는 회복 습관을 한 가지씩 정리했습니다.",
-      link: "https://evidence-base.ai/articles/recovery-habits",
+      link: "http://localhost:5173/blog/glutamine-metabolism-advanced-hr-positive-bc",
     },
   ],
   unsubscribeLink: "https://evidence-base.ai/unsubscribe",
 };
 
-const recordPageUrl = "https://evidence-base.ai/my/dashboard/health";
+const recordPageUrl = "http://localhost:5173/my/dashboard/health-habits";
 const dashboardUrl = "https://evidence-base.ai/my/dashboard";
 
 export function NewsletterEmail({

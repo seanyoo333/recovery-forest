@@ -363,9 +363,13 @@ export type Database = {
         Row: {
           clinical_significance: string | null
           created_at: string
+          derived_formula: string | null
           descriptions: Json | null
+          evidence_source_ids: string[]
+          is_derived_metric: boolean
           reference_max: number | null
           reference_min: number | null
+          reference_note: string | null
           standard_name: string
           test_id: number
           unit: string
@@ -375,9 +379,13 @@ export type Database = {
         Insert: {
           clinical_significance?: string | null
           created_at?: string
+          derived_formula?: string | null
           descriptions?: Json | null
+          evidence_source_ids?: string[]
+          is_derived_metric?: boolean
           reference_max?: number | null
           reference_min?: number | null
+          reference_note?: string | null
           standard_name: string
           test_id?: never
           unit: string
@@ -387,9 +395,13 @@ export type Database = {
         Update: {
           clinical_significance?: string | null
           created_at?: string
+          derived_formula?: string | null
           descriptions?: Json | null
+          evidence_source_ids?: string[]
+          is_derived_metric?: boolean
           reference_max?: number | null
           reference_min?: number | null
+          reference_note?: string | null
           standard_name?: string
           test_id?: never
           unit?: string
@@ -2792,10 +2804,13 @@ export type Database = {
       report_requests: {
         Row: {
           created_at: string
+          current_step: string | null
           id: string
           input_json: Json
+          last_error_message: string | null
           paid_status: string | null
           report_type: string | null
+          retry_count: number
           snapshot_json: Json | null
           status: Database["public"]["Enums"]["report_request_status"]
           sub1_input_json: Json | null
@@ -2805,10 +2820,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_step?: string | null
           id?: string
           input_json: Json
+          last_error_message?: string | null
           paid_status?: string | null
           report_type?: string | null
+          retry_count?: number
           snapshot_json?: Json | null
           status?: Database["public"]["Enums"]["report_request_status"]
           sub1_input_json?: Json | null
@@ -2818,10 +2836,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_step?: string | null
           id?: string
           input_json?: Json
+          last_error_message?: string | null
           paid_status?: string | null
           report_type?: string | null
+          retry_count?: number
           snapshot_json?: Json | null
           status?: Database["public"]["Enums"]["report_request_status"]
           sub1_input_json?: Json | null
@@ -3336,7 +3357,11 @@ export type Database = {
           standard_name: string | null
           test_date: string | null
           test_id: number | null
+          type_derived_formula: string | null
           type_descriptions: Json | null
+          type_evidence_source_ids: string[] | null
+          type_is_derived_metric: boolean | null
+          type_reference_note: string | null
           type_unit: string | null
           type_variations: Json | null
         }
