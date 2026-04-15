@@ -75,6 +75,14 @@ type PremiumReportSections = {
   sixthSection?: ReportSection;
 };
 
+type CanonicalSectionKey =
+  | "first_section"
+  | "second_section"
+  | "third_section"
+  | "forth_section"
+  | "fifth_section"
+  | "sixth_section";
+
 type OverviewPanel = {
   titlePrefix?: string;
   title: string;
@@ -147,6 +155,15 @@ const SECTION_KEY_TO_ID: Record<string, PremiumSectionId> = {
   ending: "closing",
 };
 
+const SECTION_PREFIX_ALIASES: Record<CanonicalSectionKey, string[]> = {
+  first_section: ["first_section_"],
+  second_section: ["second_section_"],
+  third_section: ["third_section_"],
+  forth_section: ["forth_section_", "fourth_section_"],
+  fifth_section: ["fifth_section_"],
+  sixth_section: ["sixth_section_"],
+};
+
 function sanitizeTocLabel(value: string): string {
   return stripAngleBrackets(value)
     .replace(/^\s*\d+\s*[\.\)]\s*/, "")
@@ -208,25 +225,15 @@ function sectionVisible(
     case "overview":
       return model.overviewPanels.length > 0;
     case "target-axis":
-      return Boolean(
-        model.sectionKeySet.has("second_section") && model.sections.secondSection,
-      );
+      return hasSectionPayload(model.sections.secondSection);
     case "evidence":
-      return Boolean(
-        model.sectionKeySet.has("third_section") && model.sections.thirdSection,
-      );
+      return hasSectionPayload(model.sections.thirdSection);
     case "action-guide":
-      return Boolean(
-        model.sectionKeySet.has("forth_section") && model.sections.fourthSection,
-      );
+      return hasSectionPayload(model.sections.fourthSection);
     case "consultation":
-      return Boolean(
-        model.sectionKeySet.has("fifth_section") && model.sections.fifthSection,
-      );
+      return hasSectionPayload(model.sections.fifthSection);
     case "warnings":
-      return Boolean(
-        model.sectionKeySet.has("sixth_section") && model.sections.sixthSection,
-      );
+      return hasSectionPayload(model.sections.sixthSection);
     case "closing":
       return model.closingMessage.trim().length > 0;
     default:
@@ -333,7 +340,7 @@ function buildPremiumTocItems(
       return {
         id,
         step: section.step,
-        label: section.label,
+        label: candidate.label ?? section.label,
       };
     })
     .filter(Boolean) as Array<{ id: PremiumSectionId; label: string; step?: string }>;
@@ -357,36 +364,99 @@ function ReportAnchorSection({
 }
 
 function getRenderableSectionKeySet(data: ReportJson): Set<string> {
+  const keys = new Set<string>();
   const context = (data.context as string[]) ?? [];
-  const keysFromContext = context.filter(
-    (key) =>
-      typeof key === "string" &&
-      typeof data[key] === "object" &&
-      data[key] !== null,
-  );
+  const keysFromContext = context
+    .map((key) => normalizeSectionKey(key))
+    .filter(
+      (key) =>
+        typeof key === "string" &&
+        ((typeof data[key] === "object" && data[key] !== null) ||
+          (SECTION_PREFIX_ALIASES[key as CanonicalSectionKey]?.some((prefix) =>
+            Object.keys(data).some((candidate) => candidate.startsWith(prefix)),
+          ) ??
+            false)),
+    );
 
-  if (keysFromContext.length > 0) {
-    return new Set(keysFromContext);
+  for (const key of keysFromContext) {
+    keys.add(key);
   }
 
-  return new Set(
-    Object.keys(data).filter(
+  for (const [sectionKey, prefixes] of Object.entries(SECTION_PREFIX_ALIASES)) {
+    if (
+      prefixes.some((prefix) =>
+        Object.keys(data).some((candidate) => candidate.startsWith(prefix)),
+      )
+    ) {
+      keys.add(sectionKey);
+    }
+  }
+
+  if (keys.size > 0) {
+    return keys;
+  }
+
+  return new Set([
+    ...Object.keys(data).filter(
       (key) =>
         !REPORT_META_KEYS.has(key) &&
         typeof data[key] === "object" &&
         data[key] !== null,
     ),
+    ...Object.keys(SECTION_PREFIX_ALIASES).filter((sectionKey) =>
+      SECTION_PREFIX_ALIASES[sectionKey as CanonicalSectionKey].some((prefix) =>
+        Object.keys(data).some((candidate) => candidate.startsWith(prefix)),
+      ),
+    ),
+  ]);
+}
+
+function extractPrefixedSectionFields(
+  data: ReportJson,
+  prefixes: string[],
+): ReportSection | undefined {
+  const section: ReportSection = {};
+
+  for (const [rawKey, value] of Object.entries(data)) {
+    const matchedPrefix = prefixes.find((prefix) => rawKey.startsWith(prefix));
+    if (!matchedPrefix) continue;
+
+    const subKey = rawKey.slice(matchedPrefix.length).trim();
+    if (!subKey) continue;
+    section[subKey] = value;
+  }
+
+  return Object.keys(section).length > 0 ? section : undefined;
+}
+
+function resolveSectionData(
+  data: ReportJson,
+  canonicalKey: CanonicalSectionKey,
+): ReportSection | undefined {
+  const nested =
+    typeof data[canonicalKey] === "object" && data[canonicalKey] !== null
+      ? (data[canonicalKey] as ReportSection)
+      : undefined;
+  const prefixed = extractPrefixedSectionFields(
+    data,
+    SECTION_PREFIX_ALIASES[canonicalKey],
   );
+
+  if (!nested && !prefixed) return undefined;
+  return {
+    ...(nested ?? {}),
+    ...(prefixed ?? {}),
+  };
 }
 
 function getPremiumReportSections(data: ReportJson): PremiumReportSections {
   return {
-    firstSection: data.first_section as ReportSection | undefined,
-    secondSection: data.second_section as ReportSection | undefined,
-    thirdSection: data.third_section as ReportSection | undefined,
-    fourthSection: data.forth_section as ReportSection | undefined,
-    fifthSection: data.fifth_section as ReportSection | undefined,
-    sixthSection: data.sixth_section as ReportSection | undefined,
+    firstSection: resolveSectionData(data, "first_section"),
+    secondSection: resolveSectionData(data, "second_section"),
+    thirdSection: resolveSectionData(data, "third_section"),
+    fourthSection: resolveSectionData(data, "forth_section"),
+    fifthSection: resolveSectionData(data, "fifth_section"),
+    sixthSection: resolveSectionData(data, "sixth_section"),
   };
 }
 
@@ -399,10 +469,17 @@ function getConsultationQuestions(section: ReportSection): string[] {
     ...(section.current_interaction_content
       ? parseListItems(String(section.current_interaction_content))
       : []),
+    ...(section.current_interaction
+      ? parseListItems(String(section.current_interaction))
+      : []),
     ...(section.suggested_interaction_content
       ? parseListItems(String(section.suggested_interaction_content))
       : []),
-    ...parseSectionBlocks(section).flatMap((block) =>
+    ...(section.suggested_interaction
+      ? parseListItems(String(section.suggested_interaction))
+      : []),
+    ...(section.things_to_ask ? parseListItems(String(section.things_to_ask)) : []),
+    ...parseSectionBlocksFlexible(section).flatMap((block) =>
       parseListItems(block.content),
     ),
   ].filter((question) => question.length > 0);
@@ -420,6 +497,74 @@ function pickFirstNonEmptyString(
     }
   }
   return "";
+}
+
+function parseSectionBlocksFlexible(
+  section: ReportSection,
+): Array<{ title: string; content: string }> {
+  const parsed = parseSectionBlocks(section);
+  const fallback = Object.entries(section)
+    .filter(
+      ([key, value]) =>
+        key !== "title" &&
+        typeof value === "string" &&
+        value.trim().length > 0 &&
+        !key.endsWith("_title"),
+    )
+    .map(([key, value]) => ({
+      title: stripAngleBrackets(key.replace(/_/g, " ").trim()),
+      content: String(value).trim(),
+    }));
+
+  if (parsed.length === 0) {
+    return fallback;
+  }
+
+  const existing = new Set(parsed.map((item) => `${item.title}|${item.content}`));
+  return [
+    ...parsed,
+    ...fallback.filter(
+      (item) => !existing.has(`${item.title}|${item.content}`),
+    ),
+  ];
+}
+
+function resolveSectionHeading(
+  section: ReportSection | undefined,
+  fallback: string,
+): string {
+  const heading = pickFirstNonEmptyString(section, ["title", "section_title"]);
+  return stripAngleBrackets(heading || fallback);
+}
+
+function resolveTimelineText(
+  section: ReportSection,
+  keyBase: "goal_action" | "goal_7d_action" | "goal_8w_action",
+  fallbackTitle: string,
+): { title: string; content: string } {
+  const rawTitle = pickFirstNonEmptyString(section, [`${keyBase}_title`, keyBase]);
+  const rawContent = pickFirstNonEmptyString(section, [`${keyBase}_content`]);
+
+  if (rawContent) {
+    return {
+      title: stripAngleBrackets(rawTitle || fallbackTitle),
+      content: rawContent,
+    };
+  }
+
+  return {
+    title: fallbackTitle,
+    content: rawTitle,
+  };
+}
+
+function hasSectionPayload(section: ReportSection | undefined): boolean {
+  if (!section) return false;
+  return Object.values(section).some((value) => {
+    if (typeof value === "string") return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    return value != null;
+  });
 }
 
 function withOverviewTitle(
@@ -480,19 +625,23 @@ function buildOverviewPanels(
   }> = [
     {
       titleKeys: ["general_health_title"],
-      contentKeys: ["general_health_content"],
+      contentKeys: ["general_health_content", "general_health"],
       prefix: "1. 일반기록 기반 건강 정보:",
       variant: "default",
     },
     {
       titleKeys: ["blood_health_title"],
-      contentKeys: ["blood_health_content"],
+      contentKeys: ["blood_health_content", "blood_health"],
       prefix: "2. 혈액검사 기반 건강 정보:",
       variant: "clinical",
     },
     {
       titleKeys: ["routine_healthi_title", "routine_health_title"],
-      contentKeys: ["routine_healthi_content", "routine_health_content"],
+      contentKeys: [
+        "routine_healthi_content",
+        "routine_health_content",
+        "routine_health",
+      ],
       prefix: "3. 생활습관 기록 기반 건강정보:",
       variant: "routine",
     },
@@ -504,6 +653,8 @@ function buildOverviewPanels(
       contentKeys: [
         "top_concerns_related_advice_content",
         "total_individualized_summary_content",
+        "top_concerns_related_advice",
+        "total_individualized_summary",
       ],
       prefix: "4. 관심 건강 항목 개선을 위한 조언 정보:",
       variant: "default",
@@ -529,7 +680,7 @@ function buildOverviewPanels(
     return orderedPanels;
   }
 
-  return parseSectionBlocks(firstSection)
+  return parseSectionBlocksFlexible(firstSection)
     .filter((block) => !isOverviewSummaryTitle(block.title))
     .map((block) => ({
       title: stripAngleBrackets(block.title),
@@ -631,18 +782,29 @@ function OverviewSection({ model }: { model: PremiumReportModel }) {
 /** 2. 핵심 표적 및 관리 축 */
 function TargetAxisSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.secondSection;
-  if (!model.sectionKeySet.has("second_section") || !section) return null;
+  if (!section) return null;
+
+  const axis = pickFirstNonEmptyString(section, [
+    "major_axis",
+    "major_targets_axis_title",
+    "title",
+  ]);
+  const explanation = pickFirstNonEmptyString(section, [
+    "targets_axis_explanation",
+    "major_targets_axis",
+    "practical_advices",
+  ]);
 
   return (
     <ReportAnchorSection id="target-axis">
       <SectionCard
         step="2"
-        title="핵심 표적 및 관리 축"
+        title={resolveSectionHeading(section, "핵심 표적 및 관리 축")}
         description="우선적으로 살펴볼 바이오마커와 생활습관 포인트입니다."
       >
         <PriorityTargetCard
-          axis={stripAngleBrackets((section.major_targets_axis as string) ?? "종합")}
-          explanation={(section.targets_axis_explanation as string) ?? ""}
+          axis={stripAngleBrackets(axis || "종합")}
+          explanation={explanation}
           symptoms={[]}
           targets={[]}
         />
@@ -654,7 +816,7 @@ function TargetAxisSection({ model }: { model: PremiumReportModel }) {
 /** 3. 근거 및 연구 요약 */
 function EvidenceSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.thirdSection;
-  if (!model.sectionKeySet.has("third_section") || !section) return null;
+  if (!section) return null;
 
   const hasBridgeData =
     section.relation_between_targets_status != null ||
@@ -664,7 +826,7 @@ function EvidenceSection({ model }: { model: PremiumReportModel }) {
     <ReportAnchorSection id="evidence">
       <SectionCard
         step="3"
-        title="근거 및 연구 요약"
+        title={resolveSectionHeading(section, "근거 및 연구 요약")}
         description="표적과 생활습관 연결 근거, 관련 논문·리소스 요약입니다."
       >
         {hasBridgeData ? (
@@ -693,7 +855,7 @@ function EvidenceSection({ model }: { model: PremiumReportModel }) {
           />
         ) : (
           <div className="space-y-4">
-            {parseSectionBlocks(section).map((block, index) => (
+            {parseSectionBlocksFlexible(section).map((block, index) => (
               <InsightPanel
                 key={index}
                 title={stripAngleBrackets(block.title)}
@@ -711,26 +873,26 @@ function EvidenceSection({ model }: { model: PremiumReportModel }) {
 /** 4. 실행 가이드 */
 function ActionGuideSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.fourthSection;
-  if (!model.sectionKeySet.has("forth_section") || !section) return null;
+  if (!section) return null;
+
+  const goal = resolveTimelineText(section, "goal_action", "목표");
+  const firstWeek = resolveTimelineText(section, "goal_7d_action", "7일 실행");
+  const eightWeek = resolveTimelineText(section, "goal_8w_action", "8주 실행");
 
   return (
     <ReportAnchorSection id="action-guide">
       <SectionCard
         step="4"
-        title="실행 가이드"
+        title={resolveSectionHeading(section, "실행 가이드")}
         description="목표와 7일·8주 단위 실행 계획입니다."
       >
         <ActionTimeline
-          goalTitle={stripAngleBrackets((section.goal_action as string) ?? "목표")}
-          goalContent={(section.goal_action_content as string) ?? ""}
-          firstWeekTitle={stripAngleBrackets(
-            (section.goal_7d_action as string) ?? "7일 실행",
-          )}
-          firstWeekContent={(section.goal_7d_action_content as string) ?? ""}
-          eightWeekTitle={stripAngleBrackets(
-            (section.goal_8w_action as string) ?? "8주 실행",
-          )}
-          eightWeekContent={(section.goal_8w_action_content as string) ?? ""}
+          goalTitle={goal.title}
+          goalContent={goal.content}
+          firstWeekTitle={firstWeek.title}
+          firstWeekContent={firstWeek.content}
+          eightWeekTitle={eightWeek.title}
+          eightWeekContent={eightWeek.content}
         />
       </SectionCard>
     </ReportAnchorSection>
@@ -740,7 +902,7 @@ function ActionGuideSection({ model }: { model: PremiumReportModel }) {
 /** 5. 상담 시 참고 */
 function ConsultationSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.fifthSection;
-  if (!model.sectionKeySet.has("fifth_section") || !section) return null;
+  if (!section) return null;
 
   const questions = getConsultationQuestions(section);
   if (questions.length > 0) {
@@ -748,7 +910,7 @@ function ConsultationSection({ model }: { model: PremiumReportModel }) {
       <ReportAnchorSection id="consultation">
         <DoctorQuestionBox
           step="5"
-          title="상담 시 참고"
+          title={resolveSectionHeading(section, "상담 시 참고")}
           intro={(section.things_to_ask as string) ?? undefined}
           questions={questions}
         />
@@ -760,11 +922,11 @@ function ConsultationSection({ model }: { model: PremiumReportModel }) {
     <ReportAnchorSection id="consultation">
       <SectionCard
         step="5"
-        title="상담 시 참고"
+        title={resolveSectionHeading(section, "상담 시 참고")}
         description="담당 선생님과 상의할 때 참고하실 수 있는 내용입니다."
       >
         <div className="space-y-4">
-          {parseSectionBlocks(section).map((block, index) => (
+          {parseSectionBlocksFlexible(section).map((block, index) => (
             <InsightPanel
               key={index}
               title={stripAngleBrackets(block.title)}
@@ -781,14 +943,18 @@ function ConsultationSection({ model }: { model: PremiumReportModel }) {
 /** 6. 주의사항 */
 function WarningSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.sixthSection;
-  if (!model.sectionKeySet.has("sixth_section") || !section) return null;
+  if (!section) return null;
+
+  const warningItems = parseListItems(
+    (section.warnings_content as string) ?? (section.warnings as string) ?? "",
+  );
 
   return (
     <ReportAnchorSection id="warnings">
       <WarningPanel
         step="6"
-        title="주의사항"
-        items={parseListItems((section.warnings_content as string) ?? "")}
+        title={resolveSectionHeading(section, "주의사항")}
+        items={warningItems}
       />
     </ReportAnchorSection>
   );
