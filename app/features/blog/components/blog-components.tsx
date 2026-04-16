@@ -181,9 +181,23 @@ export function ModeCompare({
 /**
  * ReferenceItem type for reference lists
  */
-type ReferenceItem = {
+export type ReferenceItem = {
   label: string;
   href: string;
+  /** 논문·리포트의 제목 (DB paper_title 등) */
+  paper_title?: string;
+  /** 참고 자료가 무엇인지 (제목·출처 요약 등) */
+  description?: string;
+  /** 왜 이 자료가 선별되었는지 */
+  rationale?: string;
+  /** 연구 설계 유형 (예: RCT, 메타분석 등) */
+  study_type?: string;
+};
+
+type ReferenceListProps = {
+  items: ReferenceItem[];
+  /** true면 상단 "참고 자료" 제목·구분선 없음 (상위 카드 안에 넣을 때) */
+  embedded?: boolean;
 };
 
 /**
@@ -192,28 +206,77 @@ type ReferenceItem = {
  * Displays a list of reference materials and links.
  * Used at the end of blog posts to cite sources.
  */
-export function ReferenceList({ items }: { items: ReferenceItem[] }) {
+export function ReferenceList({ items, embedded = false }: ReferenceListProps) {
   if (!items.length) return null;
-  return (
-    <section className="mt-8 border-t pt-6 text-sm">
-      <h2 className="mb-3 text-lg font-semibold">참고 자료</h2>
-      <ul className="text-muted-foreground space-y-2 pl-5">
-        {items.map((ref, index) => (
-          <li
-            key={index}
-            className="marker:text-muted-foreground list-disc leading-relaxed"
-          >
+  const list = (
+    <ul className="text-muted-foreground space-y-4 pl-5">
+      {items.map((ref, index) => (
+        <li
+          key={index}
+          className="marker:text-muted-foreground list-disc leading-relaxed"
+        >
+          <div>
+            {ref.paper_title ? (
+              <div className="mb-2">
+                <p className="text-muted-foreground text-xs font-medium">논문 제목</p>
+                <p className="text-foreground mt-1 text-sm font-semibold leading-snug">
+                  {ref.paper_title}
+                </p>
+              </div>
+            ) : null}
             <a
               href={ref.href}
               target="_blank"
               rel="noreferrer"
-              className="hover:text-foreground underline decoration-dotted underline-offset-2 transition-colors"
+              className="hover:text-foreground break-all font-medium text-foreground underline decoration-dotted underline-offset-2 transition-colors"
             >
-              {ref.label}
+              {ref.paper_title &&
+              ref.label.trim() === ref.paper_title.trim()
+                ? "원문 링크"
+                : ref.label}
             </a>
-          </li>
-        ))}
-      </ul>
+            {ref.description ? (
+              <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed whitespace-pre-line">
+                {ref.description}
+              </p>
+            ) : null}
+            {ref.label.trim() !== ref.href.trim() ? (
+              <p className="mt-2 break-all font-mono text-xs leading-relaxed text-muted-foreground">
+                {ref.href}
+              </p>
+            ) : null}
+            {ref.rationale ? (
+              <div className="mt-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-3 text-xs leading-relaxed text-foreground/85">
+                <p className="text-muted-foreground font-medium">선별 이유</p>
+                <p className="mt-2 whitespace-pre-line">{ref.rationale}</p>
+              </div>
+            ) : null}
+            {ref.study_type ? (
+              <div className="mt-5 border-t border-border/60 pt-4">
+                <p className="text-xs leading-relaxed text-foreground/90 whitespace-pre-line">
+                  <span className="text-muted-foreground font-medium">
+                    연구 유형(study_type)
+                  </span>
+                </p>
+                <p className="mt-1.5 text-xs leading-relaxed text-foreground/90 whitespace-pre-line">
+                  {ref.study_type}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
+  if (embedded) {
+    return <div className="text-sm">{list}</div>;
+  }
+
+  return (
+    <section className="mt-8 border-t pt-6 text-sm">
+      <h2 className="mb-3 text-lg font-semibold">참고 자료</h2>
+      {list}
     </section>
   );
 }

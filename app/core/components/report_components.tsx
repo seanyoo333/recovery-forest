@@ -64,8 +64,9 @@ type InsightPanelProps = {
 type PriorityTargetCardProps = {
   symptoms: string[];
   targets: string[];
-  axis: string;
-  explanation: string;
+  primaryAxis: string;
+  secondaryAxis?: string;
+  practicalAdvice: string;
   habitPriorities?: string[];
 };
 
@@ -76,19 +77,21 @@ type EvidenceBridgeProps = {
   paperSummary: string;
   relevanceTitle: string;
   relevanceContent: string;
+  relevanceBlocks?: Array<{ title: string; content: string }>;
   extraEvidenceTitle?: string;
   extraEvidenceContent?: string;
 };
 
 type ActionTimelineProps = {
-  goalTitle: string;
-  goalContent: string;
   firstWeekTitle: string;
   firstWeekContent: string;
   eightWeekTitle: string;
   eightWeekContent: string;
+  avoidTitle: string;
+  avoidContent: string;
   firstWeekChecklist?: string[];
   eightWeekChecklist?: string[];
+  avoidChecklist?: string[];
 };
 
 type DoctorQuestionBoxProps = {
@@ -216,6 +219,16 @@ const UNORDERED_MARKER_RE = /^[-•▪▸●]\s+/;
 const ORDERED_MARKER_RE = /^\d+\s*[\.\)](?:\s*[\)\].:-])?\s*/;
 
 type SmartListKind = "unordered" | "ordered";
+const TITLE_MERGE_DELIMITER = " - ";
+const FIXED_SECTION_TITLES = new Set([
+  "현재 상태 한눈에 보기",
+  "관련 바이오 표적 및 핵심 영역",
+  "현재 상황 해석 근거와 의미",
+  "실행 가이드",
+  "통합의학 상담 시 질문 내용",
+  "주의사항",
+  "근거자료",
+]);
 
 function stripListMarker(line: string, kind: SmartListKind): string {
   const trimmed = line.trim();
@@ -269,6 +282,30 @@ function extractSmartList(text: string): { kind: SmartListKind; items: string[] 
   }
 
   return null;
+}
+
+function splitSectionDisplayTitle(title: string): {
+  mainTitle: string;
+  subTitle?: string;
+} {
+  const trimmed = title.trim();
+  const delimiterIndex = trimmed.indexOf(TITLE_MERGE_DELIMITER);
+  if (delimiterIndex <= 0) {
+    return { mainTitle: trimmed };
+  }
+
+  const possibleMain = trimmed.slice(0, delimiterIndex).trim();
+  const possibleSub = trimmed
+    .slice(delimiterIndex + TITLE_MERGE_DELIMITER.length)
+    .trim();
+  if (!possibleSub || !FIXED_SECTION_TITLES.has(possibleMain)) {
+    return { mainTitle: trimmed };
+  }
+
+  return {
+    mainTitle: possibleMain,
+    subTitle: possibleSub,
+  };
 }
 
 function SmartBodyText({
@@ -407,6 +444,7 @@ export function SectionCard({
   description,
   children,
 }: SectionCardProps) {
+  const { mainTitle, subTitle } = splitSectionDisplayTitle(title);
   return (
     <section className="my-8">
       <Card className="overflow-hidden rounded-2xl shadow-sm">
@@ -418,7 +456,12 @@ export function SectionCard({
               </span>
             ) : null}
             <div className="space-y-1">
-              <CardTitle className="text-2xl tracking-tight">{title}</CardTitle>
+              <CardTitle className="text-2xl tracking-tight">{mainTitle}</CardTitle>
+              {subTitle ? (
+                <p className="text-muted-foreground text-sm font-medium tracking-tight">
+                  {subTitle}
+                </p>
+              ) : null}
               {description ? (
                 <CardDescription className="text-sm leading-6">{description}</CardDescription>
               ) : null}
@@ -525,8 +568,9 @@ export function InsightPanel({
 export function PriorityTargetCard({
   symptoms,
   targets,
-  axis,
-  explanation,
+  primaryAxis,
+  secondaryAxis,
+  practicalAdvice,
   habitPriorities = [],
 }: PriorityTargetCardProps) {
   return (
@@ -538,11 +582,43 @@ export function PriorityTargetCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="flex flex-wrap gap-2">
-          <StatusChip label={`핵심 axis: ${axis}`} tone="info" />
-          {symptoms.map((symptom, index) => (
-            <StatusChip key={index} label={symptom} tone="warning" />
-          ))}
+        <div className="rounded-xl border bg-background/80 p-4 dark:bg-background/40">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            2-1. 관련 바이오 표적 및 핵심 축
+          </p>
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                핵심 축 1
+              </p>
+              <SmartBodyText
+                text={primaryAxis}
+                paragraphClassName="leading-7 text-foreground/90"
+                listClassName="space-y-2 text-sm"
+                itemClassName="flex gap-3 leading-6 text-foreground/90"
+              />
+            </div>
+            {secondaryAxis ? (
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  핵심 축 2
+                </p>
+                <SmartBodyText
+                  text={secondaryAxis}
+                  paragraphClassName="leading-7 text-foreground/90"
+                  listClassName="space-y-2 text-sm"
+                  itemClassName="flex gap-3 leading-6 text-foreground/90"
+                />
+              </div>
+            ) : null}
+          </div>
+          {symptoms.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {symptoms.map((symptom, index) => (
+                <StatusChip key={index} label={symptom} tone="warning" />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {habitPriorities.length ? (
@@ -572,8 +648,11 @@ export function PriorityTargetCard({
         </div>
 
         <div className="rounded-xl border bg-background/80 p-4 dark:bg-background/40">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            2-2. 표적·핵심 축 기반 실질적 조언
+          </p>
           <SmartBodyText
-            text={explanation}
+            text={practicalAdvice}
             paragraphClassName="leading-7 text-foreground/90"
             listClassName="space-y-3 text-sm"
             itemClassName="flex gap-3 leading-7 text-foreground/90"
@@ -591,12 +670,13 @@ export function EvidenceBridge({
   paperSummary,
   relevanceTitle,
   relevanceContent,
+  relevanceBlocks = [],
   extraEvidenceTitle,
   extraEvidenceContent,
 }: EvidenceBridgeProps) {
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="rounded-2xl shadow-sm">
+    <div className="space-y-4">
+      <Card className="self-start rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg tracking-tight">{relationTitle}</CardTitle>
         </CardHeader>
@@ -610,7 +690,7 @@ export function EvidenceBridge({
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl shadow-sm">
+      <Card className="self-start rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg tracking-tight">{paperSummaryTitle}</CardTitle>
         </CardHeader>
@@ -624,17 +704,40 @@ export function EvidenceBridge({
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl shadow-sm">
+      <Card className="self-start rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg tracking-tight">{relevanceTitle}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <SmartBodyText
-            text={relevanceContent}
-            paragraphClassName="text-sm leading-7 text-foreground/90"
-            listClassName="space-y-3 text-sm"
-            itemClassName="flex gap-3 leading-7 text-foreground/90"
-          />
+        <CardContent className="space-y-3">
+          {relevanceBlocks.length > 0 ? (
+            <div className="grid gap-3">
+              {relevanceBlocks.map((block, index) => (
+                <div
+                  key={`${block.title}-${index}`}
+                  className="rounded-xl border bg-muted/20 p-3"
+                >
+                  <p className="text-sm font-semibold tracking-tight">
+                    {index + 1}. {block.title}
+                  </p>
+                  <div className="mt-2">
+                    <SmartBodyText
+                      text={block.content}
+                      paragraphClassName="text-sm leading-6 text-foreground/90"
+                      listClassName="space-y-2 text-sm"
+                      itemClassName="flex gap-3 leading-6 text-foreground/90"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <SmartBodyText
+              text={relevanceContent}
+              paragraphClassName="text-sm leading-7 text-foreground/90"
+              listClassName="space-y-3 text-sm"
+              itemClassName="flex gap-3 leading-7 text-foreground/90"
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -658,64 +761,83 @@ export function EvidenceBridge({
 }
 
 export function ActionTimeline({
-  goalTitle,
-  goalContent,
   firstWeekTitle,
   firstWeekContent,
   eightWeekTitle,
   eightWeekContent,
+  avoidTitle,
+  avoidContent,
   firstWeekChecklist = [],
   eightWeekChecklist = [],
+  avoidChecklist = [],
 }: ActionTimelineProps) {
   return (
-    <div className="space-y-5">
-      <Card className="rounded-2xl border-emerald-200/60 bg-emerald-50/50 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
+    <div className="space-y-4">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl tracking-tight">{goalTitle}</CardTitle>
+          <CardTitle className="text-lg tracking-tight">{firstWeekTitle}</CardTitle>
+          <CardDescription>초반 리듬 회복과 기록 안정화에 집중합니다.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <SmartBodyText
-            text={goalContent}
-            paragraphClassName="leading-7 text-foreground/90"
+            text={firstWeekContent}
+            paragraphClassName="text-sm leading-7 text-foreground/90"
             listClassName="space-y-3 text-sm"
             itemClassName="flex gap-3 leading-7 text-foreground/90"
           />
+          {firstWeekChecklist.length ? <RoutineChecklist title="7일 체크리스트" items={firstWeekChecklist} /> : null}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg tracking-tight">{firstWeekTitle}</CardTitle>
-            <CardDescription>초반 리듬 회복과 기록 안정화에 집중합니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <SmartBodyText
-              text={firstWeekContent}
-              paragraphClassName="text-sm leading-7 text-foreground/90"
-              listClassName="space-y-3 text-sm"
-              itemClassName="flex gap-3 leading-7 text-foreground/90"
-            />
-            {firstWeekChecklist.length ? <RoutineChecklist title="7일 체크리스트" items={firstWeekChecklist} /> : null}
-          </CardContent>
-        </Card>
+      <Card className="rounded-2xl shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg tracking-tight">{eightWeekTitle}</CardTitle>
+          <CardDescription>작은 행동을 반복 가능한 시스템으로 만듭니다.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <SmartBodyText
+            text={eightWeekContent}
+            paragraphClassName="text-sm leading-7 text-foreground/90"
+            listClassName="space-y-3 text-sm"
+            itemClassName="flex gap-3 leading-7 text-foreground/90"
+          />
+          {eightWeekChecklist.length ? <RoutineChecklist title="8주 핵심 실행" items={eightWeekChecklist} /> : null}
+        </CardContent>
+      </Card>
 
-        <Card className="rounded-2xl shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg tracking-tight">{eightWeekTitle}</CardTitle>
-            <CardDescription>작은 행동을 반복 가능한 시스템으로 만듭니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card className="rounded-2xl border-rose-200/70 bg-rose-50/50 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/20">
+        <CardHeader>
+          <CardTitle className="text-lg tracking-tight">{avoidTitle}</CardTitle>
+          <CardDescription>부담을 키우거나 계획을 흐트러뜨리는 행동은 피해주세요.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {avoidChecklist.length === 0 ? (
             <SmartBodyText
-              text={eightWeekContent}
+              text={avoidContent}
               paragraphClassName="text-sm leading-7 text-foreground/90"
               listClassName="space-y-3 text-sm"
               itemClassName="flex gap-3 leading-7 text-foreground/90"
             />
-            {eightWeekChecklist.length ? <RoutineChecklist title="8주 핵심 실행" items={eightWeekChecklist} /> : null}
-          </CardContent>
-        </Card>
-      </div>
+          ) : null}
+          {avoidChecklist.length ? (
+            <div className="rounded-xl border bg-background/70 p-4 dark:bg-background/40">
+              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                꼭 피해야 할 3가지
+              </p>
+              <ol className="mt-3 space-y-3 text-sm">
+                {avoidChecklist.map((item, index) => (
+                  <li key={index} className="flex gap-3 leading-6">
+                    <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 inline-flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                      {index + 1}
+                    </span>
+                    <span className="whitespace-pre-line">{item}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -727,6 +849,7 @@ export function DoctorQuestionBox({
   questions,
 }: DoctorQuestionBoxProps) {
   if (!questions.length) return null;
+  const { mainTitle, subTitle } = splitSectionDisplayTitle(title);
 
   return (
     <Card className="rounded-2xl border-sky-200/60 bg-sky-50/50 shadow-sm dark:border-sky-900/50 dark:bg-sky-950/20">
@@ -737,7 +860,14 @@ export function DoctorQuestionBox({
               {step}
             </span>
           ) : null}
-          <CardTitle className="pt-1 text-xl tracking-tight">{title}</CardTitle>
+          <div>
+            <CardTitle className="pt-1 text-xl tracking-tight">{mainTitle}</CardTitle>
+            {subTitle ? (
+              <p className="text-muted-foreground mt-1 text-sm font-medium tracking-tight">
+                {subTitle}
+              </p>
+            ) : null}
+          </div>
         </div>
         {intro ? <CardDescription className="leading-6">{intro}</CardDescription> : null}
       </CardHeader>
@@ -762,6 +892,7 @@ export function WarningPanel({
   emergencyNote,
 }: WarningPanelProps) {
   if (!items.length && !emergencyNote) return null;
+  const { mainTitle, subTitle } = splitSectionDisplayTitle(title);
 
   return (
     <Alert variant="destructive" className="my-6 rounded-2xl">
@@ -772,7 +903,14 @@ export function WarningPanel({
               {step}
             </span>
           ) : null}
-          <span className="pt-1 text-lg font-semibold tracking-tight">{title}</span>
+          <div className="pt-1">
+            <p className="text-lg font-semibold tracking-tight">{mainTitle}</p>
+            {subTitle ? (
+              <p className="text-muted-foreground mt-1 text-sm font-medium tracking-tight">
+                {subTitle}
+              </p>
+            ) : null}
+          </div>
         </div>
       </AlertTitle>
       <AlertDescription>

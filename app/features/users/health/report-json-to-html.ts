@@ -9,6 +9,39 @@
  * - Tailwind purge/동적 클래스 미적용 문제 회피
  */
 export type ReportJson = Record<string, unknown>;
+export const REPORT_HTML_VERSION_MARKER = "report_html_v2026_04_16_title_visual_refined";
+
+type FixedSectionId =
+  | "first_section"
+  | "second_section"
+  | "third_section"
+  | "forth_section"
+  | "fifth_section"
+  | "sixth_section"
+  | "seventh_section";
+
+const FIXED_SECTION_META: Record<
+  FixedSectionId,
+  { step: string; title: string }
+> = {
+  first_section: { step: "1", title: "현재 상태 한눈에 보기" },
+  second_section: { step: "2", title: "관련 바이오 표적 및 핵심 영역" },
+  third_section: { step: "3", title: "현재 상황 해석 근거와 의미" },
+  forth_section: { step: "4", title: "실행 가이드" },
+  fifth_section: { step: "5", title: "통합의학 상담 시 질문 내용" },
+  sixth_section: { step: "6", title: "주의사항" },
+  seventh_section: { step: "7", title: "근거자료" },
+};
+
+const FIXED_SECTION_ORDER: FixedSectionId[] = [
+  "first_section",
+  "second_section",
+  "third_section",
+  "forth_section",
+  "fifth_section",
+  "sixth_section",
+  "seventh_section",
+];
 
 /** 인라인 스타일 (report_components 시각과 유사한 값) */
 const STYLES = {
@@ -19,6 +52,8 @@ const STYLES = {
     "margin:0 0 0.5rem; font-size:1.875rem; font-weight:700; letter-spacing:-0.025em; color:#1a1a1a;",
   h2:
     "margin:0 0 1rem; font-size:1.5rem; font-weight:600; letter-spacing:-0.025em; color:#1a1a1a;",
+  h2Sub:
+    "margin:-0.5rem 0 1rem; font-size:0.95rem; font-weight:500; letter-spacing:-0.01em; color:#6b7280;",
   h3:
     "margin:0 0 0.5rem; font-size:1.125rem; font-weight:600; color:#374151;",
   p: "margin:0 0 0.75rem; font-size:1rem; line-height:1.75; color:#374151;",
@@ -44,6 +79,30 @@ const STYLES = {
 /** HTML 꺾쇠괄호 제거 (예: <...>) */
 function stripAngleBrackets(s: string): string {
   return s.replace(/^<([^>]*)>$/i, "$1").trim() || s;
+}
+
+function sanitizeTocLabel(value: string): string {
+  return stripAngleBrackets(value)
+    .replace(/^\s*\d+\s*[\.\)]\s*/, "")
+    .trim();
+}
+
+function normalizeSectionKey(value: string): string {
+  return value.toLowerCase().replace(/[\s-]+/g, "_").trim();
+}
+
+function resolveFixedSectionIdFromKey(value: string): FixedSectionId | null {
+  const normalized = normalizeSectionKey(value);
+  if (normalized === "first_section") return "first_section";
+  if (normalized === "second_section") return "second_section";
+  if (normalized === "third_section") return "third_section";
+  if (normalized === "forth_section" || normalized === "fourth_section") {
+    return "forth_section";
+  }
+  if (normalized === "fifth_section") return "fifth_section";
+  if (normalized === "sixth_section") return "sixth_section";
+  if (normalized === "seventh_section") return "seventh_section";
+  return null;
 }
 
 /** HTML 특수문자 이스케이프 (XSS 방지) */
@@ -111,6 +170,60 @@ function parseListItems(text: string): string[] {
     .filter((s) => s.length > 0);
 }
 
+function mergeFixedAndDynamicTocLabel(
+  fixedLabel: string,
+  dynamicLabel?: string,
+): string {
+  if (!dynamicLabel) return fixedLabel;
+  const normalizedFixed = sanitizeTocLabel(fixedLabel)
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  const normalizedDynamic = sanitizeTocLabel(dynamicLabel)
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  if (!normalizedDynamic || normalizedFixed === normalizedDynamic) {
+    return fixedLabel;
+  }
+  return `${fixedLabel} - ${dynamicLabel}`;
+}
+
+function splitSectionDisplayTitle(title: string): {
+  mainTitle: string;
+  subTitle?: string;
+} {
+  const trimmed = title.trim();
+  const delimiterIndex = trimmed.indexOf(" - ");
+  if (delimiterIndex <= 0) {
+    return { mainTitle: trimmed };
+  }
+
+  const mainTitle = trimmed.slice(0, delimiterIndex).trim();
+  const subTitle = trimmed.slice(delimiterIndex + 3).trim();
+  if (!subTitle) return { mainTitle: trimmed };
+  return { mainTitle, subTitle };
+}
+
+function pushSectionHeading(parts: string[], rawTitle: string) {
+  const { mainTitle, subTitle } = splitSectionDisplayTitle(rawTitle);
+  parts.push(`<h2 style="${STYLES.h2}">${escapeHtml(mainTitle)}</h2>`);
+  if (subTitle) {
+    parts.push(`<p style="${STYLES.h2Sub}">${escapeHtml(subTitle)}</p>`);
+  }
+}
+
+function resolveSectionHeadingFromDb(
+  section: Record<string, unknown>,
+  firstBlockTitle?: string,
+): string | undefined {
+  const headingCandidate =
+    (typeof section.title === "string" && section.title.trim()) ||
+    (typeof section.section_title === "string" && section.section_title.trim()) ||
+    (firstBlockTitle && firstBlockTitle.trim()) ||
+    "";
+  const heading = stripAngleBrackets(headingCandidate);
+  return heading || undefined;
+}
+
 /**
  * report_json을 프리미엄 HTML 문자열로 변환
  * report_components 시각과 유사한 인라인 스타일 적용
@@ -145,8 +258,12 @@ export function reportJsonToHtml(
       : Object.keys(data).filter(
           (k) => !skipKeys.has(k) && typeof data[k] === "object",
         );
+  const visibleFixedSections = FIXED_SECTION_ORDER.filter((id) =>
+    keys.some((key) => resolveFixedSectionIdFromKey(key) === id),
+  );
 
   const parts: string[] = [];
+  parts.push(`<!-- ${REPORT_HTML_VERSION_MARKER} -->`);
   parts.push(`<article style="${STYLES.article}">`);
 
   // Cover
@@ -164,6 +281,20 @@ export function reportJsonToHtml(
   }
   parts.push("</section>");
 
+  if (visibleFixedSections.length > 0) {
+    parts.push(`<section style="${STYLES.sectionMuted}">`);
+    parts.push(`<h2 style="${STYLES.h2}">목차</h2>`);
+    parts.push(`<ul style="${STYLES.ul}">`);
+    visibleFixedSections.forEach((id) => {
+      const meta = FIXED_SECTION_META[id];
+      parts.push(
+        `<li style="${STYLES.li}"><span style="${STYLES.liBullet}">${escapeHtml(meta.step)}.</span><span>${escapeHtml(meta.title)}</span></li>`,
+      );
+    });
+    parts.push("</ul>");
+    parts.push("</section>");
+  }
+
   for (const key of keys) {
     const section = data[key] as Record<string, unknown> | undefined;
     if (!section || typeof section !== "object") continue;
@@ -172,22 +303,27 @@ export function reportJsonToHtml(
     if (blocks.length === 0) continue;
 
     const firstBlock = blocks[0];
+    const fixedSectionId = resolveFixedSectionIdFromKey(key);
+    const fixedSectionTitle = fixedSectionId
+      ? FIXED_SECTION_META[fixedSectionId].title
+      : null;
+    const dbSectionTitle = resolveSectionHeadingFromDb(section, firstBlock?.title);
+    const mergedSectionTitle = fixedSectionTitle
+      ? mergeFixedAndDynamicTocLabel(fixedSectionTitle, dbSectionTitle)
+      : dbSectionTitle;
     const isWarnings =
       key.includes("sixth") || String(section.warnings ?? "").length > 0;
-    const isAction = key.includes("forth") || key.includes("action");
+    const isAction =
+      key.includes("forth") || key.includes("fourth") || key.includes("action");
     const isAskDoctor =
       key.includes("fifth") ||
       key.includes("things_to_ask") ||
       key.includes("interaction");
 
     if (isWarnings) {
-      const sectionTitle = stripAngleBrackets(
-        firstBlock?.title ?? "주의사항",
-      );
+      const sectionTitle = mergedSectionTitle ?? "주의사항";
       parts.push(`<section style="${STYLES.sectionWarn}">`);
-      parts.push(
-        `<h2 style="${STYLES.h2}">${escapeHtml(sectionTitle)}</h2>`,
-      );
+      pushSectionHeading(parts, sectionTitle);
       for (const b of blocks) {
         if (b.content) parts.push(toParagraphs(b.content));
       }
@@ -199,13 +335,9 @@ export function reportJsonToHtml(
       const items = blocks.flatMap((b) =>
         b.content ? parseListItems(b.content) : [],
       );
-      const sectionTitle = stripAngleBrackets(
-        firstBlock?.title ?? "담당 선생님께 여쭤볼 수 있는 질문",
-      );
+      const sectionTitle = mergedSectionTitle ?? "통합의학 상담 시 질문 내용";
       parts.push(`<section style="${STYLES.sectionAsk}">`);
-      parts.push(
-        `<h2 style="${STYLES.h2}">${escapeHtml(sectionTitle)}</h2>`,
-      );
+      pushSectionHeading(parts, sectionTitle);
       if (items.length > 0) {
         parts.push(`<ul style="${STYLES.ul}">`);
         items.forEach((item) => {
@@ -223,15 +355,14 @@ export function reportJsonToHtml(
       continue;
     }
 
-    const sectionTitle = stripAngleBrackets(firstBlock?.title ?? "섹션");
+    const sectionTitle =
+      mergedSectionTitle ?? stripAngleBrackets(firstBlock?.title ?? "섹션");
     const sectionStyle = isAction
       ? STYLES.sectionAction
       : STYLES.section;
 
     parts.push(`<section style="${sectionStyle}">`);
-    parts.push(
-      `<h2 style="${STYLES.h2}">${escapeHtml(sectionTitle)}</h2>`,
-    );
+    pushSectionHeading(parts, sectionTitle);
 
     for (const b of blocks) {
       if (b.content) {

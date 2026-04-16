@@ -57,6 +57,7 @@ type PremiumSectionId =
   | "action-guide"
   | "consultation"
   | "warnings"
+  | "references"
   | "closing";
 
 type PremiumSectionNavItem = {
@@ -73,6 +74,7 @@ type PremiumReportSections = {
   fourthSection?: ReportSection;
   fifthSection?: ReportSection;
   sixthSection?: ReportSection;
+  seventhSection?: ReportSection;
 };
 
 type CanonicalSectionKey =
@@ -81,7 +83,8 @@ type CanonicalSectionKey =
   | "third_section"
   | "forth_section"
   | "fifth_section"
-  | "sixth_section";
+  | "sixth_section"
+  | "seventh_section";
 
 type OverviewPanel = {
   titlePrefix?: string;
@@ -114,13 +117,13 @@ const PREMIUM_SECTION_NAV: PremiumSectionNavItem[] = [
   {
     id: "target-axis",
     step: "2",
-    label: "핵심 표적 및 관리 축",
+    label: "관련 바이오 표적 및 핵심 영역",
     sectionKey: "second_section",
   },
   {
     id: "evidence",
     step: "3",
-    label: "근거 및 연구 요약",
+    label: "현재 상황 해석 근거와 의미",
     sectionKey: "third_section",
   },
   {
@@ -132,7 +135,7 @@ const PREMIUM_SECTION_NAV: PremiumSectionNavItem[] = [
   {
     id: "consultation",
     step: "5",
-    label: "상담 시 참고",
+    label: "통합의학 상담 시 질문 내용",
     sectionKey: "fifth_section",
   },
   {
@@ -140,6 +143,12 @@ const PREMIUM_SECTION_NAV: PremiumSectionNavItem[] = [
     step: "6",
     label: "주의사항",
     sectionKey: "sixth_section",
+  },
+  {
+    id: "references",
+    step: "7",
+    label: "근거자료",
+    sectionKey: "seventh_section",
   },
 ];
 
@@ -151,6 +160,7 @@ const SECTION_KEY_TO_ID: Record<string, PremiumSectionId> = {
   fourth_section: "action-guide",
   fifth_section: "consultation",
   sixth_section: "warnings",
+  seventh_section: "references",
   closing: "closing",
   ending: "closing",
 };
@@ -162,6 +172,7 @@ const SECTION_PREFIX_ALIASES: Record<CanonicalSectionKey, string[]> = {
   forth_section: ["forth_section_", "fourth_section_"],
   fifth_section: ["fifth_section_"],
   sixth_section: ["sixth_section_"],
+  seventh_section: ["seventh_section_"],
 };
 
 function sanitizeTocLabel(value: string): string {
@@ -184,6 +195,10 @@ function resolveSectionId(value: string): PremiumSectionId | null {
 
 const SECTION_LABEL_TO_ID: Array<{ keyword: string; id: PremiumSectionId }> = [
   { keyword: "현재상태한눈에보기", id: "overview" },
+  { keyword: "관련바이오표적및핵심영역", id: "target-axis" },
+  { keyword: "현재상황해석근거와의미", id: "evidence" },
+  { keyword: "통합의학상담시질문내용", id: "consultation" },
+  { keyword: "근거자료", id: "references" },
   { keyword: "핵심표적및관리축", id: "target-axis" },
   { keyword: "근거및연구요약", id: "evidence" },
   { keyword: "실행가이드", id: "action-guide" },
@@ -234,6 +249,8 @@ function sectionVisible(
       return hasSectionPayload(model.sections.fifthSection);
     case "warnings":
       return hasSectionPayload(model.sections.sixthSection);
+    case "references":
+      return hasSectionPayload(model.sections.seventhSection);
     case "closing":
       return model.closingMessage.trim().length > 0;
     default:
@@ -321,6 +338,7 @@ function buildPremiumTocItems(
 
   const visibleIds = new Set(visibleSections.map((section) => section.id));
   const usedIds = new Set<PremiumSectionId>();
+
   const mapped = candidates
     .map((candidate, index) => {
       const candidateIdFromRef = candidate.sectionRef
@@ -340,7 +358,7 @@ function buildPremiumTocItems(
       return {
         id,
         step: section.step,
-        label: candidate.label ?? section.label,
+        label: section.label,
       };
     })
     .filter(Boolean) as Array<{ id: PremiumSectionId; label: string; step?: string }>;
@@ -457,6 +475,7 @@ function getPremiumReportSections(data: ReportJson): PremiumReportSections {
     fourthSection: resolveSectionData(data, "forth_section"),
     fifthSection: resolveSectionData(data, "fifth_section"),
     sixthSection: resolveSectionData(data, "sixth_section"),
+    seventhSection: resolveSectionData(data, "seventh_section"),
   };
 }
 
@@ -464,25 +483,48 @@ function isOverviewSummaryTitle(title: string | undefined): boolean {
   return OVERVIEW_SUMMARY_TITLE_ALIASES.includes((title ?? "").toLowerCase());
 }
 
-function getConsultationQuestions(section: ReportSection): string[] {
-  return [
-    ...(section.current_interaction_content
-      ? parseListItems(String(section.current_interaction_content))
-      : []),
-    ...(section.current_interaction
-      ? parseListItems(String(section.current_interaction))
-      : []),
-    ...(section.suggested_interaction_content
-      ? parseListItems(String(section.suggested_interaction_content))
-      : []),
-    ...(section.suggested_interaction
-      ? parseListItems(String(section.suggested_interaction))
-      : []),
-    ...(section.things_to_ask ? parseListItems(String(section.things_to_ask)) : []),
-    ...parseSectionBlocksFlexible(section).flatMap((block) =>
-      parseListItems(block.content),
-    ),
-  ].filter((question) => question.length > 0);
+function normalizeDedupeKey(text: string): string {
+  return text.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function dedupeQuestionLines(lines: string[]): string[] {
+  const seen = new Set<string>();
+  return lines.filter((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return false;
+    const key = normalizeDedupeKey(trimmed);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** 상담 질문: things_to_ask 전용 (다른 DB 필드와 합치지 않음 → 중복 방지) */
+function getThingsToAskQuestions(section: ReportSection): string[] {
+  const raw = pickFirstNonEmptyString(section, [
+    "things_to_ask",
+    "fifth_section_things_to_ask",
+  ]);
+  if (!raw) return [];
+  return dedupeQuestionLines(parseListItems(raw));
+}
+
+function textsAreEquivalent(a: string, b: string): boolean {
+  return normalizeDedupeKey(a) === normalizeDedupeKey(b);
+}
+
+function filterConsultationExtraBlocks(
+  blocks: Array<{ title: string; content: string }>,
+  alreadyShown: string[],
+): Array<{ title: string; content: string }> {
+  const norms = alreadyShown
+    .map((t) => normalizeDedupeKey(t))
+    .filter((t) => t.length > 0);
+  return blocks.filter(({ content }) => {
+    const c = normalizeDedupeKey(content);
+    if (!c) return false;
+    return !norms.some((n) => c === n || (c.length > 24 && n.length > 24 && (c.includes(n) || n.includes(c))));
+  });
 }
 
 function pickFirstNonEmptyString(
@@ -529,12 +571,399 @@ function parseSectionBlocksFlexible(
   ];
 }
 
+function parseBracketedSubsections(content: string): Array<{ title: string; content: string }> {
+  const raw = content.trim();
+  if (!raw) return [];
+
+  const matches = [...raw.matchAll(/\[([^\]]+)\]/g)];
+  if (!matches.length) return [];
+
+  const blocks: Array<{ title: string; content: string }> = [];
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i];
+    const next = matches[i + 1];
+    const title = stripAngleBrackets((match[1] ?? "").trim());
+    const start = (match.index ?? 0) + match[0].length;
+    const end = next?.index ?? raw.length;
+    const text = raw
+      .slice(start, end)
+      .trim()
+      .replace(/^[:\-\s]+/, "");
+    if (!title || !text) continue;
+    blocks.push({ title, content: text });
+  }
+  return blocks;
+}
+
+function parseAvoidChecklistItems(content: string): string[] {
+  const normalizedContent = content.replace(/\\n/g, "\n");
+  const lines = normalizedContent
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return [];
+
+  const numberedItemStartRe = /^(\d+)\s*[\.\)]\s*(.+)$/;
+  const firstItemStartIndex = lines.findIndex((line) =>
+    numberedItemStartRe.test(line),
+  );
+  const targetLines =
+    firstItemStartIndex >= 0 ? lines.slice(firstItemStartIndex) : lines;
+
+  const items: string[] = [];
+  let current = "";
+
+  for (const line of targetLines) {
+    const matched = line.match(numberedItemStartRe);
+    if (matched) {
+      if (current) items.push(current.trim());
+      current = matched[2]?.trim() ?? "";
+      continue;
+    }
+
+    if (current) {
+      current = `${current}\n${line}`;
+    } else {
+      current = line;
+    }
+  }
+
+  if (current) items.push(current.trim());
+
+  const normalizedSeen = new Set<string>();
+  const deduped = items.filter((item) => {
+    const normalized = item.replace(/\s+/g, " ").trim();
+    if (!normalized || normalizedSeen.has(normalized)) return false;
+    normalizedSeen.add(normalized);
+    return true;
+  });
+
+  if (deduped.length > 0) return deduped.slice(0, 3);
+  return parseListItems(normalizedContent).slice(0, 3);
+}
+
+function extractUrls(content: string): string[] {
+  const matches = content.match(/https?:\/\/[^\s<>"')\]]+/g) ?? [];
+  return [...new Set(matches)];
+}
+
+type ReferenceEntry = {
+  label: string;
+  href: string;
+  paper_title?: string;
+  description?: string;
+  rationale?: string;
+  study_type?: string;
+};
+
+function safeReferenceHostname(href: string): string {
+  try {
+    return new URL(href).hostname.replace(/^www\./, "");
+  } catch {
+    return href;
+  }
+}
+
+function sanitizeReferenceLabel(label: string, href: string): string {
+  const t = label.trim();
+  if (!t) return href;
+  if (/url\s*\(\s*제공된\s*링크\s*\)/i.test(t)) return href;
+  if (/^제공된\s*링크$/i.test(t)) return href;
+  const stripped = t.replace(/^\s*url\s*\(\s*제공된\s*링크\s*\)\s*:?\s*/i, "").trim();
+  if (!stripped) return href;
+  if (/url\s*\(\s*제공된\s*링크\s*\)/i.test(stripped)) return href;
+  return stripped;
+}
+
+function sanitizeReferenceDescription(desc: string): string | undefined {
+  let t = desc.trim();
+  if (!t) return undefined;
+  t = t.replace(/^url\s*\(\s*제공된\s*링크\s*\)\s*:?\s*/i, "").trim();
+  if (!t || /^url\s*\(\s*제공된\s*링크\s*\)/i.test(t)) return undefined;
+  return t;
+}
+
+/** 본문 끝에 붙은 '-Study_type: …' / 'study_type: …'을 분리 (DB 한 필드로 올 때) */
+function splitRationaleAndEmbeddedStudyType(
+  rationale: string,
+  existingStudyType?: string,
+): { rationale: string; study_type?: string } {
+  const existing = existingStudyType?.trim();
+  if (existing) {
+    return { rationale: rationale.trim() };
+  }
+  const t = rationale.trim();
+  const patterns: RegExp[] = [
+    /(?:\n|\r\n)\s*[-–—]?\s*Study_type\s*[:：]\s*(.+)$/is,
+    /\s+[-–—]?\s*Study_type\s*[:：]\s*(.+)$/i,
+    /(?:\n|\r\n)\s*study_type\s*[:：]\s*(.+)$/is,
+    /\s+study_type\s*[:：]\s*(.+)$/i,
+  ];
+  for (const re of patterns) {
+    const m = t.match(re);
+    if (m?.[1]) {
+      const studyType = m[1].trim();
+      const head = t.slice(0, m.index).trim();
+      if (head && studyType) {
+        return { rationale: head, study_type: studyType };
+      }
+    }
+  }
+  return { rationale: t };
+}
+
+function finalizeReferenceEntry(entry: ReferenceEntry): ReferenceEntry {
+  const label = sanitizeReferenceLabel(entry.label, entry.href);
+  const description = entry.description
+    ? sanitizeReferenceDescription(entry.description)
+    : undefined;
+
+  let rationale = entry.rationale?.trim();
+  let study_type = entry.study_type?.trim();
+
+  if (rationale) {
+    const split = splitRationaleAndEmbeddedStudyType(rationale, study_type);
+    rationale = split.rationale;
+    if (!study_type && split.study_type) {
+      study_type = split.study_type;
+    }
+  }
+
+  const { paper_title: rawPaperTitle, ...restEntry } = entry;
+  const paper_title = rawPaperTitle?.trim();
+
+  return {
+    ...restEntry,
+    label,
+    ...(description ? { description } : {}),
+    ...(rationale ? { rationale } : {}),
+    ...(study_type ? { study_type } : {}),
+    ...(paper_title ? { paper_title } : {}),
+  };
+}
+
+function normalizeReferenceObject(o: Record<string, unknown>): ReferenceEntry | null {
+  const href = String(o.url ?? o.href ?? o.link ?? "").trim();
+  if (!/^https?:\/\//i.test(href)) return null;
+  const rawLabel = String(o.title ?? o.label ?? o.name ?? o.source ?? "").trim();
+  const explicitPaperTitle = String(
+    o.paper_title ??
+      o.article_title ??
+      o.publication_title ??
+      o.paper_name ??
+      o.journal_article_title ??
+      ""
+  ).trim();
+  const inferredPaperTitle =
+    !explicitPaperTitle &&
+    rawLabel &&
+    !/^https?:\/\//i.test(rawLabel) &&
+    rawLabel.length > 1
+      ? rawLabel
+      : "";
+  const paper_title = explicitPaperTitle || inferredPaperTitle || undefined;
+  const rawDescription = String(
+    o.description ?? o.summary ?? o.abstract ?? o.what ?? "",
+  ).trim();
+  const rationale = String(
+    o.rationale ?? o.why ?? o.selection_reason ?? o.reason ?? o.note ?? "",
+  ).trim();
+  const study_type = String(o.study_type ?? o.studyType ?? "").trim();
+  return finalizeReferenceEntry({
+    label: rawLabel || safeReferenceHostname(href),
+    href,
+    ...(paper_title ? { paper_title } : {}),
+    ...(rawDescription ? { description: rawDescription } : {}),
+    ...(rationale ? { rationale } : {}),
+    ...(study_type ? { study_type } : {}),
+  });
+}
+
+function dedupeReferenceEntries(items: ReferenceEntry[]): ReferenceEntry[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.href)) return false;
+    seen.add(item.href);
+    return true;
+  });
+}
+
+function tryParseReferencesJsonArray(section: ReportSection): ReferenceEntry[] | null {
+  const keys = [
+    "references_json",
+    "references_structured",
+    "reference_items",
+    "seventh_section_references_json",
+  ];
+  for (const key of keys) {
+    const raw = section[key];
+    if (raw == null) continue;
+    let arr: unknown;
+    if (typeof raw === "string") {
+      const t = raw.trim();
+      if (!t.startsWith("[") && !t.startsWith("{")) continue;
+      try {
+        arr = JSON.parse(t);
+      } catch {
+        continue;
+      }
+    } else if (Array.isArray(raw)) {
+      arr = raw;
+    } else {
+      continue;
+    }
+    const list = Array.isArray(arr) ? arr : (arr as { references?: unknown }).references;
+    if (!Array.isArray(list)) continue;
+    const out: ReferenceEntry[] = [];
+    for (const item of list) {
+      if (item && typeof item === "object") {
+        const n = normalizeReferenceObject(item as Record<string, unknown>);
+        if (n) out.push(n);
+      }
+    }
+    if (out.length) return dedupeReferenceEntries(out);
+  }
+  return null;
+}
+
+function parseReferencesFromPlainBlob(text: string): ReferenceEntry[] {
+  const normalized = text.replace(/\\n/g, "\n").trim();
+  if (!normalized) return [];
+
+  if (normalized.startsWith("[") || normalized.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(normalized) as unknown;
+      const list = Array.isArray(parsed)
+        ? parsed
+        : parsed &&
+            typeof parsed === "object" &&
+            Array.isArray((parsed as { references?: unknown }).references)
+          ? (parsed as { references: unknown[] }).references
+          : null;
+      if (Array.isArray(list)) {
+        const out: ReferenceEntry[] = [];
+        for (const item of list) {
+          if (item && typeof item === "object") {
+            const n = normalizeReferenceObject(item as Record<string, unknown>);
+            if (n) out.push(n);
+          }
+        }
+        if (out.length) return dedupeReferenceEntries(out);
+      }
+    } catch {
+      // plain text below
+    }
+  }
+
+  const paragraphs = normalized.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  const byPara: ReferenceEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const para of paragraphs) {
+    const urls = extractUrls(para);
+    if (!urls.length) continue;
+    const href = urls[0];
+    if (seen.has(href)) continue;
+    seen.add(href);
+
+    const lines = para.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    const nonUrlLines = lines.filter((l) => extractUrls(l).length === 0);
+    const urlLine = lines.find((l) => l.includes(href));
+    let label = "";
+    if (urlLine) {
+      label = urlLine
+        .slice(0, urlLine.indexOf(href))
+        .replace(/^[\d\.\)\s\-•]+/, "")
+        .replace(/[\s\-•]+$/, "")
+        .trim();
+    }
+    if (!label && nonUrlLines.length > 0) {
+      label = nonUrlLines[0] ?? "";
+    }
+    if (!label || label.length < 2) {
+      label = safeReferenceHostname(href);
+    }
+
+    let rationale: string | undefined;
+    if (nonUrlLines.length > 1) {
+      rationale = nonUrlLines.slice(1).join("\n").trim();
+    } else if (nonUrlLines.length === 1 && urlLine && !nonUrlLines[0].includes(href)) {
+      rationale = nonUrlLines[0];
+    } else {
+      const idx = lines.findIndex((l) => l.includes(href));
+      const afterUrl = lines
+        .slice(idx + 1)
+        .filter((l) => extractUrls(l).length === 0)
+        .join("\n")
+        .trim();
+      if (afterUrl) rationale = afterUrl;
+    }
+
+    byPara.push({
+      label,
+      href,
+      ...(rationale ? { rationale } : {}),
+    });
+  }
+
+  if (byPara.length) return dedupeReferenceEntries(byPara);
+
+  const linear: ReferenceEntry[] = [];
+  seen.clear();
+  for (const line of normalized.split("\n")) {
+    const urls = extractUrls(line);
+    for (const href of urls) {
+      if (seen.has(href)) continue;
+      seen.add(href);
+      let label = line
+        .replace(href, "")
+        .replace(/^[\d\.\)\s\-•]+|[\s\-•]+$/g, "")
+        .trim();
+      if (label.length < 2) label = safeReferenceHostname(href);
+      linear.push({ label, href });
+    }
+  }
+  return dedupeReferenceEntries(linear);
+}
+
+function buildReferenceEntries(
+  section: ReportSection,
+  referencesText: string,
+): ReferenceEntry[] {
+  const structured = tryParseReferencesJsonArray(section);
+  if (structured?.length) return structured;
+  if (referencesText.trim()) {
+    return dedupeReferenceEntries(
+      parseReferencesFromPlainBlob(referencesText).map(finalizeReferenceEntry),
+    );
+  }
+  return [];
+}
+
 function resolveSectionHeading(
   section: ReportSection | undefined,
   fallback: string,
 ): string {
   const heading = pickFirstNonEmptyString(section, ["title", "section_title"]);
   return stripAngleBrackets(heading || fallback);
+}
+
+function mergeFixedAndDbSectionTitle(
+  fixedTitle: string,
+  dbTitle?: string,
+): string {
+  if (!dbTitle) return fixedTitle;
+  const normalizedFixed = sanitizeTocLabel(fixedTitle)
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  const normalizedDb = sanitizeTocLabel(dbTitle)
+    .toLowerCase()
+    .replace(/\s+/g, "");
+  if (!normalizedDb || normalizedFixed === normalizedDb) {
+    return fixedTitle;
+  }
+  return `${fixedTitle} - ${dbTitle}`;
 }
 
 function resolveTimelineText(
@@ -755,12 +1184,16 @@ function ReportOpeningSection({ model }: { model: PremiumReportModel }) {
 /** 1. 현재 상태 한눈에 보기 */
 function OverviewSection({ model }: { model: PremiumReportModel }) {
   if (model.overviewPanels.length === 0) return null;
+  const overviewHeading = resolveSectionHeading(
+    model.sections.firstSection,
+    "현재 상태 한눈에 보기",
+  );
 
   return (
     <ReportAnchorSection id="overview">
       <SectionCard
         step="1"
-        title="현재 상태 한눈에 보기"
+        title={mergeFixedAndDbSectionTitle("현재 상태 한눈에 보기", overviewHeading)}
         description="혈액·생활습관·전체 요약을 종합한 개인화 해석입니다."
       >
         <div className="space-y-4">
@@ -779,32 +1212,51 @@ function OverviewSection({ model }: { model: PremiumReportModel }) {
   );
 }
 
-/** 2. 핵심 표적 및 관리 축 */
+/** 2. 관련 바이오 표적 및 핵심 영역 */
 function TargetAxisSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.secondSection;
   if (!section) return null;
 
-  const axis = pickFirstNonEmptyString(section, [
+  const primaryAxis = pickFirstNonEmptyString(section, [
+    "major_targets_axis",
     "major_axis",
+    "major_targets_axis_content",
     "major_targets_axis_title",
     "title",
   ]);
-  const explanation = pickFirstNonEmptyString(section, [
-    "targets_axis_explanation",
-    "major_targets_axis",
-    "practical_advices",
+  const secondaryAxis = pickFirstNonEmptyString(section, [
+    "second_major_target_axis",
+    "second_major_target_axis_content",
+    "second_major_axis",
   ]);
+  const practicalAdvice = pickFirstNonEmptyString(section, [
+    "practical_advices",
+    "practical_advices_content",
+    "practical_advice",
+    "targets_axis_explanation",
+    "targets_axis_explanation_content",
+  ]);
+  const normalizedPrimaryAxis = stripAngleBrackets(primaryAxis || "종합");
+  const normalizedSecondaryAxis = secondaryAxis
+    ? stripAngleBrackets(secondaryAxis)
+    : undefined;
+  const normalizedPracticalAdvice =
+    practicalAdvice || normalizedSecondaryAxis || normalizedPrimaryAxis;
 
   return (
     <ReportAnchorSection id="target-axis">
       <SectionCard
         step="2"
-        title={resolveSectionHeading(section, "핵심 표적 및 관리 축")}
+        title={mergeFixedAndDbSectionTitle(
+          "관련 바이오 표적 및 핵심 영역",
+          resolveSectionHeading(section, "관련 바이오 표적 및 핵심 영역"),
+        )}
         description="우선적으로 살펴볼 바이오마커와 생활습관 포인트입니다."
       >
         <PriorityTargetCard
-          axis={stripAngleBrackets(axis || "종합")}
-          explanation={explanation}
+          primaryAxis={normalizedPrimaryAxis}
+          secondaryAxis={normalizedSecondaryAxis}
+          practicalAdvice={normalizedPracticalAdvice}
           symptoms={[]}
           targets={[]}
         />
@@ -813,12 +1265,41 @@ function TargetAxisSection({ model }: { model: PremiumReportModel }) {
   );
 }
 
-/** 3. 근거 및 연구 요약 */
+/** 3. 현재 상황 해석 근거와 의미 */
 function EvidenceSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.thirdSection;
   if (!section) return null;
 
+  const mechanisticPaper = pickFirstNonEmptyString(section, [
+    "mechanistic_paper",
+    "top_paper_research_content",
+  ]);
+  const clinicalPaper = pickFirstNonEmptyString(section, [
+    "clinical_paper",
+    "relation_content",
+  ]);
+  const customizedBlog = pickFirstNonEmptyString(section, [
+    "customized_blog",
+    "top_blog_content",
+  ]);
+  const dedupeEvidenceText = (
+    value: string,
+    seen: Set<string>,
+  ): string => {
+    const normalized = value.trim().replace(/\s+/g, " ");
+    if (!normalized) return "";
+    if (seen.has(normalized)) return "";
+    seen.add(normalized);
+    return value;
+  };
+  const usedEvidence = new Set<string>();
+  const mechanisticContent = dedupeEvidenceText(mechanisticPaper, usedEvidence);
+  const clinicalContent = dedupeEvidenceText(clinicalPaper, usedEvidence);
+  const blogContent = dedupeEvidenceText(customizedBlog, usedEvidence);
   const hasBridgeData =
+    mechanisticContent ||
+    clinicalContent ||
+    blogContent ||
     section.relation_between_targets_status != null ||
     section.top_paper_research != null;
 
@@ -826,32 +1307,46 @@ function EvidenceSection({ model }: { model: PremiumReportModel }) {
     <ReportAnchorSection id="evidence">
       <SectionCard
         step="3"
-        title={resolveSectionHeading(section, "근거 및 연구 요약")}
+        title={mergeFixedAndDbSectionTitle(
+          "현재 상황 해석 근거와 의미",
+          resolveSectionHeading(section, "현재 상황 해석 근거와 의미"),
+        )}
         description="표적과 생활습관 연결 근거, 관련 논문·리소스 요약입니다."
       >
         {hasBridgeData ? (
           <EvidenceBridge
-            relationTitle={stripAngleBrackets(
-              (section.relation_between_targets_status as string) ?? "표적-상태 연결",
-            )}
-            relationContent={(section.relation_content as string) ?? ""}
-            paperSummaryTitle={stripAngleBrackets(
-              (section.top_paper_research as string) ?? "관련 연구",
-            )}
-            paperSummary={(section.top_paper_research_content as string) ?? ""}
-            relevanceTitle="맞춤 해석"
-            relevanceContent={
-              (section.relation_content as string) ??
-              (section.top_paper_research_content as string) ??
-              ""
+            relationTitle={
+              stripAngleBrackets(
+                (section.relation_between_targets_status as string) ??
+                  "표적-축 기전설명 논문 소개",
+              ).startsWith("1.")
+                ? stripAngleBrackets(
+                    (section.relation_between_targets_status as string) ??
+                      "표적-축 기전설명 논문 소개",
+                  )
+                : `1. ${stripAngleBrackets(
+                    (section.relation_between_targets_status as string) ??
+                      "표적-축 기전설명 논문 소개",
+                  )}`
             }
-            extraEvidenceTitle={section.top_blog ? String(section.top_blog) : undefined}
-            extraEvidenceContent={
-              (section.top_blog_content as string) ??
-              (section.top_blog
-                ? ((section as Record<string, unknown>)[`top_blog_content`] as string)
-                : undefined)
+            relationContent={mechanisticContent}
+            paperSummaryTitle={
+              stripAngleBrackets(
+                (section.top_paper_research as string) ?? "관련 임상 논문 소개",
+              ).startsWith("2.")
+                ? stripAngleBrackets(
+                    (section.top_paper_research as string) ?? "관련 임상 논문 소개",
+                  )
+                : `2. ${stripAngleBrackets(
+                    (section.top_paper_research as string) ?? "관련 임상 논문 소개",
+                  )}`
             }
+            paperSummary={clinicalContent}
+            relevanceTitle="3. 개인맞춤 블로그 섹션"
+            relevanceContent={blogContent}
+            relevanceBlocks={parseBracketedSubsections(blogContent)}
+            extraEvidenceTitle={undefined}
+            extraEvidenceContent={undefined}
           />
         ) : (
           <div className="space-y-4">
@@ -875,43 +1370,121 @@ function ActionGuideSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.fourthSection;
   if (!section) return null;
 
-  const goal = resolveTimelineText(section, "goal_action", "목표");
-  const firstWeek = resolveTimelineText(section, "goal_7d_action", "7일 실행");
-  const eightWeek = resolveTimelineText(section, "goal_8w_action", "8주 실행");
+  const firstWeek = resolveTimelineText(section, "goal_7d_action", "4-1. 7일 실행");
+  const eightWeek = resolveTimelineText(section, "goal_8w_action", "4-2. 8주 실행");
+  const avoidTitleRaw = pickFirstNonEmptyString(section, [
+    "must_avoid_title",
+    "things_to_avoid_title",
+    "avoid_3_title",
+    "avoidance_title",
+    "avoid_title",
+  ]);
+  const avoidContent = pickFirstNonEmptyString(section, [
+    "forth_section_things_3_must_avoid",
+    "things_3_must_avoid",
+    "things_3_must_avoid_content",
+    "must_avoid_3",
+    "must_avoid",
+    "things_to_avoid",
+    "avoid_3_items",
+    "avoid_3",
+    "avoidance",
+    "goal_avoid",
+    "avoid_list",
+    "donts",
+    "warnings",
+    "cautions",
+  ]);
+  const avoidChecklist = parseAvoidChecklistItems(avoidContent);
+  const avoidTitle = (() => {
+    const title = stripAngleBrackets(avoidTitleRaw || "4-3. 꼭 피해야 할 3가지");
+    return /^\s*4-3[\.\s]/.test(title) ? title : `4-3. ${title}`;
+  })();
 
   return (
     <ReportAnchorSection id="action-guide">
       <SectionCard
         step="4"
-        title={resolveSectionHeading(section, "실행 가이드")}
-        description="목표와 7일·8주 단위 실행 계획입니다."
+        title={mergeFixedAndDbSectionTitle(
+          "실행 가이드",
+          resolveSectionHeading(section, "실행 가이드"),
+        )}
+        description="7일·8주 실행과 반드시 피해야 할 행동을 정리했습니다."
       >
         <ActionTimeline
-          goalTitle={goal.title}
-          goalContent={goal.content}
           firstWeekTitle={firstWeek.title}
           firstWeekContent={firstWeek.content}
           eightWeekTitle={eightWeek.title}
           eightWeekContent={eightWeek.content}
+          avoidTitle={avoidTitle}
+          avoidContent={
+            avoidContent || "무리한 변경, 과도한 제한, 중단/재개 반복은 피하세요."
+          }
+          avoidChecklist={avoidChecklist}
         />
       </SectionCard>
     </ReportAnchorSection>
   );
 }
 
-/** 5. 상담 시 참고 */
+/** 5. 통합의학 상담 시 질문 내용 */
 function ConsultationSection({ model }: { model: PremiumReportModel }) {
   const section = model.sections.fifthSection;
   if (!section) return null;
 
-  const questions = getConsultationQuestions(section);
-  if (questions.length > 0) {
+  const synergisticSuggestion = pickFirstNonEmptyString(section, [
+    "synergistic_suggestion",
+  ]);
+  const currentInteraction = pickFirstNonEmptyString(section, [
+    "current_interaction_content",
+    "current_interaction",
+  ]);
+  const suggestedInteraction = pickFirstNonEmptyString(section, [
+    "suggested_interaction_content",
+    "suggested_interaction",
+  ]);
+  const evidenceSources = pickFirstNonEmptyString(section, ["evidence_sources"]);
+  const questions = getThingsToAskQuestions(section);
+  const askIntro = pickFirstNonEmptyString(section, [
+    "things_to_ask_intro",
+    "consultation_intro",
+  ]);
+
+  const suggestedDiffersFromEvidence =
+    suggestedInteraction &&
+    evidenceSources &&
+    !textsAreEquivalent(suggestedInteraction, evidenceSources);
+
+  const shownForExtraBlocks = [
+    synergisticSuggestion,
+    currentInteraction,
+    suggestedInteraction,
+    evidenceSources,
+    ...(questions.length ? [pickFirstNonEmptyString(section, ["things_to_ask", "fifth_section_things_to_ask"]) ?? ""] : []),
+  ].filter(Boolean) as string[];
+
+  const extraBlocks = filterConsultationExtraBlocks(
+    parseSectionBlocksFlexible(section),
+    shownForExtraBlocks,
+  );
+
+  if (
+    questions.length > 0 &&
+    !synergisticSuggestion &&
+    !currentInteraction &&
+    !suggestedInteraction &&
+    !evidenceSources &&
+    extraBlocks.length === 0
+  ) {
     return (
       <ReportAnchorSection id="consultation">
         <DoctorQuestionBox
           step="5"
-          title={resolveSectionHeading(section, "상담 시 참고")}
-          intro={(section.things_to_ask as string) ?? undefined}
+          title={mergeFixedAndDbSectionTitle(
+            "통합의학 상담 시 질문 내용",
+            resolveSectionHeading(section, "통합의학 상담 시 질문 내용"),
+          )}
+          intro={askIntro || undefined}
           questions={questions}
         />
       </ReportAnchorSection>
@@ -922,11 +1495,63 @@ function ConsultationSection({ model }: { model: PremiumReportModel }) {
     <ReportAnchorSection id="consultation">
       <SectionCard
         step="5"
-        title={resolveSectionHeading(section, "상담 시 참고")}
+        title={mergeFixedAndDbSectionTitle(
+          "통합의학 상담 시 질문 내용",
+          resolveSectionHeading(section, "통합의학 상담 시 질문 내용"),
+        )}
         description="담당 선생님과 상의할 때 참고하실 수 있는 내용입니다."
       >
         <div className="space-y-4">
-          {parseSectionBlocksFlexible(section).map((block, index) => (
+          {synergisticSuggestion ? (
+            <InsightPanel
+              title="5-1. 시너지 제안"
+              content={synergisticSuggestion}
+              variant="default"
+            />
+          ) : null}
+          {currentInteraction ? (
+            <InsightPanel
+              title="5-2. 현재 상호작용 체크"
+              content={currentInteraction}
+              variant="default"
+            />
+          ) : null}
+          {suggestedDiffersFromEvidence ? (
+            <InsightPanel
+              title="5-3. 추천 상호작용"
+              content={suggestedInteraction}
+              variant="default"
+            />
+          ) : null}
+          {evidenceSources ? (
+            <InsightPanel
+              title={
+                suggestedDiffersFromEvidence
+                  ? "5-4. 근거 출처 요약"
+                  : suggestedInteraction &&
+                      textsAreEquivalent(suggestedInteraction, evidenceSources)
+                    ? "5-3. 근거·추천 상호작용"
+                    : "5-3. 근거 출처 요약"
+              }
+              content={evidenceSources}
+              variant="default"
+            />
+          ) : suggestedInteraction && !evidenceSources ? (
+            <InsightPanel
+              title="5-3. 추천 상호작용"
+              content={suggestedInteraction}
+              variant="default"
+            />
+          ) : null}
+          {questions.length > 0 ? (
+            <DoctorQuestionBox
+              step={undefined}
+              title="5-5. 상담 시 물어볼 질문"
+              intro={askIntro || undefined}
+              questions={questions}
+            />
+          ) : null}
+          {extraBlocks.map((block, index) => (
             <InsightPanel
               key={index}
               title={stripAngleBrackets(block.title)}
@@ -953,9 +1578,107 @@ function WarningSection({ model }: { model: PremiumReportModel }) {
     <ReportAnchorSection id="warnings">
       <WarningPanel
         step="6"
-        title={resolveSectionHeading(section, "주의사항")}
+        title={mergeFixedAndDbSectionTitle(
+          "주의사항",
+          resolveSectionHeading(section, "주의사항"),
+        )}
         items={warningItems}
       />
+    </ReportAnchorSection>
+  );
+}
+
+/** 7. 근거자료 */
+function ReferencesSection({ model }: { model: PremiumReportModel }) {
+  const section = model.sections.seventhSection;
+  if (!section) return null;
+
+  const referencesIntro = pickFirstNonEmptyString(section, [
+    "references_intro",
+    "reference_intro",
+    "seventh_section_intro",
+    "references_overview",
+    "references_purpose",
+    "seventh_section_purpose",
+    "references_about",
+  ]);
+  const selectionRationale = pickFirstNonEmptyString(section, [
+    "references_selection_rationale",
+    "reference_selection_rationale",
+    "why_these_references",
+    "references_why",
+    "seventh_section_selection_rationale",
+    "references_selection_note",
+    "reference_selection_note",
+  ]);
+  const referencesText = pickFirstNonEmptyString(section, [
+    "references",
+    "seventh_section_references",
+    "reference_list_text",
+  ]);
+
+  const referenceItems = buildReferenceEntries(section, referencesText);
+  const hasStructuredRefs = referenceItems.length > 0;
+  const hasIntroOrRationale = !!(referencesIntro || selectionRationale);
+  const hasLegacyText = !!referencesText.trim();
+
+  if (!hasStructuredRefs && !hasIntroOrRationale && !hasLegacyText) {
+    return (
+      <ReportAnchorSection id="references">
+        <SectionCard
+          step="7"
+          title={mergeFixedAndDbSectionTitle(
+            "근거자료",
+            resolveSectionHeading(section, "근거자료"),
+          )}
+          description="입력된 자료를 기준으로 핵심 근거를 정리했습니다."
+        >
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            현재 입력 정보 기준으로는 제한적으로 판단됩니다. 리포트 생성 시점의
+            구조화 데이터가 확장되면 이 영역에서 더 구체적인 근거 목록을 확인하실 수
+            있습니다.
+          </p>
+        </SectionCard>
+      </ReportAnchorSection>
+    );
+  }
+
+  return (
+    <ReportAnchorSection id="references">
+      <SectionCard
+        step="7"
+        title={mergeFixedAndDbSectionTitle(
+          "근거자료",
+          resolveSectionHeading(section, "근거자료"),
+        )}
+        description="참고자료의 요지와 선별 이유를 함께 확인할 수 있습니다."
+      >
+        <div className="space-y-4">
+          {referencesIntro ? (
+            <InsightPanel
+              title="참고자료 안내"
+              content={referencesIntro}
+              variant="default"
+            />
+          ) : null}
+          {selectionRationale ? (
+            <InsightPanel
+              title="참고자료 선별 기준"
+              content={selectionRationale}
+              variant="default"
+            />
+          ) : null}
+          {hasStructuredRefs ? (
+            <ReferenceList items={referenceItems} embedded />
+          ) : hasLegacyText ? (
+            <InsightPanel
+              title="근거·참고 요약"
+              content={referencesText}
+              variant="default"
+            />
+          ) : null}
+        </div>
+      </SectionCard>
     </ReportAnchorSection>
   );
 }
@@ -995,6 +1718,7 @@ export function PremiumReportRenderer({
       <ActionGuideSection model={model} />
       <ConsultationSection model={model} />
       <WarningSection model={model} />
+      <ReferencesSection model={model} />
       <ClosingSection model={model} />
       <ReportFooterMeta
         createdAt={model.createdAt}

@@ -26,7 +26,10 @@ import {
   type ReportJson,
   isHealthReportStructure,
 } from "~/features/users/dashboard/report-detail-utils";
-import { reportJsonToHtml } from "~/features/users/health/report-json-to-html";
+import {
+  REPORT_HTML_VERSION_MARKER,
+  reportJsonToHtml,
+} from "~/features/users/health/report-json-to-html";
 import { reportJsonToMdx } from "~/features/users/health/report-json-to-mdx";
 import {
   getHealthReportByRequestId,
@@ -44,6 +47,21 @@ export const meta: Route.MetaFunction = ({ data }) => {
     },
   ];
 };
+
+function hasLatestFixedSectionTitles(reportHtml: string | null | undefined): boolean {
+  if (!reportHtml || !reportHtml.trim()) return false;
+  const hasLatestVersionMarker = reportHtml.includes(REPORT_HTML_VERSION_MARKER);
+  if (!hasLatestVersionMarker) return false;
+  return (
+    reportHtml.includes("현재 상태 한눈에 보기") &&
+    reportHtml.includes("관련 바이오 표적 및 핵심 영역") &&
+    reportHtml.includes("현재 상황 해석 근거와 의미") &&
+    reportHtml.includes("실행 가이드") &&
+    reportHtml.includes("통합의학 상담 시 질문 내용") &&
+    reportHtml.includes("주의사항") &&
+    reportHtml.includes("근거자료")
+  );
+}
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -76,7 +94,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const needsHtml =
     statusAllowsHtml &&
     hasReportJson &&
-    (!report.report_html || String(report.report_html).trim() === "");
+    (!report.report_html ||
+      String(report.report_html).trim() === "" ||
+      !hasLatestFixedSectionTitles(report.report_html));
 
   if (needsHtml && reportJson) {
     try {
@@ -162,6 +182,24 @@ export default function DashboardHealthReportDetailPage({
     reportHtml,
     mdxCode,
   });
+  const hasRawReportJson =
+    !!reportJson &&
+    typeof reportJson === "object" &&
+    Object.keys(reportJson).length > 0;
+  const noContentReasons: string[] = [];
+  if (!reportContentAvailability.hasSavedHtml) {
+    noContentReasons.push("저장된 HTML 본문이 아직 생성되지 않았습니다.");
+  }
+  if (!reportContentAvailability.hasMdxCode) {
+    noContentReasons.push("MDX 변환 결과가 없어 프리미엄 본문 렌더링을 시도하지 못했습니다.");
+  }
+  if (!hasRawReportJson) {
+    noContentReasons.push("report_json 데이터가 비어 있어 본문 생성 기준을 충족하지 못했습니다.");
+  } else if (!reportContentAvailability.hasPremiumReportData) {
+    noContentReasons.push(
+      "report_json이 현재 보고서 구조 규칙과 맞지 않아 본문으로 해석되지 않았습니다.",
+    );
+  }
 
   /** PDF 다운로드 가능: (기존 pdf_url) 또는 (private 버킷의 pdf_path + pdf_status=pdf_ready) */
   const canDownloadPdf =
@@ -291,6 +329,23 @@ export default function DashboardHealthReportDetailPage({
               <p className="text-muted-foreground mt-1 text-sm">
                 잠시 후 다시 확인해 주세요.
               </p>
+              <div className="mt-5 max-w-2xl rounded-lg border border-amber-200/70 bg-amber-50/60 p-4 text-left dark:border-amber-900/50 dark:bg-amber-950/20">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                  현재 요청 상태: {request.status}
+                </p>
+                {request.current_step ? (
+                  <p className="mt-1 text-xs text-amber-700/90 dark:text-amber-300/80">
+                    current_step: {request.current_step}
+                  </p>
+                ) : null}
+                {noContentReasons.length > 0 ? (
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-900 dark:text-amber-200">
+                    {noContentReasons.map((reason, idx) => (
+                      <li key={idx}>{reason}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
         )}
