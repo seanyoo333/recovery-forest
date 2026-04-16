@@ -7,10 +7,7 @@ import { Button, buttonVariants } from "~/core/components/ui/button";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
 
-import {
-  getIngredientEvidenceBySlug,
-  getIngredientBySlug,
-} from "../queries";
+import { getIngredientBySlug, getIngredientEvidenceBySlug } from "../queries";
 
 export function meta({ data, params }: Route.MetaArgs) {
   const name = data?.ingredient?.display_name ?? params.slug;
@@ -19,7 +16,8 @@ export function meta({ data, params }: Route.MetaArgs) {
     {
       name: "description",
       content:
-        data?.ingredient?.tagline ?? `${name} 성분의 정보와 근거 자료를 확인하세요`,
+        data?.ingredient?.tagline ??
+        `${name} 성분의 정보와 근거 자료를 확인하세요`,
     },
   ];
 }
@@ -104,7 +102,9 @@ export default function IngredientOverviewLayout({
               {ingredient.tagline ?? "근거 기반 천연물질 정보"}
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2 md:justify-start">
-              <Badge variant="secondary">표적 {evidenceStats.targetCount}개</Badge>
+              <Badge variant="secondary">
+                표적 {evidenceStats.targetCount}개
+              </Badge>
               <Badge variant="secondary">
                 근거 항목 {evidenceStats.evidenceCount}개
               </Badge>
@@ -121,7 +121,9 @@ export default function IngredientOverviewLayout({
             asChild
             className="h-10 w-full px-10 md:h-14 md:w-auto md:text-lg"
           >
-            <Link to={`/community?keyword=${encodeURIComponent(ingredient.display_name)}`}>
+            <Link
+              to={`/community?keyword=${encodeURIComponent(ingredient.display_name)}`}
+            >
               커뮤니티 토론 보기
             </Link>
           </Button>
@@ -169,7 +171,18 @@ export default function IngredientOverviewLayout({
           }
           to={`/natural-ingredients/${ingredient.slug}/discussion`}
         >
-          토론
+          사용 경험
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            cn(
+              buttonVariants({ variant: "outline" }),
+              isActive && "bg-accent text-foreground",
+            )
+          }
+          to={`/natural-ingredients/${ingredient.slug}/purchase`}
+        >
+          구매가이드
         </NavLink>
       </div>
 

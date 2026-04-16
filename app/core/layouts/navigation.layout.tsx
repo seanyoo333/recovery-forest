@@ -1,7 +1,12 @@
 import type { Route } from "./+types/navigation.layout";
 
 import { Suspense } from "react";
-import { Await, Outlet, useOutletContext } from "react-router";
+import {
+  Await,
+  Outlet,
+  type ShouldRevalidateFunctionArgs,
+  useOutletContext,
+} from "react-router";
 
 import { FEATURES } from "~/core/config/features";
 import {
@@ -14,13 +19,20 @@ import Footer from "../components/footer";
 import { NavigationBar } from "../components/navigation-bar";
 import makeServerClient from "../lib/supa-client.server";
 
+const SKIP_ROOT_REVALIDATE_INTENTS = new Set([
+  "create-experience",
+  "update-experience",
+  "delete-experience",
+  "create-reply",
+  "delete-reply",
+]);
+
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
-  const userPromise = client.auth.getUser();
-
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  // Prevent duplicate Auth API hits in one loader execution.
+  const userResult = await client.auth.getUser();
+  const userPromise = Promise.resolve(userResult);
+  const user = userResult.data.user;
 
   if (!user) {
     return {
@@ -41,6 +53,25 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   return { userPromise, profile, notificationsCount, messagesCount };
 }
+
+export const shouldRevalidate = (args: ShouldRevalidateFunctionArgs) => {
+  const intent =
+    args.actionResult &&
+    typeof args.actionResult === "object" &&
+    "intent" in args.actionResult &&
+    typeof args.actionResult.intent === "string"
+      ? args.actionResult.intent
+      : null;
+
+  const isNaturalIngredientsAction =
+    args.formAction?.includes("/natural-ingredients/") ?? false;
+
+  if (intent && isNaturalIngredientsAction && SKIP_ROOT_REVALIDATE_INTENTS.has(intent)) {
+    return false;
+  }
+
+  return args.defaultShouldRevalidate;
+};
 
 export default function NavigationLayout({ loaderData }: Route.ComponentProps) {
   const { userPromise, profile, notificationsCount, messagesCount } =
@@ -75,6 +106,7 @@ export default function NavigationLayout({ loaderData }: Route.ComponentProps) {
             name: profile?.name || "Anonymous",
             username,
             avatar: profile?.avatar,
+            profileId: profile?.profile_id,
           }}
         />
       </div>

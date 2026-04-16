@@ -1316,6 +1316,143 @@ export type Database = {
           },
         ]
       }
+      ingredient_experience_replies: {
+        Row: {
+          created_at: string
+          experience_id: number
+          experience_reply_id: number
+          parent_id: number | null
+          profile_id: string
+          reply: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          experience_id: number
+          experience_reply_id?: never
+          parent_id?: number | null
+          profile_id: string
+          reply: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          experience_id?: number
+          experience_reply_id?: never
+          parent_id?: number | null
+          profile_id?: string
+          reply?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_experience_replies_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_experiences"
+            referencedColumns: ["experience_id"]
+          },
+          {
+            foreignKeyName: "ingredient_experience_replies_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_experience_replies"
+            referencedColumns: ["experience_reply_id"]
+          },
+          {
+            foreignKeyName: "ingredient_experience_replies_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "health_profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ingredient_experience_replies_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ingredient_experience_replies_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      ingredient_experiences: {
+        Row: {
+          content: string
+          created_at: string
+          duration_label: string | null
+          experience_id: number
+          form_factor: string | null
+          ingredient_id: string
+          profile_id: string
+          summary_label: string | null
+          updated_at: string
+          usage_goal: string | null
+          usage_goal_other: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          duration_label?: string | null
+          experience_id?: never
+          form_factor?: string | null
+          ingredient_id: string
+          profile_id: string
+          summary_label?: string | null
+          updated_at?: string
+          usage_goal?: string | null
+          usage_goal_other?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          duration_label?: string | null
+          experience_id?: never
+          form_factor?: string | null
+          ingredient_id?: string
+          profile_id?: string
+          summary_label?: string | null
+          updated_at?: string
+          usage_goal?: string | null
+          usage_goal_other?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_experiences_ingredient_id_natural_ingredients_id_fk"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "natural_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_experiences_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "health_profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ingredient_experiences_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "ingredient_experiences_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_view"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       ingredient_target_evidence: {
         Row: {
           created_at: string

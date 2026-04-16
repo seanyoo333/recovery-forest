@@ -168,6 +168,30 @@ export const handle = {
  * - Progress indicators for navigation
  */
 export const shouldRevalidate = (args: ShouldRevalidateFunctionArgs) => {
+  const intent =
+    args.actionResult &&
+    typeof args.actionResult === "object" &&
+    "intent" in args.actionResult &&
+    typeof args.actionResult.intent === "string"
+      ? args.actionResult.intent
+      : null;
+  const isNaturalIngredientsAction =
+    args.formAction?.includes("/natural-ingredients/") ?? false;
+
+  if (
+    intent &&
+    isNaturalIngredientsAction &&
+    [
+      "create-experience",
+      "update-experience",
+      "delete-experience",
+      "create-reply",
+      "delete-reply",
+    ].includes(intent)
+  ) {
+    return false;
+  }
+
   // 메시지 페이지에서는 데이터 재검증 비활성화 (성능 최적화)
   return !args.nextUrl.pathname.includes("messages");
 };

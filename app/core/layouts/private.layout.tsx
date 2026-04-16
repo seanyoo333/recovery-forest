@@ -1,8 +1,21 @@
 import type { Route } from "./+types/private.layout";
 
-import { Outlet, redirect, useOutletContext } from "react-router";
+import {
+  Outlet,
+  redirect,
+  type ShouldRevalidateFunctionArgs,
+  useOutletContext,
+} from "react-router";
 
 import makeServerClient from "../lib/supa-client.server";
+
+const SKIP_PRIVATE_REVALIDATE_INTENTS = new Set([
+  "create-experience",
+  "update-experience",
+  "delete-experience",
+  "create-reply",
+  "delete-reply",
+]);
 
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
@@ -22,6 +35,29 @@ export async function loader({ request }: Route.LoaderArgs) {
   // Return an empty object to avoid the "Cannot read properties of undefined" error
   return {};
 }
+
+export const shouldRevalidate = (args: ShouldRevalidateFunctionArgs) => {
+  const intent =
+    args.actionResult &&
+    typeof args.actionResult === "object" &&
+    "intent" in args.actionResult &&
+    typeof args.actionResult.intent === "string"
+      ? args.actionResult.intent
+      : null;
+
+  const isNaturalIngredientsAction =
+    args.formAction?.includes("/natural-ingredients/") ?? false;
+
+  if (
+    intent &&
+    isNaturalIngredientsAction &&
+    SKIP_PRIVATE_REVALIDATE_INTENTS.has(intent)
+  ) {
+    return false;
+  }
+
+  return args.defaultShouldRevalidate;
+};
 
 export default function PrivateLayout() {
   const outletContext = useOutletContext<{

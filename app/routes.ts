@@ -154,6 +154,10 @@ export default [
                 "/discussion",
                 "features/natural-ingredients/pages/ingredient-discussion-page.tsx",
               ),
+              route(
+                "/purchase",
+                "features/natural-ingredients/pages/ingredient-purchase-page.tsx",
+              ),
             ],
           ),
         ]),

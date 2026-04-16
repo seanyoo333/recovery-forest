@@ -6,6 +6,7 @@
  */
 import { sql, type SQL } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -27,6 +28,7 @@ import { authUid, authUsers, authenticatedRole } from "drizzle-orm/supabase";
 
 import { timestamps } from "~/core/db/helpers.server";
 import { products } from "~/features/products/schema";
+import { profiles } from "~/features/users/schema";
 
 /**
  * Health Habit Enums
@@ -354,6 +356,129 @@ export const naturalIngredients = pgTable(
         AND admin_role IN ('super_admin', 'content_admin')
         AND is_active = true
       )`,
+    }),
+  ],
+);
+
+/**
+ * Ingredient Experiences Table
+ *
+ * 천연물질 상세 페이지의 "사용 경험" 탭 전용 댓글형 데이터
+ * - 성분별 다건 작성 허용 (1인 제한 없음)
+ * - 공개 읽기 가능, 작성/수정/삭제는 작성자 본인만 가능
+ */
+export const ingredientExperiences = pgTable(
+  "ingredient_experiences",
+  {
+    experience_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    ingredient_id: uuid()
+      .references(() => naturalIngredients.id, { onDelete: "cascade" })
+      .notNull(),
+    profile_id: uuid()
+      .references(() => profiles.profile_id, { onDelete: "cascade" })
+      .notNull(),
+    content: text().notNull(),
+    usage_goal: text(),
+    usage_goal_other: text(),
+    duration_label: text(),
+    form_factor: text(),
+    summary_label: text(),
+    ...timestamps,
+  },
+  (table) => [
+    index("ingredient-experiences-ingredient-created-at-idx").on(
+      table.ingredient_id,
+      table.created_at,
+    ),
+    pgPolicy("ingredient-experiences-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("ingredient-experiences-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    pgPolicy("ingredient-experiences-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    pgPolicy("ingredient-experiences-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
+    }),
+  ],
+);
+
+/**
+ * Ingredient Experience Replies Table
+ *
+ * 사용 경험에 달리는 댓글
+ * - 공개 읽기 가능
+ * - 작성/수정/삭제는 작성자 본인만 가능
+ */
+export const ingredientExperienceReplies = pgTable(
+  "ingredient_experience_replies",
+  {
+    experience_reply_id: bigint({ mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    experience_id: bigint({ mode: "number" })
+      .references(() => ingredientExperiences.experience_id, {
+        onDelete: "cascade",
+      })
+      .notNull(),
+    parent_id: bigint({ mode: "number" }).references(
+      (): AnyPgColumn => ingredientExperienceReplies.experience_reply_id,
+      {
+        onDelete: "cascade",
+      },
+    ),
+    profile_id: uuid()
+      .references(() => profiles.profile_id, { onDelete: "cascade" })
+      .notNull(),
+    reply: text().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index("ingredient-experience-replies-experience-created-at-idx").on(
+      table.experience_id,
+      table.created_at,
+    ),
+    pgPolicy("ingredient-experience-replies-select-policy", {
+      for: "select",
+      to: ["public"],
+      as: "permissive",
+      using: sql`true`,
+    }),
+    pgPolicy("ingredient-experience-replies-insert-policy", {
+      for: "insert",
+      to: authenticatedRole,
+      as: "permissive",
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    pgPolicy("ingredient-experience-replies-update-policy", {
+      for: "update",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
+      withCheck: sql`${authUid} = ${table.profile_id}`,
+    }),
+    pgPolicy("ingredient-experience-replies-delete-policy", {
+      for: "delete",
+      to: authenticatedRole,
+      as: "permissive",
+      using: sql`${authUid} = ${table.profile_id}`,
     }),
   ],
 );
