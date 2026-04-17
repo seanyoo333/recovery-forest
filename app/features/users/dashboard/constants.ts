@@ -1,17 +1,11 @@
+import type { Category, GridOptionKind, TimeBlock } from "./types";
 import {
   AXIS_LABEL,
-  type MetaAxis,
   META_AXES,
+  type MetaAxis,
 } from "~/core/meta-axis";
 
-import type { Category, GridOptionKind, TimeBlock } from "./types";
-
-import {
-  type StandardBloodTestType,
-  standardBloodTestType,
-} from "./blood-test-metadata";
-
-export { AXIS_LABEL, type MetaAxis, META_AXES };
+export { AXIS_LABEL, META_AXES, type MetaAxis };
 
 /**
  * 카테고리별 허용 시간대 정의
@@ -68,7 +62,7 @@ export const DEFAULT_GRID_OPTIONS: Record<
 export const CATEGORY_SCORES: Record<Category, Record<string, number>> = {
   exercise: {
     __none__: 0,
-    저강도: 1,
+    저강도: 2,
     중강도: 2,
     고강도: 2,
     __template__: 3, // 최저 0, 최고 9
@@ -212,69 +206,162 @@ export const TARGET_TO_META_AXIS: Record<string, MetaAxis> = {
   igf1: "metabolic_stability",
   glut1: "metabolic_stability",
   aerobic_glycolysis: "metabolic_stability",
-  ppp: "metabolic_stability",
+  pppathway: "metabolic_stability",
   hexokinase2: "metabolic_stability",
   oxphos: "metabolic_stability",
   complex1: "metabolic_stability",
   pdh: "metabolic_stability",
   pdk: "metabolic_stability",
   ampk: "metabolic_stability",
+  ldha: "metabolic_stability",
+  lactate: "metabolic_stability",
+  acetyl_coa: "metabolic_stability",
+  mct1: "metabolic_stability",
+  mct4: "metabolic_stability",
+  g6pd: "metabolic_stability",
   mtor: "metabolic_stability",
   glutaminolysis: "metabolic_stability",
   glutamine_transport: "metabolic_stability",
   glutaminase: "metabolic_stability",
+  gls: "metabolic_stability",
+  asct2: "metabolic_stability",
   gdh_kgdh: "metabolic_stability",
+  autophagy_nucleoside_salvage: "metabolic_stability",
+  macropinocytosis: "metabolic_stability",
+  nucleoside_salvage: "metabolic_stability",
+  gln_oxphos: "metabolic_stability",
   srebp1: "metabolic_stability",
   srebp2: "metabolic_stability",
   acly: "metabolic_stability",
   fas: "metabolic_stability",
+  fasn: "metabolic_stability",
   mevalonate: "metabolic_stability",
+  hmgcr: "metabolic_stability",
   fao: "metabolic_stability",
+  cpt1: "metabolic_stability",
   ldlr: "metabolic_stability",
+  acss2: "metabolic_stability",
+  "acetate-srebp-1": "metabolic_stability",
+  "mevalonate-srebp-2": "metabolic_stability",
 
   // 면역 균형 (immune_balance)
-  nfkb: "immune_balance",
   il1: "immune_balance",
   il6: "immune_balance",
   cox: "immune_balance",
   pge2: "immune_balance",
+  tgfb: "immune_balance",
   tlr4: "immune_balance",
   tlr9: "immune_balance",
+  il10: "immune_balance",
+  ido: "immune_balance",
+  ido1: "immune_balance",
+  ifng: "immune_balance",
+  il2: "immune_balance",
+  ccr5: "immune_balance",
+  pd1: "immune_balance",
+  pdl1: "immune_balance",
+  ctla4: "immune_balance",
+  ox40: "immune_balance",
+  treg: "immune_balance",
+  mdsc: "immune_balance",
+  tams: "immune_balance",
+  m2_macrophage: "immune_balance",
+  sting: "immune_balance",
+  nk_cells: "immune_balance",
+  th1: "immune_balance",
+  th2: "immune_balance",
+  microbiome: "immune_balance",
+  gut_microbiome: "immune_balance",
+  acidic_tumor_microenvironment: "immune_balance",
+  cox2: "immune_balance",
+  arginase: "immune_balance",
+  complement_c4_function: "immune_balance",
+  neutrophil_function: "immune_balance",
 
   // 비정상 신호조절 (abnormal_signals)
   hedgehog: "abnormal_signals",
   wnt_beta_catenin: "abnormal_signals",
   notch: "abnormal_signals",
   stat3: "abnormal_signals",
+  nfkb: "abnormal_signals",
   ras: "abnormal_signals",
   akt: "abnormal_signals",
   cmyc: "abnormal_signals",
   cyclin_d1: "abnormal_signals",
   mir_34a: "abnormal_signals",
+  integrins: "abnormal_signals",
   estrogen_receptor: "abnormal_signals",
   egfr: "abnormal_signals",
   her2: "abnormal_signals",
+  jak2: "abnormal_signals",
+  pi3k: "abnormal_signals",
+  beta_catenin: "abnormal_signals",
+  sonic_hedgehog: "abnormal_signals",
+  bfgf: "abnormal_signals",
+  fgf: "abnormal_signals",
+  fgfr: "abnormal_signals",
+  emt: "abnormal_signals",
+  angiogenesis: "abnormal_signals",
+  progesterone_receptor: "abnormal_signals",
+  androgen_receptor: "abnormal_signals",
+  mmp2: "abnormal_signals",
+  mmp3: "abnormal_signals",
+  mmp9: "abnormal_signals",
+  vegf: "abnormal_signals",
+  pdgf: "abnormal_signals",
+  hif: "abnormal_signals",
 
   // 신경·스트레스 (neuro_stress)
-  // 현재 타겟 없음 (추후 추가 가능)
+  beta_adrenergic_receptor: "neuro_stress",
+  beta2_adrenergic_receptor: "neuro_stress",
+  epinephrine: "neuro_stress",
+  norepinephrine: "neuro_stress",
+  cortisol: "neuro_stress",
+  glucocorticoid_receptor: "neuro_stress",
+  hpa_axis: "neuro_stress",
+  autonomic_nervous_system: "neuro_stress",
+  sympathetic_tone: "neuro_stress",
+  parasympathetic_tone: "neuro_stress",
+  hrv: "neuro_stress",
+  circadian_rhythm: "neuro_stress",
+  melatonin: "neuro_stress",
 
   // 회복증진 (recovery)
-  integrins: "recovery",
-  macropinocytosis: "recovery",
-  autophagy_nucleoside_salvage: "recovery",
-  mmp2: "recovery",
-  mmp3: "recovery",
-  mmp9: "recovery",
-  vegf: "recovery",
-  pdgf: "recovery",
-  tgfb: "recovery",
-  hif: "recovery",
   ros: "recovery",
   glutathione: "recovery",
   caspases: "recovery",
   bcl2_bax: "recovery",
   fas_receptor: "recovery",
   caspase3: "recovery",
+  dnmt: "recovery",
+  dnmt1: "recovery",
+  dnmt3a: "recovery",
+  dnmt3b: "recovery",
+  tet: "recovery",
+  hdac: "recovery",
+  hats: "recovery",
+  histone_acetylation: "recovery",
+  dna_methylation: "recovery",
+  mitochondria: "recovery",
+  mitochondrial_function: "recovery",
+  redox: "recovery",
+  nrf2: "recovery",
+  thioredoxin: "recovery",
+  gpx: "recovery",
+  catalase: "recovery",
+  sod: "recovery",
+  nadph: "recovery",
+  oxidative_stress: "recovery",
+  cytochrome_c: "recovery",
+  bax: "recovery",
+  bad: "recovery",
+  bak: "recovery",
+  bclxl: "recovery",
+  apoptosis: "recovery",
+  caspase8: "recovery",
+  caspase9: "recovery",
+  p53: "recovery",
+  ascorbate_recycling: "recovery",
 } as const;
 
 /**
@@ -303,7 +390,7 @@ export const STUDY_TYPE_STRENGTH: Record<
  * 표준 혈액검사 항목 정의
  * 모든 standard_name은 소문자로 통일하여 관리
  */
-const STANDARD_BLOOD_TEST_TYPES_RAW = [
+export const STANDARD_BLOOD_TEST_TYPES = [
   // 일반 메트릭
   {
     standard_name: "lmr",
@@ -311,8 +398,6 @@ const STANDARD_BLOOD_TEST_TYPES_RAW = [
     reference_min: null,
     reference_max: null,
     clinical_significance: null,
-    is_derived_metric: true,
-    derived_formula: "Lymphocyte / Monocyte",
   },
   {
     standard_name: "nlr",
@@ -320,8 +405,6 @@ const STANDARD_BLOOD_TEST_TYPES_RAW = [
     reference_min: null,
     reference_max: null,
     clinical_significance: null,
-    is_derived_metric: true,
-    derived_formula: "Neutrophil / Lymphocyte",
   },
   {
     standard_name: "glucose",
@@ -657,10 +740,6 @@ const STANDARD_BLOOD_TEST_TYPES_RAW = [
     clinical_significance: "정상 범위: 1.5 ng/mL 이하",
   },
 ] as const;
-
-/** 표준 혈액검사 항목 (메타데이터 전체 구조로 정규화) */
-export const STANDARD_BLOOD_TEST_TYPES: StandardBloodTestType[] =
-  STANDARD_BLOOD_TEST_TYPES_RAW.map((row) => standardBloodTestType(row as any));
 
 /**
  * standard_name 정규화 함수 (소문자로 통일)

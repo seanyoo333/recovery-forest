@@ -1,9 +1,9 @@
 import {
   AXIS_DESCRIPTION,
   AXIS_LABEL,
-  isMetaAxis,
   META_AXES,
   type MetaAxis,
+  isMetaAxis,
 } from "~/core/meta-axis";
 
 export type NaturalTargetWithMappings = {
@@ -35,9 +35,10 @@ export type MetaAxisSection = {
  * `target_to_meta_axis` 매핑을 기준으로 표적을 5축 섹션으로 나눕니다.
  * 한 표적이 여러 축에 속하면 각 축 섹션에 모두 표시됩니다.
  */
-export function groupTargetsByMetaAxis(
-  targets: NaturalTargetWithMappings[],
-): { sections: MetaAxisSection[]; unassigned: TargetCardData[] } {
+export function groupTargetsByMetaAxis(targets: NaturalTargetWithMappings[]): {
+  sections: MetaAxisSection[];
+  unassigned: TargetCardData[];
+} {
   const byAxis = new Map<MetaAxis, TargetCardData[]>();
   for (const axis of META_AXES) {
     byAxis.set(axis, []);

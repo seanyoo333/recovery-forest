@@ -30,12 +30,13 @@ import { getLoggedInUserId } from "~/features/users/queries";
 
 import { HealthHabitsAreaChart } from "../components/health-habits-area-chart";
 import { NaturalTargetRadarChart } from "../components/natural-target-radar-chart";
+import { META_AXES } from "../constants";
 import { initializeDefaultGridOptions } from "../mutations";
 import {
   type BloodTestChartPoint,
   type BloodTestSummary,
-  type MedicalRecordTranscriptEntry,
   METRIC_DEFINITIONS,
+  type MedicalRecordTranscriptEntry,
   type PatientHealthProfile,
   getBloodTestOverview,
   getDailyGridLogs,
@@ -263,13 +264,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     const month30AvgAxisScores: Record<string, number> = {};
 
     if (week7AxisScoresList.length > 0) {
-      for (const axis of [
-        "metabolic_stability",
-        "immune_balance",
-        "abnormal_signals",
-        "neuro_stress",
-        "recovery",
-      ] as const) {
+      for (const axis of META_AXES) {
         const sum = week7AxisScoresList.reduce(
           (acc, scores) => acc + (scores[axis] || 0),
           0,
@@ -279,13 +274,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     }
 
     if (month30AxisScoresList.length > 0) {
-      for (const axis of [
-        "metabolic_stability",
-        "immune_balance",
-        "abnormal_signals",
-        "neuro_stress",
-        "recovery",
-      ] as const) {
+      for (const axis of META_AXES) {
         const sum = month30AxisScoresList.reduce(
           (acc, scores) => acc + (scores[axis] || 0),
           0,
@@ -296,13 +285,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     // 기준선 계산: 0.7 * week7Avg + 0.3 * month30Avg
     const baselineAxisScores: Record<string, number> = {};
-    for (const axis of [
-      "metabolic_stability",
-      "immune_balance",
-      "abnormal_signals",
-      "neuro_stress",
-      "recovery",
-    ] as const) {
+    for (const axis of META_AXES) {
       const week7Avg = week7AvgAxisScores[axis] ?? 0;
       const month30Avg = month30AvgAxisScores[axis] ?? 0;
       baselineAxisScores[axis] = 0.7 * week7Avg + 0.3 * month30Avg;
@@ -819,8 +802,9 @@ function BloodTestProfileCard({ patientProfile }: BloodTestProfileCardProps) {
             <div className="font-medium">
               {patientProfile?.medication_status === "active"
                 ? `${medicationStatusLabels["active"]} (${patientProfile?.medication_name ?? "약물명 미입력"})`
-                : medicationStatusLabels[patientProfile?.medication_status ?? ""] ??
-                  "-"}
+                : (medicationStatusLabels[
+                    patientProfile?.medication_status ?? ""
+                  ] ?? "-")}
             </div>
           </div>
           <div>
@@ -851,15 +835,16 @@ function BloodTestProfileCard({ patientProfile }: BloodTestProfileCardProps) {
 
 function getLatestMedicalByDate(records: MedicalRecordTranscriptEntry[]) {
   if (records.length === 0) {
-    return { date: null as string | null, entries: [] as MedicalRecordTranscriptEntry[] };
+    return {
+      date: null as string | null,
+      entries: [] as MedicalRecordTranscriptEntry[],
+    };
   }
   const dates = [...new Set(records.map((r) => r.test_date))].sort((a, b) =>
     b.localeCompare(a),
   );
   const date = dates[0] ?? null;
-  const entries = date
-    ? records.filter((r) => r.test_date === date)
-    : [];
+  const entries = date ? records.filter((r) => r.test_date === date) : [];
   return { date, entries };
 }
 
@@ -876,19 +861,16 @@ function BloodTestSummaryCard({
   medicalRecords,
 }: BloodTestSummaryCardProps) {
   const previewItems = latestSummary.slice(0, 8);
-  const summaryTestDate =
-    lastTestDate ?? previewItems[0]?.testDate ?? null;
+  const summaryTestDate = lastTestDate ?? previewItems[0]?.testDate ?? null;
   const formattedBloodDate =
-    summaryTestDate &&
-    !Number.isNaN(new Date(summaryTestDate).getTime())
+    summaryTestDate && !Number.isNaN(new Date(summaryTestDate).getTime())
       ? new Date(summaryTestDate).toLocaleDateString("ko-KR")
       : null;
 
   const { date: latestMedicalDate, entries: latestMedicalEntries } =
     getLatestMedicalByDate(medicalRecords);
   const formattedMedicalDate =
-    latestMedicalDate &&
-    !Number.isNaN(new Date(latestMedicalDate).getTime())
+    latestMedicalDate && !Number.isNaN(new Date(latestMedicalDate).getTime())
       ? new Date(latestMedicalDate).toLocaleDateString("ko-KR")
       : null;
 
@@ -924,7 +906,7 @@ function BloodTestSummaryCard({
             {hasBlood ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2 border-b pb-1">
-                  <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     혈액검사
                   </span>
                   {formattedBloodDate ? (
@@ -961,7 +943,7 @@ function BloodTestSummaryCard({
             {hasMedical ? (
               <div className="space-y-2 border-t pt-2">
                 <div className="flex items-center justify-between gap-2 border-b pb-1">
-                  <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     의무기록
                   </span>
                   {formattedMedicalDate ? (
@@ -986,7 +968,7 @@ function BloodTestSummaryCard({
                       ) : null}
                       {rec.test_content ? (
                         <div>
-                          <span className="font-medium text-foreground">
+                          <span className="text-foreground font-medium">
                             검사내용
                           </span>
                           <p className="text-muted-foreground mt-0.5 line-clamp-4 whitespace-pre-wrap">
@@ -996,7 +978,7 @@ function BloodTestSummaryCard({
                       ) : null}
                       {rec.clinical_information ? (
                         <div>
-                          <span className="font-medium text-foreground">
+                          <span className="text-foreground font-medium">
                             Clinical Information
                           </span>
                           <p className="text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
@@ -1006,7 +988,7 @@ function BloodTestSummaryCard({
                       ) : null}
                       {rec.finding ? (
                         <div>
-                          <span className="font-medium text-foreground">
+                          <span className="text-foreground font-medium">
                             Finding
                           </span>
                           <p className="text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
@@ -1016,7 +998,7 @@ function BloodTestSummaryCard({
                       ) : null}
                       {rec.conclusion ? (
                         <div>
-                          <span className="font-medium text-foreground">
+                          <span className="text-foreground font-medium">
                             Conclusion
                           </span>
                           <p className="text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
