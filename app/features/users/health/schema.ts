@@ -766,16 +766,20 @@ export const evidenceSources = pgTable(
   "evidence_sources",
   {
     id: uuid().primaryKey().defaultRandom(),
-    pmid: text(),
+    pmid: bigint({ mode: "number" }),
+    pmcid: text(),
     doi: text(),
     doi_norm: text(),
     url: text(),
     title: text(),
+    title_norm: text(),
     journal: text(),
     year: integer(),
     authors: text(),
+    first_author_norm: text(),
     summary: text(),
     source: text(),
+    source_input: text(),
     cited: integer(),
     snippet: text(),
     candidates: jsonb().$type<
@@ -811,6 +815,9 @@ export const evidenceSources = pgTable(
         | "mechanistic"
       >(),
     strength: doublePrecision().notNull().default(1),
+    canonical_id: text(),
+    match_strategy: text(),
+    review_reason: text(),
     retrieved_at: timestamp()
       .notNull()
       .defaultNow()
@@ -827,7 +834,11 @@ export const evidenceSources = pgTable(
     // Postgres UNIQUE는 NULL 자동 중복 허용 → WHERE 없이 plain UNIQUE 사용
     check(
       "evidence_sources_identifier_check",
-      sql`(("pmid" IS NOT NULL) OR ("doi_norm" IS NOT NULL AND "doi_norm" != '') OR ("title" IS NOT NULL AND "title" != '' AND "year" IS NOT NULL))`,
+      sql`(
+        ("pmid" IS NOT NULL)
+        OR ("doi_norm" IS NOT NULL AND "doi_norm" <> '')
+        OR ("title_norm" IS NOT NULL AND "title_norm" <> '' AND "year" IS NOT NULL)
+      )`,
     ),
     check(
       "evidence_sources_strength_check",

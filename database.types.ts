@@ -1521,39 +1521,69 @@ export type Database = {
       }
       ingredient_target_evidence_sources: {
         Row: {
+          candidate_confidence: number | null
+          candidate_index: number | null
           created_at: string
           disease_id: string | null
+          disease_slug: string | null
           dose_info: Json | null
+          effect:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           evidence_source_id: string
           extracted_strength_override: number | null
+          extraction_note: string | null
           id: string
           ingredient_target_evidence_id: string
           is_primary: boolean
           note: string | null
+          outcome_direction:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           outcome_text: string | null
         }
         Insert: {
+          candidate_confidence?: number | null
+          candidate_index?: number | null
           created_at?: string
           disease_id?: string | null
+          disease_slug?: string | null
           dose_info?: Json | null
+          effect?:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           evidence_source_id: string
           extracted_strength_override?: number | null
+          extraction_note?: string | null
           id?: string
           ingredient_target_evidence_id: string
           is_primary?: boolean
           note?: string | null
+          outcome_direction?:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           outcome_text?: string | null
         }
         Update: {
+          candidate_confidence?: number | null
+          candidate_index?: number | null
           created_at?: string
           disease_id?: string | null
+          disease_slug?: string | null
           dose_info?: Json | null
+          effect?:
+            | Database["public"]["Enums"]["ingredient_target_evidence_effect"]
+            | null
           evidence_source_id?: string
           extracted_strength_override?: number | null
+          extraction_note?: string | null
           id?: string
           ingredient_target_evidence_id?: string
           is_primary?: boolean
           note?: string | null
+          outcome_direction?:
+            | Database["public"]["Enums"]["outcome_direction_enum"]
+            | null
           outcome_text?: string | null
         }
         Relationships: [
@@ -1900,6 +1930,7 @@ export type Database = {
           display_name: string
           id: string
           slug: string
+          synonyms: string[] | null
           updated_at: string
         }
         Insert: {
@@ -1908,6 +1939,7 @@ export type Database = {
           display_name: string
           id?: string
           slug: string
+          synonyms?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -1916,6 +1948,7 @@ export type Database = {
           display_name?: string
           id?: string
           slug?: string
+          synonyms?: string[] | null
           updated_at?: string
         }
         Relationships: []
@@ -3329,26 +3362,32 @@ export type Database = {
         Row: {
           axis_description: string | null
           axis_label: string | null
+          axis_llm_description: string | null
           axis_weight: number
           meta_axis: string
           target_id: string
           target_slug: string | null
+          updated_at: string
         }
         Insert: {
           axis_description?: string | null
           axis_label?: string | null
+          axis_llm_description?: string | null
           axis_weight?: number
           meta_axis: string
           target_id: string
           target_slug?: string | null
+          updated_at?: string
         }
         Update: {
           axis_description?: string | null
           axis_label?: string | null
+          axis_llm_description?: string | null
           axis_weight?: number
           meta_axis?: string
           target_id?: string
           target_slug?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
