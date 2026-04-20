@@ -1,5 +1,5 @@
 {
-  "id": "665c7fc9-065b-4e2a-9679-2a2e5fd13fee",
+  "id": "27aab012-73d6-4174-b34e-2931acdf5adb",
   "prevId": "021b71bc-4ab5-4967-aacf-1d81ef4cd83e",
   "version": "7",
   "dialect": "postgresql",
@@ -4537,12 +4537,6 @@
         },
         "pmid": {
           "name": "pmid",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pmcid": {
-          "name": "pmcid",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -4571,12 +4565,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "title_norm": {
-          "name": "title_norm",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "journal": {
           "name": "journal",
           "type": "text",
@@ -4595,12 +4583,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "first_author_norm": {
-          "name": "first_author_norm",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "summary": {
           "name": "summary",
           "type": "text",
@@ -4609,12 +4591,6 @@
         },
         "source": {
           "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "source_input": {
-          "name": "source_input",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -4662,24 +4638,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
-        },
-        "canonical_id": {
-          "name": "canonical_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "match_strategy": {
-          "name": "match_strategy",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "review_reason": {
-          "name": "review_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "retrieved_at": {
           "name": "retrieved_at",
@@ -4749,7 +4707,7 @@
       "checkConstraints": {
         "evidence_sources_identifier_check": {
           "name": "evidence_sources_identifier_check",
-          "value": "(\n        (\"pmid\" IS NOT NULL)\n        OR (\"doi_norm\" IS NOT NULL AND \"doi_norm\" <> '')\n        OR (\"title_norm\" IS NOT NULL AND \"title_norm\" <> '' AND \"year\" IS NOT NULL)\n      )"
+          "value": "((\"pmid\" IS NOT NULL) OR (\"doi_norm\" IS NOT NULL AND \"doi_norm\" != '') OR (\"title\" IS NOT NULL AND \"title\" != '' AND \"year\" IS NOT NULL))"
         },
         "evidence_sources_strength_check": {
           "name": "evidence_sources_strength_check",
@@ -5481,6 +5439,20 @@
           "notNull": true,
           "default": false
         },
+        "effect": {
+          "name": "effect",
+          "type": "ingredient_target_evidence_effect",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome_direction": {
+          "name": "outcome_direction",
+          "type": "outcome_direction_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "extracted_strength_override": {
           "name": "extracted_strength_override",
           "type": "double precision",
@@ -5493,6 +5465,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "candidate_index": {
+          "name": "candidate_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disease_slug": {
+          "name": "disease_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "disease_id": {
           "name": "disease_id",
           "type": "uuid",
@@ -5501,6 +5485,18 @@
         },
         "outcome_text": {
           "name": "outcome_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "candidate_confidence": {
+          "name": "candidate_confidence",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extraction_note": {
+          "name": "extraction_note",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -5628,6 +5624,10 @@
         "extracted_strength_override_check": {
           "name": "extracted_strength_override_check",
           "value": "(\"extracted_strength_override\" IS NULL) OR (\"extracted_strength_override\" >= 0 AND \"extracted_strength_override\" <= 2)"
+        },
+        "ingredient_target_evidence_sources_candidate_confidence_check": {
+          "name": "ingredient_target_evidence_sources_candidate_confidence_check",
+          "value": "(\"candidate_confidence\" IS NULL) OR (\"candidate_confidence\" >= 0 AND \"candidate_confidence\" <= 1)"
         }
       },
       "isRLSEnabled": false

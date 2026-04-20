@@ -495,6 +495,7 @@ export const naturalTargets = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     slug: text().notNull().unique(),
     display_name: text().notNull(),
+    synonyms: text().array().default([]), // 동의어 (약어, 영문 풀네임, 검색용 별칭)
     description: text(),
     ...timestamps,
   },
@@ -564,6 +565,10 @@ export const targetToMetaAxis = pgTable(
       .notNull()
       .references(() => naturalTargets.id, { onDelete: "cascade" }),
     target_slug: text("target_slug"), // natural_targets.slug 디노말라이즈 (JOIN 없이 조회용)
+    updated_at: timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
     meta_axis: text()
       .notNull()
       .$type<
@@ -1133,10 +1138,17 @@ export const ingredientTargetEvidenceSources = pgTable(
       .notNull()
       .references(() => evidenceSources.id, { onDelete: "cascade" }),
     is_primary: boolean().notNull().default(false), // 주요 근거인지 여부
+    // source-level 연결 정보 (논문마다 달라질 수 있음)
+    effect: ingredientTargetEffectEnum(), // candidates.effect에서 확정된 값
+    outcome_direction: outcomeDirectionEnum(), // candidates.outcome_direction에서 확정된 값
     extracted_strength_override: doublePrecision(), // 이 매핑에서만 사용하는 strength 오버라이드 (null이면 evidence_sources.strength 사용)
     note: text(), // 이 매핑에 대한 추가 설명
+    candidate_index: integer(), // evidence_sources.candidates / dose_info_candidates 인덱스 추적
+    disease_slug: text(), // raw slug 보존 (정규화 전 값)
     disease_id: uuid().references(() => diseases.id, { onDelete: "set null" }), // 정규화된 질병/적응증 (diseases.slug와 candidates.disease_slug 매칭)
     outcome_text: text(), // 논문별 결과 요약
+    candidate_confidence: doublePrecision(), // candidates.confidence(추출 신뢰도) 보존
+    extraction_note: text(), // candidates.extraction_note 보존
     dose_info: jsonb().$type<DoseInfo>(), // 용량/투여 정보 (dose_info_candidates와 동일 구조)
     created_at: timestamp().notNull().defaultNow(),
   },
@@ -1150,6 +1162,10 @@ export const ingredientTargetEvidenceSources = pgTable(
     check(
       "extracted_strength_override_check",
       sql`("extracted_strength_override" IS NULL) OR ("extracted_strength_override" >= 0 AND "extracted_strength_override" <= 2)`,
+    ),
+    check(
+      "ingredient_target_evidence_sources_candidate_confidence_check",
+      sql`("candidate_confidence" IS NULL) OR ("candidate_confidence" >= 0 AND "candidate_confidence" <= 1)`,
     ),
     pgPolicy("ingredient-target-evidence-sources-select-policy", {
       for: "select",
