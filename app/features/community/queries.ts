@@ -8,6 +8,22 @@ import path from "node:path";
 import type { Database } from "~/core/lib/supa-client.server";
 
 import { createPost } from "./mutations";
+import type { PostReference } from "./reference-utils";
+
+function normalizeReferences(raw: unknown): PostReference[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const obj = item as Record<string, unknown>;
+      const label = typeof obj.label === "string" ? obj.label.trim() : "";
+      const url = typeof obj.url === "string" ? obj.url.trim() : "";
+      const note = typeof obj.note === "string" ? obj.note.trim() : undefined;
+      if (!label || !url) return null;
+      return { label, url, note } satisfies PostReference;
+    })
+    .filter(Boolean) as PostReference[];
+}
 
 export const isAdminUser = async (
   client: SupabaseClient<Database>,
@@ -162,7 +178,11 @@ export const getPostById = async (
 
   if (error) throw error;
   if (!data) throw new Error("Post not found");
-  return data;
+
+  return {
+    ...data,
+    references: normalizeReferences(data.references),
+  };
 };
 
 export const getReplies = async (

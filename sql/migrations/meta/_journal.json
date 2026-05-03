@@ -869,6 +869,20 @@
       "when": 1776700000000,
       "tag": "0123_tired_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1776800000000,
+      "tag": "0124_community_post_references_jsonb",
+      "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1776900000000,
+      "tag": "0125_drop_posts_reference_column",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,8 @@ import makeServerClient from "~/core/lib/supa-client.server";
 import { getLoggedInUserId } from "~/features/users/queries";
 
 import { createPost } from "../mutations";
+import { ReferenceInputList } from "../components/reference-input-list";
+import { parseReferencesFromFormData } from "../reference-utils";
 import { getTopics, isAdminUser } from "../queries";
 
 export const meta: Route.MetaFunction = () => {
@@ -34,6 +36,13 @@ const formSchema = z.object({
   content: z.string().min(1),
 });
 
+type PostFormFieldErrors = {
+  title?: string[];
+  category?: string[];
+  content?: string[];
+  references?: string[];
+};
+
 export const action = async ({ request }: Route.ActionArgs) => {
   const [client] = makeServerClient(request);
   const userId = await getLoggedInUserId(client);
@@ -44,19 +53,36 @@ export const action = async ({ request }: Route.ActionArgs) => {
   );
 
   if (!success) {
-    return { fieldErrors: error.flatten().fieldErrors };
+    return { fieldErrors: error.flatten().fieldErrors as PostFormFieldErrors };
   }
 
   const { title, category, content } = data;
+  let parsedReferences;
+  try {
+    parsedReferences = parseReferencesFromFormData(formData);
+  } catch (error) {
+    return {
+      fieldErrors: {
+        title: undefined,
+        category: undefined,
+        content: undefined,
+        references: [error instanceof Error ? error.message : "출처 형식이 올바르지 않습니다."],
+      } satisfies PostFormFieldErrors,
+    };
+  }
+
   if (category === "notice" && !isAdmin) {
     return {
-      fieldErrors: { category: ["공지사항은 관리자만 작성할 수 있습니다."] },
+      fieldErrors: {
+        category: ["공지사항은 관리자만 작성할 수 있습니다."],
+      } satisfies PostFormFieldErrors,
     };
   }
   const { post_id } = await createPost(client, {
     title,
     category,
     content,
+    references: parsedReferences,
     userId,
   });
   return redirect(`/community/${post_id}`);
@@ -117,6 +143,12 @@ export default function SubmitPostPage({
         {actionData && "fieldErrors" in actionData && (
           <div className="text-red-500">
             {actionData.fieldErrors.content?.join(", ")}
+          </div>
+        )}
+        <ReferenceInputList />
+        {actionData && "fieldErrors" in actionData && (
+          <div className="text-red-500">
+            {actionData.fieldErrors.references?.join(", ")}
           </div>
         )}
         <Button type="submit" className="mx-auto">

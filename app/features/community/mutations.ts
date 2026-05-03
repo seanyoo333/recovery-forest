@@ -2,18 +2,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "~/core/lib/supa-client.server";
 
+import type { PostReference } from "./reference-utils";
+
 export const createPost = async (
   client: SupabaseClient<Database>,
   {
     title,
     category,
     content,
+    references = [],
     userId,
     isMarkdown = false,
   }: {
     title: string;
     category: string;
     content: string;
+    references?: PostReference[];
     userId: string;
     isMarkdown?: boolean;
   },
@@ -31,6 +35,7 @@ export const createPost = async (
     .insert({
       title,
       content,
+      references,
       profile_id: userId,
       topic_id: categoryData.topic_id,
       is_markdown: isMarkdown,
@@ -122,12 +127,14 @@ export const updatePost = async (
     title,
     category,
     content,
+    references = [],
     userId,
   }: {
     postId: string;
     title: string;
     category: string;
     content: string;
+    references?: PostReference[];
     userId: string;
   },
 ) => {
@@ -161,6 +168,7 @@ export const updatePost = async (
     .update({
       title,
       content,
+      references,
       topic_id: categoryData.topic_id,
     })
     .eq("post_id", Number(postId))

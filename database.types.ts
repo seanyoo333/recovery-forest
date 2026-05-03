@@ -1070,22 +1070,29 @@ export type Database = {
         Row: {
           authors: string | null
           candidates: Json | null
+          canonical_id: string | null
           cited: number | null
           created_at: string
           doi: string | null
           doi_norm: string | null
           dose_info_candidates: Json | null
+          first_author_norm: string | null
           id: string
           journal: string | null
+          match_strategy: string | null
+          pmcid: string | null
           pmid: number | null
           retrieved_at: string
+          review_reason: string | null
           snippet: string | null
           source: string | null
+          source_input: string | null
           status: string | null
           strength: number
           study_type: string
           summary: string | null
           title: string
+          title_norm: string | null
           title_year_key: string | null
           updated_at: string
           url: string | null
@@ -1094,22 +1101,29 @@ export type Database = {
         Insert: {
           authors?: string | null
           candidates?: Json | null
+          canonical_id?: string | null
           cited?: number | null
           created_at?: string
           doi?: string | null
           doi_norm?: string | null
           dose_info_candidates?: Json | null
+          first_author_norm?: string | null
           id?: string
           journal?: string | null
+          match_strategy?: string | null
+          pmcid?: string | null
           pmid?: number | null
           retrieved_at?: string
+          review_reason?: string | null
           snippet?: string | null
           source?: string | null
+          source_input?: string | null
           status?: string | null
           strength?: number
           study_type?: string
           summary?: string | null
           title: string
+          title_norm?: string | null
           title_year_key?: string | null
           updated_at?: string
           url?: string | null
@@ -1118,22 +1132,29 @@ export type Database = {
         Update: {
           authors?: string | null
           candidates?: Json | null
+          canonical_id?: string | null
           cited?: number | null
           created_at?: string
           doi?: string | null
           doi_norm?: string | null
           dose_info_candidates?: Json | null
+          first_author_norm?: string | null
           id?: string
           journal?: string | null
+          match_strategy?: string | null
+          pmcid?: string | null
           pmid?: number | null
           retrieved_at?: string
+          review_reason?: string | null
           snippet?: string | null
           source?: string | null
+          source_input?: string | null
           status?: string | null
           strength?: number
           study_type?: string
           summary?: string | null
           title?: string
+          title_norm?: string | null
           title_year_key?: string | null
           updated_at?: string
           url?: string | null
@@ -2475,7 +2496,7 @@ export type Database = {
           is_notice: boolean | null
           post_id: number
           profile_id: string
-          reference: string | null
+          references: Json
           title: string
           topic_id: number
           updated_at: string
@@ -2488,7 +2509,7 @@ export type Database = {
           is_notice?: boolean | null
           post_id?: never
           profile_id: string
-          reference?: string | null
+          references?: Json
           title: string
           topic_id: number
           updated_at?: string
@@ -2501,7 +2522,7 @@ export type Database = {
           is_notice?: boolean | null
           post_id?: never
           profile_id?: string
-          reference?: string | null
+          references?: Json
           title?: string
           topic_id?: number
           updated_at?: string
@@ -3698,7 +3719,7 @@ export type Database = {
           is_upvoted: boolean | null
           post_id: number | null
           products: number | null
-          reference: string | null
+          references: Json | null
           replies: number | null
           title: string | null
           topic_id: number | null
@@ -4180,6 +4201,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      upsert_evidence_source: { Args: { payload: Json }; Returns: string }
     }
     Enums: {
       admin_role:

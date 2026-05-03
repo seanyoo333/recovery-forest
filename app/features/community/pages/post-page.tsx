@@ -415,16 +415,36 @@ export default function PostPage({
                 </div>
 
                 {/* 출처 링크 */}
-                {loaderData.post.reference && (
+                {loaderData.post.references?.length > 0 && (
                   <div className="w-full md:w-3/4">
-                    <Link
-                      to={loaderData.post.reference}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground text-sm underline"
-                    >
-                      출처: {loaderData.post.reference}
-                    </Link>
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">출처:</p>
+                      <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm">
+                        {loaderData.post.references.map((reference, index) => (
+                          <li
+                            key={`${reference.url}-${index}`}
+                            className="leading-6"
+                          >
+                            <span className="font-medium text-foreground/90">
+                              {reference.label.replace(/[:\s]+$/g, "")}:
+                            </span>{" "}
+                            <Link
+                              to={reference.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="break-all underline underline-offset-2 hover:text-foreground"
+                            >
+                              {reference.url}
+                            </Link>
+                            {reference.note ? (
+                              <span className="text-muted-foreground/90 ml-2">
+                                ({reference.note})
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>

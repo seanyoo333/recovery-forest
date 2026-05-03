@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  jsonb,
   pgPolicy,
   pgTable,
   primaryKey,
@@ -96,7 +97,13 @@ export const posts = pgTable(
         onDelete: "cascade",
       })
       .notNull(),
-    reference: text(),
+    references: jsonb().$type<
+      Array<{
+        label: string;
+        url: string;
+        note?: string;
+      }>
+    >().default([]),
     profile_id: uuid()
       .references(() => profiles.profile_id, {
         onDelete: "cascade",
