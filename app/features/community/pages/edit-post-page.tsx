@@ -32,15 +32,17 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
     throw new Response("권한이 없습니다.", { status: 403 });
   }
 
-  // 공지글은 관리자만 수정 가능
-  if (post.topic_slug === "notice" && !isAdmin) {
+  const topics = await getTopics(client);
+
+  // 관리자 전용 토픽 글은 관리자만 수정 가능
+  const currentTopic = topics.find((topic) => topic.slug === post.topic_slug);
+  if (currentTopic?.is_admin_only && !isAdmin) {
     throw new Response("권한이 없습니다.", { status: 403 });
   }
 
-  const topics = await getTopics(client);
   const filteredTopics = isAdmin
     ? topics
-    : topics.filter((topic) => topic.slug !== "notice");
+    : topics.filter((topic) => !topic.is_admin_only);
   return { topics: filteredTopics, post };
 };
 
@@ -85,10 +87,24 @@ export const action = async ({ request, params }: Route.ActionArgs) => {
     };
   }
 
-  if (category === "notice" && !isAdmin) {
+  const { data: selectedTopic, error: selectedTopicError } = await client
+    .from("topics")
+    .select("is_admin_only")
+    .eq("slug", category)
+    .maybeSingle();
+
+  if (selectedTopicError || !selectedTopic) {
     return {
       fieldErrors: {
-        category: ["공지사항은 관리자만 수정할 수 있습니다."],
+        category: ["유효하지 않은 카테고리입니다."],
+      } satisfies PostFormFieldErrors,
+    };
+  }
+
+  if (selectedTopic.is_admin_only && !isAdmin) {
+    return {
+      fieldErrors: {
+        category: ["관리자 전용 카테고리는 관리자만 수정할 수 있습니다."],
       } satisfies PostFormFieldErrors,
     };
   }

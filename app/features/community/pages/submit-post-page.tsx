@@ -26,7 +26,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
   const topics = await getTopics(client);
   const filteredTopics = isAdmin
     ? topics
-    : topics.filter((topic) => topic.slug !== "notice");
+    : topics.filter((topic) => !topic.is_admin_only);
   return { topics: filteredTopics, isAdmin };
 };
 
@@ -71,10 +71,24 @@ export const action = async ({ request }: Route.ActionArgs) => {
     };
   }
 
-  if (category === "notice" && !isAdmin) {
+  const { data: selectedTopic, error: selectedTopicError } = await client
+    .from("topics")
+    .select("is_admin_only")
+    .eq("slug", category)
+    .maybeSingle();
+
+  if (selectedTopicError || !selectedTopic) {
     return {
       fieldErrors: {
-        category: ["공지사항은 관리자만 작성할 수 있습니다."],
+        category: ["유효하지 않은 카테고리입니다."],
+      } satisfies PostFormFieldErrors,
+    };
+  }
+
+  if (selectedTopic.is_admin_only && !isAdmin) {
+    return {
+      fieldErrors: {
+        category: ["관리자 전용 카테고리는 관리자만 작성할 수 있습니다."],
       } satisfies PostFormFieldErrors,
     };
   }

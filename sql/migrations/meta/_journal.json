@@ -883,6 +883,20 @@
       "when": 1776900000000,
       "tag": "0125_drop_posts_reference_column",
       "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1777000000000,
+      "tag": "0126_community_post_list_view_notice_pin",
+      "breakpoints": true
+    },
+    {
+      "idx": 127,
+      "version": "7",
+      "when": 1777100000000,
+      "tag": "0127_topics_taxonomy_refinement",
+      "breakpoints": true
     }
   ]
 }

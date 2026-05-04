@@ -3484,6 +3484,8 @@ export type Database = {
       topics: {
         Row: {
           created_at: string
+          display_order: number
+          is_admin_only: boolean
           name: string
           slug: string
           topic_id: number
@@ -3491,6 +3493,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_order: number
+          is_admin_only?: boolean
           name: string
           slug: string
           topic_id?: never
@@ -3498,6 +3502,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_order?: number
+          is_admin_only?: boolean
           name?: string
           slug?: string
           topic_id?: never
@@ -3758,6 +3764,7 @@ export type Database = {
           author_username: string | null
           created_at: string | null
           is_markdown: boolean | null
+          is_notice: boolean | null
           is_upvoted: boolean | null
           post_id: number | null
           title: string | null
@@ -3923,13 +3930,6 @@ export type Database = {
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["other_profile_id"]
-            isOneToOne: false
-            referencedRelation: "health_profiles_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "health_profiles_view"
@@ -3939,7 +3939,7 @@ export type Database = {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "health_profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
@@ -3952,13 +3952,20 @@ export type Database = {
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
             columns: ["other_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "message_room_members_profile_id_profiles_profile_id_fk"
-            columns: ["profile_id"]
+            columns: ["other_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles_view"
             referencedColumns: ["profile_id"]

@@ -4,12 +4,14 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  integer,
   jsonb,
   pgPolicy,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { authUid, authenticatedRole } from "drizzle-orm/supabase";
@@ -26,9 +28,13 @@ export const topics = pgTable(
       .generatedAlwaysAsIdentity(),
     name: text().notNull(),
     slug: text().notNull(),
+    display_order: integer().notNull().default(999),
+    is_admin_only: boolean().notNull().default(false),
     ...timestamps,
   },
   (table) => [
+    uniqueIndex("topics_slug_unique_idx").on(table.slug),
+    uniqueIndex("topics_display_order_unique_idx").on(table.display_order),
     // 모든 사용자가 토픽을 조회할 수 있음
     pgPolicy("topics-select-policy", {
       for: "select",

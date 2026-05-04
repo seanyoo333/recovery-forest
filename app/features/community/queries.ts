@@ -43,7 +43,8 @@ export const isAdminUser = async (
 export const getTopics = async (client: SupabaseClient<Database>) => {
   const { data, error } = await client
     .from("topics")
-    .select("topic_id, name, slug");
+    .select("topic_id, name, slug, display_order, is_admin_only")
+    .order("display_order", { ascending: true });
   if (error) throw new Error(error.message);
   return data;
 };
@@ -128,6 +129,8 @@ export const getPosts = async (
     .select(`*`)
     .limit(limit);
 
+  baseQuery.order("is_notice", { ascending: false });
+
   if (sorting === "newest") {
     baseQuery.order("created_at", { ascending: false });
   } else if (sorting === "popular") {
@@ -159,6 +162,74 @@ export const getPosts = async (
   const { data, error } = await baseQuery;
   if (error) throw new Error(error.message);
   return data;
+};
+
+/** 페이지네이션된 커뮤니티 목록 + 전체 건수 */
+export const getPostsPage = async (
+  client: SupabaseClient<Database>,
+  {
+    page,
+    pageSize,
+    sorting,
+    period = "all",
+    keyword,
+    topic,
+  }: {
+    page: number;
+    pageSize: number;
+    sorting: "newest" | "popular";
+    period?: "all" | "today" | "week" | "month" | "year";
+    keyword?: string;
+    topic?: string;
+  },
+) => {
+  await syncMDFilesToDatabase(client);
+
+  const safePage = Math.max(1, page);
+  const from = (safePage - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let baseQuery = client
+    .from("community_post_list_view")
+    .select("*", { count: "exact" })
+    .range(from, to);
+
+  baseQuery.order("is_notice", { ascending: false });
+
+  if (sorting === "newest") {
+    baseQuery.order("created_at", { ascending: false });
+  } else if (sorting === "popular") {
+    if (period === "all") {
+      baseQuery.order("upvotes", { ascending: false });
+    } else {
+      const today = DateTime.now();
+      if (period === "today") {
+        baseQuery.gte("created_at", today.startOf("day").toISO());
+      } else if (period === "week") {
+        baseQuery.gte("created_at", today.startOf("week").toISO());
+      } else if (period === "month") {
+        baseQuery.gte("created_at", today.startOf("month").toISO());
+      } else if (period === "year") {
+        baseQuery.gte("created_at", today.startOf("year").toISO());
+      }
+      baseQuery.order("upvotes", { ascending: false });
+    }
+  }
+
+  if (keyword) {
+    baseQuery.ilike("title", `%${keyword}%`);
+  }
+
+  if (topic) {
+    baseQuery.eq("topic_slug", topic);
+  }
+
+  const { data, error, count } = await baseQuery;
+  if (error) throw new Error(error.message);
+  return {
+    posts: data ?? [],
+    totalCount: count ?? 0,
+  };
 };
 
 export const getPostById = async (
