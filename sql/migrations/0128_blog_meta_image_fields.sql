@@ -10,6 +10,18 @@ ON "blog_posts_meta" ("slug", "is_published");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "blog_posts_meta_category_published_date_idx"
 ON "blog_posts_meta" ("category", "is_published", "date" DESC);--> statement-breakpoint
 
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER
+LANGUAGE PLPGSQL
+SECURITY DEFINER
+SET SEARCH_PATH = ''
+AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP AT TIME ZONE 'UTC';
+    RETURN NEW;
+END;
+$$;--> statement-breakpoint
+
 DROP TRIGGER IF EXISTS "set_blog_posts_meta_updated_at"
 ON public.blog_posts_meta;--> statement-breakpoint
 

@@ -897,6 +897,13 @@
       "when": 1777100000000,
       "tag": "0127_topics_taxonomy_refinement",
       "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "7",
+      "when": 1777200000000,
+      "tag": "0128_blog_meta_image_fields",
+      "breakpoints": true
     }
   ]
 }
