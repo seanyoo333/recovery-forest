@@ -13,16 +13,70 @@
  * The sitemap is generated on-demand when the route is accessed, ensuring it always
  * contains the latest content without requiring a rebuild of the application.
  */
-import { readdir } from "node:fs/promises";
+import type { Route } from "./+types/sitemap";
+
+import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
+
+import makeServerClient from "~/core/lib/supa-client.server";
+import { getBlogPostEntries } from "~/features/blog/lib/blog-content.server";
+
+interface SitemapEntry {
+  url: string;
+  lastmod: string;
+}
+
+const toIsoDate = (value: string | Date) => {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString()
+    : date.toISOString();
+};
+
+const escapeXml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
+async function getBlogSitemapEntries(request: Request): Promise<SitemapEntry[]> {
+  const [client] = makeServerClient(request);
+  const { data, error } = await client
+    .from("blog_posts_meta")
+    .select("slug, date, updated_at")
+    .eq("is_published", true)
+    .order("date", { ascending: false });
+
+  if (!error && data) {
+    return data.map((post) => ({
+      url: `/blog/${post.slug}`,
+      lastmod: post.updated_at
+        ? toIsoDate(post.updated_at)
+        : toIsoDate(post.date),
+    }));
+  }
+
+  return (await getBlogPostEntries()).map(
+    ({ frontmatter, lastmod }): SitemapEntry => ({
+      url: `/blog/${frontmatter.slug}`,
+      lastmod: frontmatter.updatedAt
+        ? toIsoDate(frontmatter.updatedAt)
+        : frontmatter.date
+          ? toIsoDate(frontmatter.date)
+          : toIsoDate(lastmod),
+    }),
+  );
+}
 
 /**
  * Sitemap generator loader function
- * 
+ *
  * This React Router loader function dynamically generates an XML sitemap for the application.
  * It scans the filesystem for content files, combines them with static routes, and formats
  * them according to the sitemap protocol specification.
- * 
+ *
  * The function performs these steps:
  * 1. Gets the site domain from environment variables
  * 2. Scans the blog directory for MDX files and converts filenames to URLs
@@ -30,35 +84,53 @@ import path from "node:path";
  * 4. Combines these with static routes like homepage, login, and registration
  * 5. Formats all URLs according to the sitemap XML specification
  * 6. Returns an XML response with the proper content type header
- * 
+ *
  * @returns {Response} XML response containing the sitemap
  */
-export async function loader() {
+export async function loader({ request }: Route.LoaderArgs) {
   // Get the site domain from environment variables
-  const DOMAIN = process.env.SITE_URL;
+  const DOMAIN = process.env.SITE_URL ?? "";
+  const now = new Date().toISOString();
+  const legalDocsPath = path.join(
+    process.cwd(),
+    "app",
+    "features",
+    "legal",
+    "docs",
+  );
 
-  // Scan the blog directory for MDX files and convert to URLs
-  const blogUrls = (
-    await readdir(path.join(process.cwd(), "app", "features", "blog", "docs"))
-  )
-    .filter((file) => file.endsWith(".mdx")) // Only include MDX files
-    .map((file) => `/blog/${file.replace(".mdx", "")}`);
+  const blogEntries = await getBlogSitemapEntries(request);
 
   // Scan the legal directory for MDX files and convert to URLs
-  const legalUrls = (
-    await readdir(path.join(process.cwd(), "app", "features", "legal", "docs"))
-  )
-    .filter((file) => file.endsWith(".mdx")) // Only include MDX files
-    .map((file) => `/legal/${file.replace(".mdx", "")}`);
+  const legalEntries = await Promise.all(
+    (await readdir(legalDocsPath))
+      .filter((file) => file.endsWith(".mdx"))
+      .map(async (file): Promise<SitemapEntry> => {
+        const filePath = path.join(legalDocsPath, file);
+        const fileStats = await stat(filePath);
+
+        return {
+          url: `/legal/${file.replace(/\.mdx$/, "")}`,
+          lastmod: toIsoDate(fileStats.mtime),
+        };
+      }),
+  );
 
   // Define static routes that should be included in the sitemap
-  const customUrls = ["/", "/login", "/join"];
+  const customEntries: SitemapEntry[] = [
+    { url: "/", lastmod: now },
+    { url: "/blog", lastmod: now },
+  ];
 
   // Combine all URLs and format them according to sitemap protocol
-  const sitemapUrls = [...blogUrls, ...legalUrls, ...customUrls].map((url) => {
+  const sitemapUrls = [
+    ...blogEntries,
+    ...legalEntries,
+    ...customEntries,
+  ].map(({ url, lastmod }) => {
     return `<url>
-      <loc>${DOMAIN}${url}</loc>
-      <lastmod>${new Date().toISOString()}</lastmod>
+      <loc>${escapeXml(`${DOMAIN}${url}`)}</loc>
+      <lastmod>${lastmod}</lastmod>
     </url>`;
   });
 

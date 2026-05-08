@@ -2,9 +2,10 @@
 title: "블로그 작성 가이드"
 description: "이 블로그 시스템을 사용해서 효과적으로 블로그를 작성하는 방법을 알아봅니다."
 date: "2025-01-15"
-category: "가이드"
+category: "notice"
 author: "개발팀"
 slug: "how-to-write-blog"
+image: "/blog/how-to-write-blog/cover.jpg"
 ---
 
 # 블로그 작성 가이드
@@ -54,7 +55,7 @@ function hello() {
 
 MDX의 장점은 React 컴포넌트를 직접 사용할 수 있다는 것입니다:
 
-import CounterExample from "../components/counter-example";
+import CounterExample from "~/features/blog/components/counter-example";
 
 <CounterExample />
 
@@ -62,11 +63,12 @@ import CounterExample from "../components/counter-example";
 
 블로그 포스트에 이미지를 추가하려면:
 
-1. `public/blog/` 폴더에 이미지 파일을 업로드
-2. 파일명은 슬러그와 동일하게 설정 (예: `how-to-write-blog.jpg`)
-3. 포스트에서 이미지 참조:
+1. `public/blog/{slug}/` 폴더에 이미지 파일을 업로드
+2. 대표 이미지는 `cover.webp`, `cover.jpg`, `cover.png` 중 하나로 저장
+3. frontmatter의 `image`에 대표 이미지 경로를 명시
+4. 포스트에서 이미지 참조:
 
-![블로그 작성 가이드](/blog/how-to-write-blog.jpg)
+![블로그 작성 가이드](/blog/how-to-write-blog/cover.jpg)
 
 ## 5. SEO 최적화
 

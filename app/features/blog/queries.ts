@@ -10,10 +10,16 @@ export interface BlogPostMeta {
   category: string;
   author: string;
   date: string;
+  image_url: string | null;
+  image_alt: string | null;
   upvotes: number;
   created_at: string;
+  updated_at: string;
   is_upvoted?: boolean;
 }
+
+const BLOG_POST_META_SELECT =
+  "post_id, slug, title, description, category, author, date, image_url, image_alt, created_at, updated_at";
 
 /**
  * Get all published blog posts metadata
@@ -33,9 +39,7 @@ export async function getBlogPostsMeta(
 ): Promise<BlogPostMeta[]> {
   let query = client
     .from("blog_posts_meta")
-    .select(
-      "post_id, slug, title, description, category, author, date, created_at",
-    )
+    .select(BLOG_POST_META_SELECT)
     .eq("is_published", true);
 
   // Apply sorting
@@ -124,9 +128,7 @@ export async function getBlogPostMetaBySlug(
 ): Promise<BlogPostMeta | null> {
   const { data, error } = await client
     .from("blog_posts_meta")
-    .select(
-      "post_id, slug, title, description, category, author, date, created_at",
-    )
+    .select(BLOG_POST_META_SELECT)
     .eq("slug", slug)
     .eq("is_published", true)
     .single();
@@ -187,6 +189,8 @@ export async function createBlogPostMeta(
     category: string;
     author: string;
     date: string;
+    image_url?: string | null;
+    image_alt?: string | null;
     profile_id: string;
     is_published?: boolean;
   },
@@ -201,6 +205,8 @@ export async function createBlogPostMeta(
         category: meta.category,
         author: meta.author,
         date: meta.date,
+        image_url: meta.image_url ?? null,
+        image_alt: meta.image_alt ?? null,
         profile_id: meta.profile_id,
         is_published: meta.is_published ?? true,
       },
@@ -208,9 +214,7 @@ export async function createBlogPostMeta(
         onConflict: "slug",
       },
     )
-    .select(
-      "post_id, slug, title, description, category, author, date, created_at",
-    )
+    .select(BLOG_POST_META_SELECT)
     .single();
 
   if (error) {
@@ -255,6 +259,8 @@ export async function updateBlogPostMeta(
     category?: string;
     author?: string;
     date?: string;
+    image_url?: string | null;
+    image_alt?: string | null;
     is_published?: boolean;
   },
 ): Promise<BlogPostMeta> {
@@ -266,14 +272,14 @@ export async function updateBlogPostMeta(
       ...(meta.category && { category: meta.category }),
       ...(meta.author && { author: meta.author }),
       ...(meta.date && { date: meta.date }),
+      ...(meta.image_url !== undefined && { image_url: meta.image_url }),
+      ...(meta.image_alt !== undefined && { image_alt: meta.image_alt }),
       ...(meta.is_published !== undefined && {
         is_published: meta.is_published,
       }),
     })
     .eq("slug", slug)
-    .select(
-      "post_id, slug, title, description, category, author, date, created_at",
-    )
+    .select(BLOG_POST_META_SELECT)
     .single();
 
   if (error) {

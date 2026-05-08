@@ -8,11 +8,12 @@
 import type { Route } from "./+types/og";
 
 import { ImageResponse } from "@vercel/og";
-import { bundleMDX } from "mdx-bundler";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { data } from "react-router";
 import { z } from "zod";
+
+import { getBlogPostEntryBySlug } from "~/features/blog/lib/blog-content.server";
 
 /**
  * Validation schema for OG image request parameters
@@ -24,6 +25,8 @@ import { z } from "zod";
 const paramsSchema = z.object({
   slug: z.string(),
 });
+
+const BLOG_DEFAULT_IMAGE = "/blog/og-default.png";
 
 /**
  * Loader function for generating Open Graph images
@@ -37,37 +40,55 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!success) {
     return data(null, { status: 400 });
   }
+  const entry = await getBlogPostEntryBySlug(params.slug);
 
-  // Construct the file path to the MDX file
-  const filePath = path.join(
-    process.cwd(),
-    "app",
-    "features",
-    "blog",
-    "docs",
-    `${params.slug}.mdx`,
-  );
+  if (!entry) {
+    return data(null, { status: 404 });
+  }
 
   try {
-    // Load and parse the MDX file to extract frontmatter
-    const { frontmatter } = await bundleMDX({
-      file: filePath,
-    });
+    const { frontmatter } = entry;
 
     // Find the actual image file with any extension
     const blogImagesPath = path.join(process.cwd(), "public", "blog");
     const baseUrl = process.env.SITE_URL || "http://localhost:5173";
-    let imageFile: string | undefined;
+    const toAbsoluteImageUrl = (image: string) =>
+      image.startsWith("http://") || image.startsWith("https://")
+        ? image
+        : `${baseUrl}${image.startsWith("/") ? image : `/${image}`}`;
+    let imageUrl =
+      typeof frontmatter.image === "string"
+        ? toAbsoluteImageUrl(frontmatter.image)
+        : toAbsoluteImageUrl(BLOG_DEFAULT_IMAGE);
 
-    try {
-      const files = await readdir(blogImagesPath);
-      // Find image file matching the slug (any extension)
-      imageFile = files.find((file) => {
-        const nameWithoutExt = file.replace(/\.[^/.]+$/, "");
-        return nameWithoutExt === params.slug;
-      });
-    } catch {
-      // If directory doesn't exist or can't read, imageFile remains undefined
+    if (imageUrl.endsWith(BLOG_DEFAULT_IMAGE)) {
+      try {
+        const files = await readdir(path.join(blogImagesPath, params.slug));
+        const coverFile = files.find((file) => {
+          const nameWithoutExt = file.replace(/\.[^/.]+$/, "");
+          return nameWithoutExt === "cover";
+        });
+        if (coverFile) {
+          imageUrl = `${baseUrl}/blog/${params.slug}/${coverFile}`;
+        }
+      } catch {
+        // If the new image directory is missing, try the legacy {slug}.{ext} layout.
+      }
+    }
+
+    if (imageUrl.endsWith(BLOG_DEFAULT_IMAGE)) {
+      try {
+        const files = await readdir(blogImagesPath);
+        const imageFile = files.find((file) => {
+          const nameWithoutExt = file.replace(/\.[^/.]+$/, "");
+          return nameWithoutExt === params.slug;
+        });
+        if (imageFile) {
+          imageUrl = `${baseUrl}/blog/${imageFile}`;
+        }
+      } catch {
+        // If directory doesn't exist or can't read, imageUrl remains undefined.
+      }
     }
 
     // Generate and return the OG image using Vercel's ImageResponse
@@ -75,25 +96,25 @@ export async function loader({ request }: Route.LoaderArgs) {
       (
         <div tw="relative flex h-full w-full" style={{ fontFamily: "Inter" }}>
           {/* Background image from the blog post - only if image file exists */}
-          {imageFile && (
+          {imageUrl && (
             <img
-              src={`${baseUrl}/blog/${imageFile}`}
+              src={imageUrl}
               tw="absolute inset-0 h-full w-full object-cover object-center"
             />
           )}
           {/* Overlay with title and description */}
           <div
             tw={`absolute flex h-full w-full items-center justify-center p-8 flex-col ${
-              imageFile ? "bg-black bg-opacity-20" : "bg-gray-100"
+              imageUrl ? "bg-black bg-opacity-20" : "bg-gray-100"
             }`}
           >
             <h1
-              tw={`text-6xl font-extrabold ${imageFile ? "text-white" : "text-gray-900"}`}
+              tw={`text-6xl font-extrabold ${imageUrl ? "text-white" : "text-gray-900"}`}
             >
               {frontmatter.title}
             </h1>
             <p
-              tw={`text-3xl -mt-2 ${imageFile ? "text-white" : "text-gray-600"}`}
+              tw={`text-3xl -mt-2 ${imageUrl ? "text-white" : "text-gray-600"}`}
             >
               {frontmatter.description}
             </p>

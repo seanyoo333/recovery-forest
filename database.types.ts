@@ -164,6 +164,8 @@ export type Database = {
           date: string
           description: string
           email_sent: boolean | null
+          image_alt: string | null
+          image_url: string | null
           imported_at: string | null
           is_curated: boolean | null
           is_published: boolean | null
@@ -185,6 +187,8 @@ export type Database = {
           date: string
           description: string
           email_sent?: boolean | null
+          image_alt?: string | null
+          image_url?: string | null
           imported_at?: string | null
           is_curated?: boolean | null
           is_published?: boolean | null
@@ -206,6 +210,8 @@ export type Database = {
           date?: string
           description?: string
           email_sent?: boolean | null
+          image_alt?: string | null
+          image_url?: string | null
           imported_at?: string | null
           is_curated?: boolean | null
           is_published?: boolean | null

@@ -14,27 +14,56 @@
 import type { Route } from "./+types/posts";
 
 import { ChevronUpIcon } from "lucide-react";
-import { bundleMDX } from "mdx-bundler";
-import { readdir } from "node:fs/promises";
-import path from "node:path";
 import { Form, Link, useFetcher, useSearchParams } from "react-router";
-import { redirect } from "react-router";
 
 import { Badge } from "~/core/components/ui/badge";
 import { Button } from "~/core/components/ui/button";
 import { Input } from "~/core/components/ui/input";
 import makeServerClient from "~/core/lib/supa-client.server";
 import { cn } from "~/core/lib/utils";
+import { BLOG_CATEGORIES, getBlogCategory } from "~/features/blog/categories";
 import { BlogPagination } from "~/features/blog/components/blog-pagination";
+import { getBlogPostEntries } from "~/features/blog/lib/blog-content.server";
 import { getBlogPostsMeta } from "~/features/blog/queries";
 
 /**
  * Meta function for the blog posts page
  */
-export const meta: Route.MetaFunction = () => {
+export const meta: Route.MetaFunction = ({ data }) => {
+  const canonicalUrl = data?.canonicalUrl;
+  const baseUrl = data?.baseUrl;
+  const shouldNoIndex = data?.shouldNoIndex ?? false;
+  const title = `좋은습관 블로그 | ${import.meta.env.VITE_APP_NAME}`;
+  const description = "근거기반의 통합의학 정보를 공유합니다.";
+  const imageUrl = baseUrl ? `${baseUrl}/blog/og-default.png` : undefined;
+  const imageAlt = "좋은습관 블로그 - 근거기반의 통합의학 정보";
+
   return [
-    { title: `좋은습관 블로그 | ${import.meta.env.VITE_APP_NAME}` },
-    { name: "description", content: "근거기반의 통합의학 정보를 공유합니다." },
+    { title },
+    { name: "description", content: description },
+    ...(canonicalUrl
+      ? [{ tagName: "link", rel: "canonical", href: canonicalUrl }]
+      : []),
+    { property: "og:type", content: "website" },
+    ...(canonicalUrl ? [{ property: "og:url", content: canonicalUrl }] : []),
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    ...(imageUrl
+      ? [
+          { property: "og:image", content: imageUrl },
+          { property: "og:image:width", content: "1200" },
+          { property: "og:image:height", content: "630" },
+          { property: "og:image:alt", content: imageAlt },
+          { name: "twitter:image", content: imageUrl },
+          { name: "twitter:image:alt", content: imageAlt },
+        ]
+      : []),
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
+    ...(shouldNoIndex
+      ? [{ name: "robots", content: "noindex, follow" }]
+      : []),
   ];
 };
 
@@ -46,14 +75,19 @@ interface BlogPost {
   description: string;
   date: string;
   category: string;
+  categoryName: string;
   author: string;
   slug: string;
+  image?: string;
+  imageAlt?: string;
+  updatedAt?: string;
   upvotes?: number;
   is_upvoted?: boolean;
   post_id?: number;
 }
 
 const POSTS_PER_PAGE = 10;
+const BLOG_DEFAULT_IMAGE = "/blog/og-default.png";
 
 /**
  * Blog Post Card Component with Optimistic Upvote
@@ -82,6 +116,7 @@ function BlogPostCard({ frontmatter }: { frontmatter: BlogPost }) {
       action: `/api/blog/${frontmatter.post_id}/upvote`,
     });
   };
+  const imageSrc = frontmatter.image ?? BLOG_DEFAULT_IMAGE;
 
   return (
     <div className="flex flex-col gap-4">
@@ -93,12 +128,16 @@ function BlogPostCard({ frontmatter }: { frontmatter: BlogPost }) {
         {/* Post featured image */}
         <div className="relative">
           <img
-            src={`/blog/${frontmatter.slug}.jpg`}
-            alt={frontmatter.title}
+            src={imageSrc}
+            alt={frontmatter.imageAlt ?? frontmatter.title}
             className="aspect-[4/3] w-full rounded-lg object-cover object-center shadow-md transition-shadow hover:shadow-lg"
             loading="lazy"
             onError={(e) => {
               const img = e.currentTarget;
+              if (!img.src.endsWith(BLOG_DEFAULT_IMAGE)) {
+                img.src = BLOG_DEFAULT_IMAGE;
+                return;
+              }
               img.style.display = "none";
               const placeholder = img
                 .closest("div")
@@ -118,7 +157,7 @@ function BlogPostCard({ frontmatter }: { frontmatter: BlogPost }) {
       {/* Category badge and Upvote button */}
       <div className="flex items-center justify-between">
         <Badge variant="secondary" className="text-sm">
-          {frontmatter.category}
+          {frontmatter.categoryName}
         </Badge>
         {frontmatter.post_id && (
           <Button
@@ -162,80 +201,89 @@ function BlogPostCard({ frontmatter }: { frontmatter: BlogPost }) {
 export async function loader({ request }: Route.LoaderArgs) {
   const [client] = makeServerClient(request);
 
-  // Check authentication - redirect to login if not authenticated
   const {
     data: { user },
   } = await client.auth.getUser();
-  if (!user) {
-    throw redirect("/login");
-  }
 
   // Parse search parameters
   const url = new URL(request.url);
   const query = url.searchParams.get("query") || "";
-  const category = url.searchParams.get("category") || "";
+  const categoryParam = url.searchParams.get("category") || "";
+  const category = categoryParam ? getBlogCategory(categoryParam).slug : "";
   const page = Number(url.searchParams.get("page")) || 1;
   const sorting =
     (url.searchParams.get("sorting") as "newest" | "popular") || "newest";
+  const baseUrl = `${url.protocol}//${url.host}`;
+  const canonicalParams = new URLSearchParams();
+  if (!query) {
+    if (category) {
+      canonicalParams.set("category", category);
+    }
+    if (page > 1) {
+      canonicalParams.set("page", String(page));
+    }
+  }
+  const canonicalQuery = canonicalParams.toString();
+  const canonicalUrl = canonicalQuery
+    ? `${baseUrl}/blog?${canonicalQuery}`
+    : `${baseUrl}/blog`;
+  const shouldNoIndex = Boolean(query);
 
-  // Get the path to the docs directory containing MDX files
-  const docsPath = path.join(process.cwd(), "app", "features", "blog", "docs");
-
-  // Read all files in the docs directory
-  const files = await readdir(docsPath);
-  const mdxFiles = files.filter((file) => file.endsWith(".mdx"));
-
-  // Get blog posts metadata from Supabase (optional - if available)
+  // Supabase metadata is the source of truth for the public blog list.
   let blogPostsMeta: Awaited<ReturnType<typeof getBlogPostsMeta>> = [];
+  let shouldUseMdxFallback = false;
   try {
-    blogPostsMeta = await getBlogPostsMeta(client, user.id, sorting);
+    blogPostsMeta = await getBlogPostsMeta(client, user?.id, sorting);
   } catch {
-    // If Supabase query fails, continue without metadata
+    // Keep local development resilient if Supabase is unavailable.
+    shouldUseMdxFallback = true;
   }
 
-  // Create a map of slug to metadata for quick lookup
-  const metaMap = new Map(blogPostsMeta.map((meta) => [meta.slug, meta]));
+  const blogPosts: BlogPost[] = shouldUseMdxFallback
+    ? (await getBlogPostEntries()).map(({ frontmatter }) => ({
+        title: frontmatter.title,
+        description: frontmatter.description,
+        date: frontmatter.date,
+        category: frontmatter.category,
+        categoryName: frontmatter.categoryName,
+        author: frontmatter.author,
+        slug: frontmatter.slug,
+        image: frontmatter.image,
+        imageAlt: frontmatter.imageAlt,
+        updatedAt: frontmatter.updatedAt,
+        upvotes: 0,
+        is_upvoted: false,
+      }))
+    : blogPostsMeta.map((meta) => {
+        const category = getBlogCategory(meta.category);
 
-  // Extract frontmatter from each MDX file and merge with Supabase metadata
-  const blogPosts: BlogPost[] = await Promise.all(
-    mdxFiles.map(async (file) => {
-      const filePath = path.join(docsPath, file);
-      const { frontmatter } = await bundleMDX({ file: filePath });
-      const slug = (frontmatter.slug as string) || file.replace(/\.mdx$/, "");
-
-      // Get metadata from Supabase if available
-      const meta = metaMap.get(slug);
-
-      // Merge frontmatter with Supabase metadata (prefer Supabase for dynamic fields)
-      return {
-        title: (meta?.title || frontmatter.title) as string,
-        description: (meta?.description || frontmatter.description) as string,
-        date: (meta?.date || frontmatter.date) as string,
-        category: (meta?.category || frontmatter.category) as string,
-        author: (meta?.author || frontmatter.author) as string,
-        slug,
-        upvotes: meta?.upvotes || 0,
-        is_upvoted: meta?.is_upvoted || false,
-        post_id: meta?.post_id,
-      };
-    }),
-  );
-
-  // Filter by published posts if Supabase metadata exists, otherwise show all
-  const publishedPosts =
-    blogPostsMeta.length > 0
-      ? blogPosts.filter((post) => metaMap.has(post.slug))
-      : blogPosts;
+        return {
+          title: meta.title,
+          description: meta.description,
+          date: meta.date,
+          category: category.slug,
+          categoryName: category.name,
+          author: meta.author,
+          slug: meta.slug,
+          image: meta.image_url ?? undefined,
+          imageAlt: meta.image_alt ?? undefined,
+          updatedAt: meta.updated_at,
+          upvotes: meta.upvotes || 0,
+          is_upvoted: meta.is_upvoted || false,
+          post_id: meta.post_id,
+        };
+      });
 
   // Apply search filter
-  let filteredPosts = publishedPosts;
+  let filteredPosts = blogPosts;
   if (query) {
     const queryLower = query.toLowerCase();
     filteredPosts = filteredPosts.filter(
       (post) =>
         post.title.toLowerCase().includes(queryLower) ||
         post.description.toLowerCase().includes(queryLower) ||
-        post.category.toLowerCase().includes(queryLower),
+        post.category.toLowerCase().includes(queryLower) ||
+        post.categoryName.toLowerCase().includes(queryLower),
     );
   }
 
@@ -271,9 +319,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
 
   // Get all unique categories
-  const allCategories = [
-    ...new Set(publishedPosts.map((post) => post.category)),
-  ] as string[];
+  const categoriesWithPosts = new Set(blogPosts.map((post) => post.category));
+  const allCategories = BLOG_CATEGORIES.filter((category) =>
+    categoriesWithPosts.has(category.slug),
+  );
 
   return {
     frontmatters: paginatedPosts,
@@ -284,6 +333,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     category,
     sorting,
     allCategories,
+    canonicalUrl,
+    baseUrl,
+    shouldNoIndex,
   };
 }
 
@@ -392,17 +444,19 @@ export default function Posts({
         </Button>
         {allCategories.map((cat) => (
           <Button
-            key={cat}
-            variant={category === cat ? "default" : "outline"}
+            key={cat.slug}
+            variant={category === cat.slug ? "default" : "outline"}
             size="sm"
             asChild
           >
             <Link
               to={
-                query ? `?query=${query}&category=${cat}` : `?category=${cat}`
+                query
+                  ? `?query=${query}&category=${cat.slug}`
+                  : `?category=${cat.slug}`
               }
             >
-              {cat}
+              {cat.name}
             </Link>
           </Button>
         ))}

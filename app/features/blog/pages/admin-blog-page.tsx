@@ -5,8 +5,8 @@
  * - Create or update blog post metadata in Supabase
  * - Manage blog post publication status
  *
- * Note: MDX files are managed locally in app/features/blog/docs/ and committed to git.
- * Images are stored in public/blog/ directory.
+ * Note: MDX files are managed locally in app/content/blog/{category}/ and committed to git.
+ * Images are stored in the Supabase Storage blog bucket.
  * This page only manages metadata for dynamic features (views, likes, bookmarks, comments, etc.)
  *
  * Follows the same pattern as other admin pages for consistency.
@@ -24,6 +24,7 @@ import {
   requireAdminRole,
   requireAuthentication,
 } from "~/features/admin/guards.server";
+import { BLOG_CATEGORIES, getBlogCategory } from "~/features/blog/categories";
 import {
   createBlogPostMeta,
   updateBlogPostMeta,
@@ -55,6 +56,12 @@ const metaFormSchema = z.object({
   category: z.string().min(1, "카테고리가 필요합니다."),
   author: z.string().min(1, "작성자가 필요합니다."),
   slug: z.string().min(1, "Slug가 필요합니다."),
+  image_url: z
+    .string()
+    .url("대표 이미지 URL 형식이 올바르지 않습니다.")
+    .optional()
+    .or(z.literal("")),
+  image_alt: z.string().optional(),
   is_published: z.string().optional(),
 });
 
@@ -79,6 +86,8 @@ export async function action({ request }: Route.ActionArgs) {
       category: formData.get("category"),
       author: formData.get("author"),
       slug: formData.get("slug"),
+      image_url: formData.get("image_url"),
+      image_alt: formData.get("image_alt"),
       is_published: formData.get("is_published") || "true",
     });
 
@@ -102,14 +111,18 @@ export async function action({ request }: Route.ActionArgs) {
       // Get user ID for profile_id
       const userId = await getLoggedInUserId(client);
 
+      const category = getBlogCategory(parsedData.category);
+
       // Save metadata to database
       await createBlogPostMeta(client, {
         slug: parsedData.slug,
         title: parsedData.title,
         description: parsedData.description,
-        category: parsedData.category,
+        category: category.slug,
         author: parsedData.author,
         date: parsedData.date,
+        image_url: parsedData.image_url || null,
+        image_alt: parsedData.image_alt || null,
         profile_id: userId,
         is_published: parsedData.is_published === "true",
       });
@@ -178,25 +191,27 @@ export default function AdminBlogPage({ actionData }: Route.ComponentProps) {
             <li>
               • MDX 파일은 로컬에서 작성하여{" "}
               <code className="bg-muted rounded px-1">
-                app/features/blog/docs/
+                app/content/blog/{`{categorySlug}`}/
               </code>{" "}
               디렉토리에 저장하고 Git에 커밋하세요.
             </li>
             <li>
-              • 대표 이미지는{" "}
+              • 대표 이미지는 Supabase Storage의{" "}
               <code className="bg-muted rounded px-1">
-                public/blog/{`{slug}.{ext}`}
+                blog/{`{slug}`}/cover.webp
               </code>{" "}
-              형식으로 저장하세요. (jpg, png, webp, jpeg, gif 지원)
+              형식으로 업로드하고 Public URL을 아래{" "}
+              <code className="bg-muted rounded px-1">image_url</code>에
+              입력하세요.
             </li>
             <li>
-              • MDX 내부 이미지는{" "}
+              • MDX 내부 이미지는 Supabase Storage의{" "}
               <code className="bg-muted rounded px-1">
-                public/blog/{`{date}_{slug}/`}
+                blog/{`{slug}`}/
               </code>{" "}
-              폴더에 저장하고 MDX에서{" "}
+              경로에 업로드하고, MDX에서 Public URL을{" "}
               <code className="bg-muted rounded px-1">
-                &lt;img src="/blog/{`{date}_{slug}/image.jpg`}" /&gt;
+                &lt;img src="https://.../storage/v1/object/public/blog/{`{slug}`}/image.jpg" /&gt;
               </code>{" "}
               형식으로 사용하세요.
             </li>
@@ -218,7 +233,7 @@ export default function AdminBlogPage({ actionData }: Route.ComponentProps) {
             <div className="space-y-5">
               <InputPair
                 label="Slug"
-                description="MDX 파일명과 일치해야 합니다 (예: my-blog-post.mdx → my-blog-post)"
+                description="URL slug입니다. 파일명은 YYYY-MM-DD-{slug}.mdx 규칙을 사용하세요."
                 id="slug"
                 name="slug"
                 type="text"
@@ -294,15 +309,26 @@ export default function AdminBlogPage({ actionData }: Route.ComponentProps) {
             </div>
 
             <div className="space-y-5">
-              <InputPair
-                label="카테고리"
-                description="블로그 포스트 카테고리"
-                id="category"
-                name="category"
-                type="text"
-                required
-                placeholder="예: 면역요법, 대사치료"
-              />
+              <div className="space-y-2">
+                <label htmlFor="category" className="text-sm font-medium">
+                  카테고리
+                </label>
+                <p className="text-muted-foreground text-sm">
+                  MDX 폴더명과 같은 taxonomy slug를 선택하세요.
+                </p>
+                <select
+                  id="category"
+                  name="category"
+                  required
+                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {BLOG_CATEGORIES.map((category) => (
+                    <option key={category.slug} value={category.slug}>
+                      {category.name} ({category.slug})
+                    </option>
+                  ))}
+                </select>
+              </div>
               {actionData &&
                 "formErrors" in actionData &&
                 actionData.formErrors &&
@@ -331,6 +357,43 @@ export default function AdminBlogPage({ actionData }: Route.ComponentProps) {
                     {actionData.formErrors.author.join(", ")}
                   </p>
                 )}
+
+              <InputPair
+                label="대표 이미지 URL"
+                description="Supabase Storage blog bucket의 cover 이미지 Public URL"
+                id="image_url"
+                name="image_url"
+                type="url"
+                placeholder="https://...supabase.co/storage/v1/object/public/blog/{slug}/cover.webp"
+              />
+              {actionData &&
+                "formErrors" in actionData &&
+                actionData.formErrors &&
+                "image_url" in actionData.formErrors &&
+                actionData.formErrors.image_url && (
+                  <p className="text-red-500">
+                    {actionData.formErrors.image_url.join(", ")}
+                  </p>
+                )}
+
+              <InputPair
+                label="대표 이미지 설명"
+                description="OG 이미지와 접근성에 사용될 대체 텍스트"
+                id="image_alt"
+                name="image_alt"
+                type="text"
+                placeholder="예: 키트루다의 PD-1/PD-L1 면역관문 기전 설명 이미지"
+              />
+              {actionData &&
+                "formErrors" in actionData &&
+                actionData.formErrors &&
+                "image_alt" in actionData.formErrors &&
+                actionData.formErrors.image_alt && (
+                  <p className="text-red-500">
+                    {actionData.formErrors.image_alt.join(", ")}
+                  </p>
+                )}
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"

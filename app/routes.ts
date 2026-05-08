@@ -110,7 +110,15 @@ export default [
 
     route("/contact", "features/contact/screens/contact-us.tsx"),
 
-    // 커뮤니티, 천연물질, 블로그: 로그인 필요
+    // 블로그: 공개 (크롤링·SEO)
+    layout("features/blog/layouts/blog.layout.tsx", [
+      ...prefix("/blog", [
+        index("features/blog/pages/posts.tsx"),
+        route("/:slug", "features/blog/pages/post.tsx"),
+      ]),
+    ]),
+
+    // 커뮤니티, 천연물질: 로그인 필요
     layout("core/layouts/private.layout.tsx", { id: "private-community" }, [
       ...prefix("community", [
         index("features/community/pages/community-page.tsx"),
@@ -426,13 +434,4 @@ export default [
 
   ...prefix("/legal", [route("/:slug", "features/legal/screens/policy.tsx")]),
 
-  // 블로그: 로그인 필요
-  layout("core/layouts/private.layout.tsx", { id: "private-blog" }, [
-    layout("features/blog/layouts/blog.layout.tsx", [
-      ...prefix("/blog", [
-        index("features/blog/pages/posts.tsx"),
-        route("/:slug", "features/blog/pages/post.tsx"),
-      ]),
-    ]),
-  ]),
 ] satisfies RouteConfig;
