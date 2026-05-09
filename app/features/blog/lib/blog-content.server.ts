@@ -3,6 +3,11 @@ import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getBlogCategory } from "../categories";
+import {
+  pathExists,
+  resolveBlogMdxFilePaths,
+  slugFromFileName,
+} from "./blog-mdx-files";
 
 export interface BlogPostFrontmatter {
   title: string;
@@ -24,54 +29,11 @@ export interface BlogPostEntry {
   lastmod: Date;
 }
 
-export const BLOG_CONTENT_ROOT = path.join(process.cwd(), "app", "content", "blog");
+export { BLOG_CONTENT_ROOT } from "./blog-mdx-files";
+
 const PUBLIC_BLOG_ROOT = path.join(process.cwd(), "public", "blog");
-const LEGACY_BLOG_DOCS_ROOT = path.join(
-  process.cwd(),
-  "app",
-  "features",
-  "blog",
-  "docs",
-);
 
-const DATE_PREFIX_PATTERN = /^\d{4}-\d{2}-\d{2}-/;
 const IMAGE_EXTENSIONS = new Set([".webp", ".jpg", ".jpeg", ".png", ".gif"]);
-
-async function pathExists(filePath: string) {
-  try {
-    await stat(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function getMdxFiles(root: string): Promise<string[]> {
-  if (!(await pathExists(root))) {
-    return [];
-  }
-
-  const entries = await readdir(root, { withFileTypes: true });
-  const nested = await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = path.join(root, entry.name);
-
-      if (entry.isDirectory()) {
-        return getMdxFiles(entryPath);
-      }
-
-      return entry.isFile() && entry.name.endsWith(".mdx") ? [entryPath] : [];
-    }),
-  );
-
-  return nested.flat();
-}
-
-function slugFromFileName(filePath: string) {
-  return path
-    .basename(filePath, ".mdx")
-    .replace(DATE_PREFIX_PATTERN, "");
-}
 
 function normalizeFrontmatter(
   frontmatter: Record<string, unknown>,
@@ -132,9 +94,7 @@ async function findPostImage(slug: string, basename: string) {
 }
 
 export async function getBlogPostEntries(): Promise<BlogPostEntry[]> {
-  const contentFiles = await getMdxFiles(BLOG_CONTENT_ROOT);
-  const files =
-    contentFiles.length > 0 ? contentFiles : await getMdxFiles(LEGACY_BLOG_DOCS_ROOT);
+  const files = await resolveBlogMdxFilePaths();
 
   const entries = await Promise.all(
     files.map(async (filePath) => {
