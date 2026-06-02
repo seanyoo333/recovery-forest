@@ -1,1 +1,0 @@
-ALTER POLICY "messages-select-policy" ON "messages" TO authenticated USING ((select auth.uid()) = "messages"."sender_id");

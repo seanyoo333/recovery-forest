@@ -1,3 +1,0 @@
-ALTER POLICY "bot-message-rooms-insert-policy" ON "bot_message_room_members" RENAME TO "bot-message-room-members-insert-policy";--> statement-breakpoint
-ALTER POLICY "bot-message-rooms-update-policy" ON "bot_message_rooms" TO authenticated USING ((select auth.uid()) = "bot_message_rooms"."created_by") WITH CHECK ((select auth.uid()) = "bot_message_rooms"."created_by");--> statement-breakpoint
-ALTER POLICY "bot-message-rooms-delete-policy" ON "bot_message_rooms" TO authenticated USING ((select auth.uid()) = "bot_message_rooms"."created_by");

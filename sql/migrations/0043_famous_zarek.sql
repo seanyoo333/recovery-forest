@@ -1,1 +1,0 @@
-ALTER POLICY "message-rooms-insert-policy" ON "message_rooms" TO public WITH CHECK (true);

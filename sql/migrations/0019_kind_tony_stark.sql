@@ -1,1 +1,0 @@
-ALTER TABLE "profiles" ALTER COLUMN "stats" SET DEFAULT '{"followers":0,"following":0}'::jsonb;

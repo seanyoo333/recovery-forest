@@ -1,1 +1,0 @@
-ALTER POLICY "message-room-members-select-policy" ON "message_room_members" RENAME TO "Enable read access for all users";

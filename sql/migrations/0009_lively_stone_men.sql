@@ -1,1 +1,0 @@
-ALTER TABLE "categories" ADD COLUMN "korean_name" text DEFAULT '' NOT NULL;

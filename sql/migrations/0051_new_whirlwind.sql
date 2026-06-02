@@ -1,2 +1,0 @@
-CREATE POLICY "product-upvotes-update-policy" ON "product_upvotes" AS PERMISSIVE FOR UPDATE TO "authenticated" USING ((select auth.uid()) = "product_upvotes"."profile_id") WITH CHECK ((select auth.uid()) = "product_upvotes"."profile_id");--> statement-breakpoint
-ALTER POLICY "products-update-policy" ON "products" TO authenticated USING (true) WITH CHECK (true);

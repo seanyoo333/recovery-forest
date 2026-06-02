@@ -1,0 +1,93 @@
+{
+  "_comment": "회복의 숲 추천 워크플로우 스켈레톤. n8n UI에서 import 후 노드 credential을 연결한 다음 다시 export하여 이 파일을 갱신하세요.",
+  "name": "recovery-forest-recommend",
+  "active": false,
+  "nodes": [
+    {
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "recovery-forest/recommend",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// TODO: session_id, user_priorities 등 필수 필드 검증\nreturn $input.all();"
+      }
+    },
+    {
+      "name": "Supabase: Query Forest Candidates",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "forest_places"
+      }
+    },
+    {
+      "name": "Fetch Weather (KMA)",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.KMA_SHORT_FORECAST_URL}}/getVilageFcst" }
+    },
+    {
+      "name": "Fetch Air Quality (AirKorea)",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.AIRKOREA_REALTIME_URL}}/getCtprvnRltmMesureDnsty" }
+    },
+    {
+      "name": "Fetch Forest Healing",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.FOREST_HEALING_API_URL}}" }
+    },
+    {
+      "name": "Fetch Forest Trail",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.FOREST_TRAIL_API_URL}}" }
+    },
+    {
+      "name": "Fetch Urban Forest",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.URBAN_FOREST_API_URL}}" }
+    },
+    {
+      "name": "Calculate Scores",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// TODO: 5축 점수 계산 + 우선순위 가중치\nreturn $input.all();"
+      }
+    },
+    {
+      "name": "OpenAI: Reason Generation",
+      "type": "n8n-nodes-base.openAi",
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "options": { "responseFormat": "json_object" }
+      }
+    },
+    {
+      "name": "Parse + Safety Filter",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// TODO: JSON 파싱, 금지표현 필터, 실패 시 fallback\nreturn $input.all();"
+      }
+    },
+    {
+      "name": "Supabase: Update Session",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "update",
+        "tableId": "recommendation_sessions"
+      }
+    },
+    {
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {}
+    }
+  ],
+  "connections": {}
+}

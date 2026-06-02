@@ -1,1 +1,0 @@
-ALTER POLICY "products-update-policy" ON "products" TO authenticated USING ((select auth.uid()) = "products"."profile_id") WITH CHECK ((select auth.uid()) = "products"."profile_id");

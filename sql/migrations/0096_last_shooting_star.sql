@@ -1,1 +1,0 @@
-ALTER TABLE "evidence_sources" ADD COLUMN "status" text;

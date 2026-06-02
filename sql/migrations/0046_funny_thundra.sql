@@ -1,1 +1,0 @@
-ALTER TABLE "admin_permissions" DROP COLUMN "permissions";

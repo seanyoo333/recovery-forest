@@ -1,2 +1,0 @@
-ALTER POLICY "product-upvotes-update-policy" ON "product_upvotes" TO authenticated USING (true) WITH CHECK (true);--> statement-breakpoint
-ALTER POLICY "product-upvotes-delete-policy" ON "product_upvotes" TO authenticated USING (true);

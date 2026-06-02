@@ -1,1 +1,0 @@
-ALTER POLICY "admin-permissions-select-policy" ON "admin_permissions" TO authenticated USING ((select auth.uid()) = "admin_permissions"."admin_id");

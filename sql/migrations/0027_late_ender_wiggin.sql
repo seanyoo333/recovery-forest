@@ -1,1 +1,0 @@
-ALTER TABLE "posts" ADD COLUMN "is_markdown" boolean DEFAULT false;

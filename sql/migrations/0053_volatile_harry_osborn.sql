@@ -1,1 +1,0 @@
-ALTER POLICY "product-upvotes-insert-policy" ON "product_upvotes" TO authenticated WITH CHECK (true);

@@ -1,59 +1,17 @@
-/**
- * Root Application Component
- *
- * This is the top-level component of the application that sets up:
- * - Theme management with dark/light mode support
- * - Internationalization (i18n) configuration
- * - Global UI components like dialogs and sheets
- * - Error boundaries and 404 handling
- * - Analytics integrations (Google Tag Manager)
- * - Customer support integration (Channel.io)
- * - Progress indicators for navigation
- */
 import "./app.css";
 
 import type { Route } from "./+types/root";
 
-import * as Sentry from "@sentry/react-router";
 import { Settings } from "luxon";
-import NProgress from "nprogress";
-import nProgressStyles from "nprogress/nprogress.css?url";
-import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import {
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-  type ShouldRevalidateFunctionArgs,
   isRouteErrorResponse,
-  useLocation,
-  useNavigate,
-  useNavigation,
-  useRouteLoaderData,
-  useSearchParams,
 } from "react-router";
-import { useChangeLanguage } from "remix-i18next/react";
-import {
-  PreventFlashOnWrongTheme,
-  ThemeProvider,
-  useTheme,
-} from "remix-themes";
 import { Toaster } from "sonner";
-
-import { Dialog } from "./core/components/ui/dialog";
-import { Sheet } from "./core/components/ui/sheet";
-import i18next from "./core/lib/i18next.server";
-import makeServerClient from "./core/lib/supa-client.server";
-import { themeSessionResolver } from "./core/lib/theme-session.server";
-import { cn } from "./core/lib/utils";
-import NotFound from "./core/screens/404";
-import {
-  countNotifications,
-  getUserById,
-  getUserPointsByUserId,
-} from "./features/users/queries";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico" },
@@ -67,362 +25,59 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap",
   },
-  { rel: "stylesheet", href: nProgressStyles },
 ];
 
-/**
- * Root loader function
- *
- * This server-side function runs on every request and is responsible for:
- * 1. Validating that all required environment variables are present
- * 2. Loading the user's theme preference from the session
- * 3. Detecting the user's preferred locale
- *
- * The data returned from this loader is available throughout the application
- * via the useRouteLoaderData hook with the 'root' ID.
- *
- * @param request - The incoming HTTP request
- * @returns Object containing theme and locale preferences
- */
-export async function loader({ request }: Route.LoaderArgs) {
-  // Validate that all required Supabase environment variables are present
-  // This prevents the application from starting with incomplete configuration
-  if (
-    !process.env.DATABASE_URL ||
-    !process.env.SUPABASE_URL ||
-    !process.env.SUPABASE_ANON_KEY ||
-    !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.DATABASE_URL === "" ||
-    process.env.SUPABASE_URL === "" ||
-    process.env.SUPABASE_ANON_KEY === "" ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY === ""
-  ) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  const [client] = makeServerClient(request);
-  const {
-    data: { user },
-  } = await client.auth.getUser();
-  // Concurrently load theme and locale preferences for better performance
-  const [{ getTheme }, locale] = await Promise.all([
-    themeSessionResolver(request),
-    i18next.getLocale(request),
-  ]);
-
-  if (user && user.id) {
-    try {
-      const [profile, count, userPoints] = await Promise.all([
-        getUserById(client, { id: user.id }),
-        countNotifications(client, { userId: user.id }),
-        getUserPointsByUserId(client, { userId: user.id }),
-      ]);
-      return {
-        user,
-        profile,
-        notificationsCount: count,
-        userPoints: userPoints?.points ?? 0,
-        theme: getTheme(),
-        locale,
-      };
-    } catch {
-      // 프로필이 없는 경우(삭제된 계정 등) 로그아웃 상태로 처리
-      return {
-        user: null,
-        profile: null,
-        notificationsCount: 0,
-        userPoints: 0,
-        theme: getTheme(),
-        locale,
-      };
-    }
-  }
-  return {
-    user: null,
-    profile: null,
-    notificationsCount: 0,
-    userPoints: 0,
-    theme: getTheme(),
-    locale,
-  };
-}
-
-/**
- * i18n handle for the root route
- * Specifies that this route uses the 'common' translation namespace
- */
-export const handle = {
-  i18n: "common",
-};
-
-/**
- * Root Application Component
- *
- * This is the top-level component of the application that sets up:
- * - Theme management with dark/light mode support
- * - Internationalization (i18n) configuration
- * - Global UI components like dialogs and sheets
- * - Error boundaries and 404 handling
- * - Analytics integrations (Google Tag Manager)
- * - Customer support integration (Channel.io)
- * - Progress indicators for navigation
- */
-export const shouldRevalidate = (args: ShouldRevalidateFunctionArgs) => {
-  const intent =
-    args.actionResult &&
-    typeof args.actionResult === "object" &&
-    "intent" in args.actionResult &&
-    typeof args.actionResult.intent === "string"
-      ? args.actionResult.intent
-      : null;
-  const isNaturalIngredientsAction =
-    args.formAction?.includes("/natural-ingredients/") ?? false;
-
-  if (
-    intent &&
-    isNaturalIngredientsAction &&
-    [
-      "create-experience",
-      "update-experience",
-      "delete-experience",
-      "create-reply",
-      "delete-reply",
-    ].includes(intent)
-  ) {
-    return false;
-  }
-
-  // 메시지 페이지에서는 데이터 재검증 비활성화 (성능 최적화)
-  return !args.nextUrl.pathname.includes("messages");
-};
-
-/**
- * Primary Layout Component
- *
- * This component wraps the entire application with the ThemeProvider
- * to enable dark/light mode functionality. It retrieves theme preferences
- * from the root loader data and provides a theme switching API endpoint.
- *
- * @param children - Child components to render within the layout
- */
 export function Layout({ children }: { children: React.ReactNode }) {
   Settings.defaultLocale = "ko";
   Settings.defaultZone = "Asia/Seoul";
-  const data = useRouteLoaderData("root");
   return (
-    <ThemeProvider
-      specifiedTheme={data?.theme ?? "dark"} // Default to dark theme if none is specified
-      themeAction="/api/settings/theme" // API endpoint for changing theme
-    >
-      <InnerLayout>{children}</InnerLayout>
-    </ThemeProvider>
-  );
-}
-
-/**
- * Inner Layout Component
- *
- * This component handles the HTML structure of the application and applies:
- * - Language direction (RTL/LTR) based on the current locale
- * - Theme class to the HTML element
- * - Special handling for pre-rendered routes (blog, legal pages)
- * - Loading of analytics and customer support scripts
- *
- * @param children - Child components to render within the layout
- */
-function InnerLayout({ children }: { children: React.ReactNode }) {
-  const [theme] = useTheme();
-  const data = useRouteLoaderData<typeof loader>("root");
-  const { i18n } = useTranslation();
-  const { pathname } = useLocation();
-
-  // Set the i18next language based on the locale from the loader
-  useChangeLanguage(data?.locale ?? "en");
-
-  // Detect if the current route is a pre-rendered page (blog or legal)
-  // These pages require special theme handling
-  const isPreRendered =
-    pathname.includes("/legal") || pathname.includes("/blog");
-
-  return (
-    <html
-      lang={data?.locale ?? "en"}
-      className={cn(theme ?? "", "h-full")}
-      dir={i18n.dir()}
-    >
+    <html lang="ko" className="h-full">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        {isPreRendered ? (
-          <script src="/scripts/prerendered-theme.js" />
-        ) : (
-          <PreventFlashOnWrongTheme ssrTheme={Boolean(data?.theme)} />
-        )}
       </head>
-      <body className="h-full">
+      <body className="h-full bg-white text-gray-900 antialiased">
         {children}
         <Toaster richColors position="bottom-right" />
         <ScrollRestoration />
         <Scripts />
-        {import.meta.env.VITE_GOOGLE_TAG_ID &&
-          import.meta.env.VITE_GOOGLE_TAG_ID !== "" && (
-            <>
-              <script
-                async
-                src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.VITE_GOOGLE_TAG_ID}`}
-              ></script>
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${import.meta.env.VITE_GOOGLE_TAG_ID}');`,
-                }}
-              />
-            </>
-          )}
-        {import.meta.env.VITE_CHANNEL_PLUGIN_KEY &&
-          import.meta.env.VITE_CHANNEL_PLUGIN_KEY !== "" && (
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `(function(){var w=window;if(w.ChannelIO){return w.console.error("ChannelIO script included twice.");}var ch=function(){ch.c(arguments);};ch.q=[];ch.c=function(args){ch.q.push(args);};w.ChannelIO=ch;function l(){if(w.ChannelIOInitialized){return;}w.ChannelIOInitialized=true;var s=document.createElement("script");s.type="text/javascript";s.async=true;s.src="https://cdn.channel.io/plugin/ch-plugin-web.js";var x=document.getElementsByTagName("script")[0];if(x.parentNode){x.parentNode.insertBefore(s,x);}}if(document.readyState==="complete"){l();}else{w.addEventListener("DOMContentLoaded",l);w.addEventListener("load",l);}})();
-            ChannelIO('boot', {
-              "pluginKey": "${import.meta.env.VITE_CHANNEL_PLUGIN_KEY}"
-            });
-`,
-              }}
-            ></script>
-          )}
       </body>
     </html>
   );
 }
 
-/**
- * Main Application Component
- *
- * This is the primary component rendered by React Router.
- * It handles global UI elements, progress indicators, and navigation.
- *
- * Key responsibilities:
- * 1. Setting up progress indicators for navigation (NProgress)
- * 2. Handling Supabase authentication redirects
- * 3. Providing global UI context (Sheet and Dialog components)
- */
-export default function App({ loaderData }: Route.ComponentProps) {
-  const navigation = useNavigation();
-  const data = useRouteLoaderData("root");
-  const isLoggedIn = loaderData.user !== null;
-
-  // Initialize NProgress with spinner for better UX during navigation
-  useEffect(() => {
-    NProgress.configure({ showSpinner: true });
-  }, []);
-
-  // Show/hide progress bar based on navigation state
-  useEffect(() => {
-    if (navigation.state === "loading") {
-      NProgress.start();
-    } else if (navigation.state === "idle") {
-      NProgress.done();
-    }
-  }, [navigation.state]);
-
-  // Handle Supabase authentication redirects
-  // This is a workaround for a Supabase auth issue: https://github.com/supabase/auth/issues/1927
-  // TODO: Remove this once the issue is fixed
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  useEffect(() => {
-    if (location.pathname === "/") {
-      const error = searchParams.get("error");
-      const code = searchParams.get("code");
-      if (error) {
-        // Redirect to error page if authentication failed
-        navigate(`/error?${searchParams.toString()}`);
-      } else if (code) {
-        // Redirect to dashboard if authentication succeeded
-        navigate(`/my/dashboard`);
-      }
-    }
-  }, [searchParams]);
-
-  return (
-    <Sheet>
-      <Dialog>
-        <Outlet
-          context={{
-            isLoggedIn,
-            name: loaderData.profile?.name,
-            userId: loaderData.user?.id,
-            username: loaderData.profile?.username,
-            avatar: loaderData.profile?.avatar,
-            email: loaderData.user?.email,
-          }}
-        />
-      </Dialog>
-    </Sheet>
-  );
+export default function App() {
+  return <Outlet />;
 }
 
-/**
- * Global Error Boundary Component
- *
- * This component catches and displays errors that occur during rendering
- * anywhere in the application. It provides different behavior based on:
- * - Error type (route error vs. JavaScript error)
- * - Environment (development vs. production)
- *
- * Key features:
- * - Special handling for 404 errors with a custom NotFound component
- * - Error reporting to Sentry in production
- * - Detailed stack traces in development mode
- * - User-friendly error messages in production
- *
- * @param error - The error that was caught by React Router
- */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack: string | undefined;
+  let title = "문제가 발생했어요";
+  let message = "잠시 후 다시 시도해주세요.";
 
   if (isRouteErrorResponse(error)) {
-    // Handle route errors (404, 500, etc.)
     if (error.status === 404) {
-      // Show custom 404 page for "not found" errors
-      return <NotFound />;
+      title = "페이지를 찾을 수 없어요";
+      message = "주소를 다시 확인해주세요.";
+    } else {
+      title = `오류 ${error.status}`;
+      message = error.statusText || message;
     }
-    message = "Error";
-    details = error.statusText || details;
-  } else if (error && error instanceof Error) {
-    // Handle JavaScript errors
-    if (
-      import.meta.env.VITE_SENTRY_DSN &&
-      import.meta.env.MODE === "production"
-    ) {
-      // Report error to Sentry in production
-      Sentry.captureException(error);
-    }
-    if (import.meta.env.DEV) {
-      // Show detailed error information in development
-      details = error.message;
-      stack = error.stack;
-    }
+  } else if (import.meta.env.DEV && error instanceof Error) {
+    message = error.message;
   }
 
-  // Render a simple error page with available information
   return (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full overflow-x-auto p-4">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="mx-auto flex max-w-xl flex-col gap-4 px-6 py-20 text-center">
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      <p className="text-gray-600">{message}</p>
+      <a
+        href="/"
+        className="mx-auto inline-flex h-12 items-center rounded-full bg-emerald-600 px-6 text-white"
+      >
+        처음으로 돌아가기
+      </a>
     </main>
   );
 }

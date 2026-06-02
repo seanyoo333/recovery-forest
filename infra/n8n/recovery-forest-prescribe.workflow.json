@@ -1,0 +1,110 @@
+{
+  "_comment": "회복의 숲 Evidence Engine 처방 워크플로우 스켈레톤. PRESCRIPTION_MODE=n8n 일 때 앱이 호출. n8n UI에서 import 후 Supabase/OpenAI credential을 연결하고, prescriptions/prescription_citations/journeys 를 service-role로 갱신하도록 구성한 다음 다시 export하여 이 파일을 갱신하세요. 프롬프트는 app/features/recovery-forest/prompts/prescription-plan.md 참고.",
+  "name": "recovery-forest-prescribe",
+  "active": false,
+  "nodes": [
+    {
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "recovery-forest/prescribe",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// TODO: journey_token, wellness(sleep/fatigue/mood/stress), recommendation_input 필수 검증\n// X-Webhook-Secret 헤더가 N8N_WEBHOOK_SECRET 과 일치하는지 확인\nreturn $input.all();"
+      }
+    },
+    {
+      "name": "Supabase: Pick Forest Place",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "forest_places",
+        "_comment": "user_sido 우선 1곳. 없으면 아무 곳. forest_place_id 확보."
+      }
+    },
+    {
+      "name": "Fetch Weather (KMA)",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.KMA_SHORT_FORECAST_URL}}/getVilageFcst" }
+    },
+    {
+      "name": "Fetch Air Quality (AirKorea)",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": { "url": "={{$env.AIRKOREA_REALTIME_URL}}/getCtprvnRltmMesureDnsty" }
+    },
+    {
+      "name": "Supabase: Evidence Candidates",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "forest_evidence_sources",
+        "_comment": "user_priorities → mechanism 매핑(cortisol/nk_cell/parasympathetic/phytoncide/blood_pressure)으로 근거 후보 조회."
+      }
+    },
+    {
+      "name": "Build Prescription Context",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// TODO: wellness + place + 환경데이터 + evidence 후보를 prescription-plan 입력 스키마로 조립\n// 치료 종료 3개월 미만이면 intensity 후보를 low 로 제한하도록 힌트 추가\nreturn $input.all();"
+      }
+    },
+    {
+      "name": "OpenAI: Prescription Plan",
+      "type": "n8n-nodes-base.openAi",
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o-mini",
+        "options": { "responseFormat": "json_object" },
+        "_comment": "system 프롬프트 = prescription-plan.md. 출력: ai_summary/caution/action_plan/target_outcome/post_measurement_plan/citations"
+      }
+    },
+    {
+      "name": "Parse + Safety Filter",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// TODO: JSON 파싱, 금지표현(치료/완치/효과 단정) 필터, target_outcome axis/direction 정합성 검증\n// 실패 시 journey.status='failed' + last_error 기록 후 종료\nreturn $input.all();"
+      }
+    },
+    {
+      "name": "Supabase: Update Prescription",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "update",
+        "tableId": "prescriptions",
+        "_comment": "journey_id 의 pending 처방을 status='completed' + action_plan/target_outcome/post_measurement_plan/ai_summary/caution/forest_place_id/completed_at 로 갱신 (service-role)."
+      }
+    },
+    {
+      "name": "Supabase: Insert Citations",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "create",
+        "tableId": "prescription_citations",
+        "_comment": "prescription_id + evidence_source_id + mechanism 로 인용 기록."
+      }
+    },
+    {
+      "name": "Supabase: Mark Journey Prescribed",
+      "type": "n8n-nodes-base.supabase",
+      "parameters": {
+        "operation": "update",
+        "tableId": "journeys",
+        "_comment": "journey_token 의 status 를 'prescribed' 로 갱신 (service-role)."
+      }
+    },
+    {
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "_comment": "앱은 fire-and-forget 이므로 { journey_token, status:'completed', action_plan, target_outcome, post_measurement_plan, citations } 형태로 응답(선택)."
+      }
+    }
+  ],
+  "connections": {}
+}

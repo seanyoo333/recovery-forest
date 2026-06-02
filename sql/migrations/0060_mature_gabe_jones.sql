@@ -1,1 +1,0 @@
-ALTER TABLE "profiles" ADD COLUMN "post_count" bigint DEFAULT 0 NOT NULL;

@@ -1,1 +1,0 @@
-ALTER TABLE "categories" ADD COLUMN "korean_main_energy" text DEFAULT '' NOT NULL;

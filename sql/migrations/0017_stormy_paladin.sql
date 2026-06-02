@@ -1,1 +1,0 @@
-ALTER TABLE "message_room_members" ADD COLUMN "is_read" boolean DEFAULT false NOT NULL;
