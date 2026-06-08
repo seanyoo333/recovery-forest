@@ -56,4 +56,28 @@ describe("recommendationInputSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("should_accept_missing_user_type", () => {
+    // user_type 미지정도 유효(랭킹 단계에서 comfort 로 해석)
+    const result = recommendationInputSchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.user_type).toBeUndefined();
+  });
+
+  it("should_accept_explorer_user_type", () => {
+    const result = recommendationInputSchema.safeParse({
+      ...validInput,
+      user_type: "explorer",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.user_type).toBe("explorer");
+  });
+
+  it("should_reject_invalid_user_type", () => {
+    const result = recommendationInputSchema.safeParse({
+      ...validInput,
+      user_type: "tourist",
+    });
+    expect(result.success).toBe(false);
+  });
 });

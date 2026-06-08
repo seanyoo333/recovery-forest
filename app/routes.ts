@@ -52,6 +52,7 @@ export default [
 
   ...prefix("/api", [
     route("/recommend", "features/recovery-forest/api/recommend.tsx"),
+    route("/prescribe", "features/recovery-forest/api/prescribe.tsx"),
     route("/feedback", "features/recovery-forest/api/feedback.tsx"),
     route("/journey-start", "features/recovery-forest/api/journey-start.tsx"),
     route(

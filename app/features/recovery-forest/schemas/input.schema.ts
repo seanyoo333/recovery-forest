@@ -25,6 +25,15 @@ export const PREFERRED_ACTIVITIES = [
 ] as const;
 export type PreferredActivity = (typeof PREFERRED_ACTIVITIES)[number];
 
+/**
+ * 사용자 유형 — 인터뷰(2026-06)에서 관찰된 정반대 선호.
+ *  - comfort(편안함형, 디폴트·일반 타겟): 거리가 결정의 전부
+ *  - explorer(근거형): 거리 무관, 차별성·과학적 근거 중심
+ * 사전설문 질문 1개로 감지("거리가 중요 vs 특별한 경험이 중요"). 과설계 금지.
+ */
+export const USER_TYPES = ["comfort", "explorer"] as const;
+export type UserType = (typeof USER_TYPES)[number];
+
 export const recommendationInputSchema = z.object({
   user_sido: z.string().min(1, "시·도를 선택해주세요"),
   user_sigungu: z.string().min(1, "시·군·구를 선택해주세요"),
@@ -35,6 +44,8 @@ export const recommendationInputSchema = z.object({
   user_fitness_level: z.enum(FITNESS_LEVELS),
   user_travel_time_min: z.union([z.literal(30), z.literal(60), z.literal(120)]),
   user_preferred_activity: z.enum(PREFERRED_ACTIVITIES),
+  // 미지정 시 일반 타겟(comfort)으로 해석한다(랭킹 시 `?? "comfort"`).
+  user_type: z.enum(USER_TYPES).optional(),
 });
 
 export type RecommendationInput = z.infer<typeof recommendationInputSchema>;
@@ -60,4 +71,9 @@ export const ACTIVITY_LABELS: Record<PreferredActivity, string> = {
   meditation: "명상",
   program: "체험 프로그램",
   free: "자유",
+};
+
+export const USER_TYPE_LABELS: Record<UserType, string> = {
+  comfort: "가까운 곳이 좋아요",
+  explorer: "특별한 경험이 좋아요",
 };
