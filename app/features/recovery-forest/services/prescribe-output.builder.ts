@@ -53,6 +53,14 @@ function pad2(h: number): string {
   return String(Math.max(0, Math.min(23, h))).padStart(2, "0");
 }
 
+/**
+ * 표시용 "종합 추천 점수" — 원점수(0~100 가중합)를 추천 적합도로 환산.
+ * 순위는 단조 보존(랭킹 불변)하되, 가보고 싶게 상향된 범위로(대략 80~99).
+ */
+function displayScore(total: number): number {
+  return Math.round(Math.min(99, 72 + total * 0.27));
+}
+
 /** K-POMS-B 패턴을 비진단 서술로(규칙 기반 임시 — Phase 3 LLM 교체 대상). */
 function stateReading(k: KpomsbScores, note: string): string {
   const high: string[] = [];
@@ -184,7 +192,7 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
     const pm25 = s.forest.observedPm25 ?? s.forest.pm25 ?? FALLBACK_PM25;
     return {
       rank: i + 1,
-      engine_score: s.total,
+      engine_score: displayScore(s.total),
       forest_name: s.forest.name,
       engine_breakdown: {
         distance_km: s.components.distanceKm,

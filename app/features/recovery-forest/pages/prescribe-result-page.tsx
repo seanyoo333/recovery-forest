@@ -43,6 +43,13 @@ export default function PrescribeResultPage({
   const rest = output.ranking.slice(1);
   const heroImage = forestImage(b.species);
 
+  // 추천 산림치유 프로그램 (예시) — API/원천 연동 전 데모 샘플.
+  const PROGRAMS = [
+    { name: "숲속 아로마 명상", img: "/forest-hinoki.jpg" },
+    { name: "편백 숲 걷기 명상", img: "/forest-pine.jpg" },
+    { name: "숲 호흡 이완 명상", img: "/recovery-forest.png" },
+  ];
+
   return (
     <div className="bg-gradient-to-b from-emerald-50/70 to-white">
       <main className="mx-auto flex max-w-2xl flex-col gap-6 px-5 pt-8 pb-4">
@@ -74,7 +81,7 @@ export default function PrescribeResultPage({
                   <span className="text-xl font-bold tabular-nums text-white">
                     {Math.round(topRank.engine_score)}
                   </span>
-                  <span className="text-xs text-emerald-50/90">점 · 종합</span>
+                  <span className="text-xs text-emerald-50/90">점 · 종합 추천</span>
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs text-emerald-50/90 backdrop-blur-sm">
                   <Mountain className="size-3.5" aria-hidden />
@@ -179,6 +186,31 @@ export default function PrescribeResultPage({
           <VisitTimeline steps={top.itinerary.steps} forestImage={heroImage} />
         </section>
 
+        {/* 추천 산림치유 프로그램 (예시 이미지·프로그램명) */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-gray-900">
+              추천 산림치유 프로그램
+            </h2>
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+              예시
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {PROGRAMS.map((p) => (
+              <div
+                key={p.name}
+                className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
+              >
+                <img src={p.img} alt="" className="h-20 w-full object-cover" />
+                <p className="px-2.5 py-2 text-xs leading-snug font-medium text-gray-800">
+                  {p.name}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ⑥ 주변 — 먹거리·볼거리·교통 (샘플 + 예시 배지) */}
         <section className="flex flex-col gap-3 rounded-3xl border border-gray-200 bg-white p-5">
           <div className="flex items-center gap-2">
@@ -221,7 +253,7 @@ export default function PrescribeResultPage({
           </div>
           <p className="flex items-center gap-1.5 border-t border-gray-100 pt-3 text-sm text-gray-600">
             <Bus className="size-4 text-emerald-600" aria-hidden />
-            교통: KTX + 버스 약 3시간 · 추천 프로그램 {top.recommended_program.title}
+            교통: KTX + 버스 약 3시간 (예시)
           </p>
         </section>
 
@@ -240,13 +272,8 @@ export default function PrescribeResultPage({
           </section>
         ) : null}
 
-        {/* 안내 + 다시 입력 */}
+        {/* 다시 입력 */}
         <section className="flex flex-col gap-4">
-          <ul className="flex flex-col gap-1 rounded-2xl bg-gray-50 p-4 text-xs leading-relaxed text-gray-500">
-            {output.disclaimers.map((d, i) => (
-              <li key={i}>· {d}</li>
-            ))}
-          </ul>
           <Link
             to="/prescribe"
             className="inline-flex h-12 w-fit items-center gap-2 rounded-full border border-emerald-600 px-6 text-emerald-700 transition hover:bg-emerald-50"

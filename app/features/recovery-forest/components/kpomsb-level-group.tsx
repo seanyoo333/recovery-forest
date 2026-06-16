@@ -33,7 +33,7 @@ export function KpomsbLevelGroup({
   value,
   onChange,
 }: {
-  value: KpomsbScores;
+  value: Partial<KpomsbScores>;
   onChange: (axis: KpomsbAxis, v: number) => void;
 }) {
   return (
@@ -72,7 +72,7 @@ export function KpomsbLevelGroup({
                 );
               })}
             </div>
-            <input type="hidden" name={`kpomsb_${axis}`} value={v} />
+            <input type="hidden" name={`kpomsb_${axis}`} value={v ?? ""} />
           </div>
         );
       })}

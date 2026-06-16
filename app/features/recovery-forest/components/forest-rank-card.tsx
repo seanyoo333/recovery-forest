@@ -30,7 +30,7 @@ export function ForestRankCard({ item }: { item: RankingItem }) {
             <span className="text-2xl font-bold tabular-nums text-emerald-600">
               {item.engine_score}
             </span>
-            <span className="text-[10px] text-gray-400">엔진 종합점수</span>
+            <span className="text-[10px] text-gray-400">종합 추천 점수</span>
           </div>
           <ChevronDown
             className="mt-1 size-5 shrink-0 text-gray-400 transition group-open:rotate-180"

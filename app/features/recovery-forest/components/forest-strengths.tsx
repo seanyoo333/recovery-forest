@@ -56,7 +56,7 @@ export function ForestStrengths({
       />
 
       <p className="rounded-xl bg-gray-50 p-3 text-sm leading-relaxed text-gray-600">
-        <b className="text-gray-900">종합 {Math.round(engineScore)}점</b>
+        <b className="text-gray-900">종합 추천 점수 {Math.round(engineScore)}점</b>
         {tradeoff ? ` — ${tradeoff}` : null}
       </p>
     </div>

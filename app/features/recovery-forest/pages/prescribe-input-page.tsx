@@ -18,15 +18,12 @@ import {
   EXPLORER_INPUT_DEMO,
 } from "../fixtures/prescription-demo";
 import {
-  COMPANIONS,
-  COMPANION_LABELS,
   SIMPLE_MOODS,
   TRANSPORT_LABELS,
   TRANSPORT_MODES,
   USER_TYPES,
   USER_TYPE_LABELS,
   USER_TYPE_TAGLINES,
-  type Companion,
   type KpomsbAxis,
   type KpomsbScores,
   type PrescribeInput,
@@ -55,15 +52,6 @@ const QUICK_REGIONS = [
   { sido: "부산", sigungu: "해운대구" },
 ] as const;
 
-const DEFAULT_KPOMSB: KpomsbScores = {
-  긴장: 6,
-  우울: 6,
-  분노: 3,
-  활력: 6,
-  피로: 6,
-  혼란: 6,
-};
-const MAX_TRAVEL_OPTIONS = [60, 90, 120, 240] as const;
 const ARRIVAL_HOURS = [7, 8, 9, 10, 11, 13, 14, 15] as const;
 
 const STEP_COUNT = 4;
@@ -85,16 +73,15 @@ export default function PrescribeInputPage() {
 
   // --- 정밀(선택) ---
   const [userTypeOverride, setUserTypeOverride] = useState<UserType | null>(null);
-  const [kpomsb, setKpomsb] = useState<KpomsbScores>(DEFAULT_KPOMSB);
+  // K-POMS-B 는 미선택(빈) 상태로 시작 — 매번 새롭게(이전 선택이 남지 않게).
+  const [kpomsb, setKpomsb] = useState<Partial<KpomsbScores>>({});
   const [arrivalHour, setArrivalHour] = useState(10);
   const [mode, setMode] = useState<TransportMode>("transit");
-  const [maxTravel, setMaxTravel] = useState(90);
   const [prefs, setPrefs] = useState({
     wants_program: true,
     wants_food: true,
     wants_nearby: false,
   });
-  const [companions, setCompanions] = useState<Companion>("solo");
 
   const mood = SIMPLE_MOODS.find((m) => m.key === moodKey) ?? null;
   const userType: UserType | null =
@@ -114,12 +101,19 @@ export default function PrescribeInputPage() {
   function selectMood(key: SimpleMoodKey) {
     setMoodKey(key);
     setUserTypeOverride(null);
-    // 글로 남기는 중이 아니면 자연스럽게 다음으로 흘러가게.
-    if (!note.trim()) goNext();
+    goNext(); // 고르면 자연스럽게 다음으로
+  }
+
+  function todayStr() {
+    const k = new Date(Date.now() + 9 * 3600 * 1000);
+    return k.toISOString().slice(0, 10);
   }
 
   function submit() {
-    if (!userType || !sido || !date || !consent) return;
+    if (!userType || !sido) return;
+    const visitDate = date || todayStr(); // 날짜 미선택 시 오늘
+    // 미선택 축은 '보통'(6)으로. 순서 고정: 긴장,우울,분노,활력,피로,혼란.
+    const k = (a: KpomsbAxis) => kpomsb[a] ?? 6;
     const params = new URLSearchParams();
     params.set("user_type", userType);
     params.set("health_goal", healthGoal);
@@ -131,12 +125,11 @@ export default function PrescribeInputPage() {
     }
     params.set("sido", sido);
     if (sigungu) params.set("sigungu", sigungu);
-    params.set("visit_date", date);
+    params.set("visit_date", visitDate);
     params.set("arrival_hour", String(arrivalHour));
-    // 순서 고정: 긴장,우울,분노,활력,피로,혼란 (결과 loader 의 parseKpomsb 와 일치)
     params.set(
       "kpomsb",
-      `${kpomsb.긴장},${kpomsb.우울},${kpomsb.분노},${kpomsb.활력},${kpomsb.피로},${kpomsb.혼란}`,
+      `${k("긴장")},${k("우울")},${k("분노")},${k("활력")},${k("피로")},${k("혼란")}`,
     );
     if (note.trim()) params.set("note", note.trim());
 
@@ -165,18 +158,15 @@ export default function PrescribeInputPage() {
     setKpomsb(input.kpomsb_pre);
     setArrivalHour(input.visit_plan.arrival_hour);
     setMode(input.transport.mode);
-    setMaxTravel(input.transport.max_travel_minutes ?? 90);
     setPrefs({
       wants_program: input.preferences.wants_program,
       wants_food: input.preferences.wants_food,
       wants_nearby: input.preferences.wants_nearby,
     });
-    setCompanions(input.preferences.companions ?? "solo");
     setStep(STEP_COUNT - 1);
   }
 
   const canLeaveOrigin = !!sido;
-  const canLeaveDate = !!date && consent;
 
   return (
     <div className="relative isolate min-h-[calc(100vh-3.5rem)]">
@@ -243,10 +233,7 @@ export default function PrescribeInputPage() {
           {step === 0 ? (
             <StepMood
               moodKey={moodKey}
-              note={note}
               onSelect={selectMood}
-              onNote={setNote}
-              onNext={goNext}
               onFillComfort={() => fillExample(COMFORT_INPUT_DEMO)}
               onFillExplorer={() => fillExample(EXPLORER_INPUT_DEMO)}
             />
@@ -269,7 +256,7 @@ export default function PrescribeInputPage() {
               consent={consent}
               onDate={setDate}
               onConsent={setConsent}
-              canNext={canLeaveDate}
+              today={todayStr()}
               onNext={goNext}
               onSkip={submit}
             />
@@ -279,20 +266,18 @@ export default function PrescribeInputPage() {
             <StepSurvey
               userType={userType}
               kpomsb={kpomsb}
+              note={note}
               arrivalHour={arrivalHour}
               mode={mode}
-              maxTravel={maxTravel}
               prefs={prefs}
-              companions={companions}
               onUserType={setUserTypeOverride}
               onKpomsb={(axis, v) =>
                 setKpomsb((prev) => ({ ...prev, [axis]: v }))
               }
+              onNote={setNote}
               onArrivalHour={setArrivalHour}
               onMode={setMode}
-              onMaxTravel={setMaxTravel}
               onPrefs={setPrefs}
-              onCompanions={setCompanions}
               onSubmit={submit}
             />
           ) : null}
@@ -308,18 +293,12 @@ export default function PrescribeInputPage() {
 
 function StepMood({
   moodKey,
-  note,
   onSelect,
-  onNote,
-  onNext,
   onFillComfort,
   onFillExplorer,
 }: {
   moodKey: SimpleMoodKey | "";
-  note: string;
   onSelect: (key: SimpleMoodKey) => void;
-  onNote: (v: string) => void;
-  onNext: () => void;
   onFillComfort: () => void;
   onFillExplorer: () => void;
 }) {
@@ -362,28 +341,9 @@ function StepMood({
         })}
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm text-gray-600">
-          마음을 글로 남기고 싶으시면 적어주셔도 좋아요{" "}
-          <span className="text-gray-400">(선택)</span>
-        </span>
-        <textarea
-          value={note}
-          onChange={(e) => onNote(e.target.value)}
-          rows={2}
-          maxLength={200}
-          placeholder="예: 요즘 잠이 얕고 자꾸 지쳐요. 조용히 쉬고 싶어요."
-          className="resize-none rounded-xl border border-gray-300/80 bg-white/80 p-3 text-base leading-relaxed outline-none focus:border-emerald-400"
-        />
-      </label>
-
-      {note.trim() ? (
-        <NextButton onClick={onNext} disabled={!moodKey} />
-      ) : (
-        <p className="text-center text-xs text-gray-400">
-          하나를 고르면 다음으로 천천히 넘어가요.
-        </p>
-      )}
+      <p className="text-center text-xs text-gray-400">
+        하나를 고르면 다음으로 천천히 넘어가요.
+      </p>
 
       <div className="flex flex-wrap items-center justify-center gap-2 border-t border-gray-200/70 pt-4 text-xs">
         <span className="text-gray-400">빠른 시연:</span>
@@ -491,12 +451,22 @@ function StepOrigin({
 
 /* ───────────────────────── 스텝 3 · 날짜 + 동의 ───────────────────────── */
 
+function addDays(ymd: string, days: number): string {
+  const t = Date.parse(`${ymd}T00:00:00`);
+  return new Date(t + days * 86400000).toISOString().slice(0, 10);
+}
+function nextSaturday(ymd: string): string {
+  const d = new Date(`${ymd}T00:00:00`);
+  const diff = (6 - d.getUTCDay() + 7) % 7 || 7; // 다가오는 토요일(오늘이 토요일이면 다음 주)
+  return addDays(ymd, diff);
+}
+
 function StepDate({
   date,
   consent,
   onDate,
   onConsent,
-  canNext,
+  today,
   onNext,
   onSkip,
 }: {
@@ -504,10 +474,15 @@ function StepDate({
   consent: boolean;
   onDate: (v: string) => void;
   onConsent: (v: boolean) => void;
-  canNext: boolean;
+  today: string;
   onNext: () => void;
   onSkip: () => void;
 }) {
+  const quick = [
+    { label: "오늘", value: today },
+    { label: "내일", value: addDays(today, 1) },
+    { label: "이번 주말", value: nextSaturday(today) },
+  ];
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2.5">
@@ -515,14 +490,32 @@ function StepDate({
           언제 다녀오고 싶으세요?
         </h1>
         <p className="text-[0.975rem] leading-relaxed text-gray-600">
-          그날의 공기와 미세먼지까지 살펴 가장 좋은 숲을 골라드려요.
+          정하지 않아도 괜찮아요. 안 고르면 오늘 기준으로 골라드려요.
         </p>
       </header>
+
+      <div className="flex flex-wrap gap-2">
+        {quick.map((q) => (
+          <button
+            key={q.label}
+            type="button"
+            onClick={() => onDate(q.value)}
+            className={cn(
+              "min-h-10 rounded-full border px-4 text-sm transition",
+              date === q.value
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : "border-gray-300 bg-white text-gray-700 hover:border-emerald-300",
+            )}
+          >
+            {q.label}
+          </button>
+        ))}
+      </div>
 
       <label className="flex w-full flex-col gap-1.5 text-sm sm:max-w-xs">
         <span className="flex items-center gap-1.5 font-medium text-gray-700">
           <CalendarDays className="size-4" aria-hidden />
-          방문 희망일
+          직접 고르기 <span className="font-normal text-gray-400">(선택)</span>
         </span>
         <input
           type="date"
@@ -546,16 +539,11 @@ function StepDate({
       </label>
 
       <div className="flex flex-col gap-3">
-        <NextButton
-          onClick={onNext}
-          disabled={!canNext}
-          label="기분도 살펴볼게요"
-        />
+        <NextButton onClick={onNext} label="기분도 살펴볼게요" />
         <button
           type="button"
           onClick={onSkip}
-          disabled={!canNext}
-          className="text-center text-sm text-gray-500 underline-offset-4 transition hover:text-emerald-700 hover:underline disabled:cursor-not-allowed disabled:text-gray-300"
+          className="text-center text-sm text-gray-500 underline-offset-4 transition hover:text-emerald-700 hover:underline"
         >
           설문은 건너뛰고 바로 처방 받기
         </button>
@@ -569,32 +557,29 @@ function StepDate({
 function StepSurvey({
   userType,
   kpomsb,
+  note,
   arrivalHour,
   mode,
-  maxTravel,
   prefs,
-  companions,
   onUserType,
   onKpomsb,
+  onNote,
   onArrivalHour,
   onMode,
-  onMaxTravel,
   onPrefs,
-  onCompanions,
   onSubmit,
 }: {
   userType: UserType | null;
-  kpomsb: KpomsbScores;
+  kpomsb: Partial<KpomsbScores>;
+  note: string;
   arrivalHour: number;
   mode: TransportMode;
-  maxTravel: number;
   prefs: { wants_program: boolean; wants_food: boolean; wants_nearby: boolean };
-  companions: Companion;
   onUserType: (t: UserType) => void;
   onKpomsb: (axis: KpomsbAxis, v: number) => void;
+  onNote: (v: string) => void;
   onArrivalHour: (v: number) => void;
   onMode: (v: TransportMode) => void;
-  onMaxTravel: (v: number) => void;
   onPrefs: (
     p: (prev: {
       wants_program: boolean;
@@ -606,7 +591,6 @@ function StepSurvey({
       wants_nearby: boolean;
     },
   ) => void;
-  onCompanions: (v: Companion) => void;
   onSubmit: () => void;
 }) {
   return (
@@ -636,6 +620,21 @@ function StepSurvey({
           </span>
         </p>
       </div>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold text-gray-800">
+          지금 마음을 글로 남겨주세요{" "}
+          <span className="font-normal text-gray-400">(선택)</span>
+        </span>
+        <textarea
+          value={note}
+          onChange={(e) => onNote(e.target.value)}
+          rows={2}
+          maxLength={200}
+          placeholder="예: 요즘 잠이 얕고 자꾸 지쳐요. 조용히 쉬고 싶어요."
+          className="resize-none rounded-xl border border-gray-300/80 bg-white/80 p-3 text-base leading-relaxed outline-none focus:border-emerald-400"
+        />
+      </label>
 
       <Sub label="지금 기분 상태 (K-POMS-B)" hint="최근 일주일 기준">
         <KpomsbLevelGroup value={kpomsb} onChange={onKpomsb} />
@@ -700,27 +699,10 @@ function StepSurvey({
                 value={mode}
                 onSelect={(v) => onMode(v as TransportMode)}
               />
-              <div className="flex flex-wrap gap-2">
-                {MAX_TRAVEL_OPTIONS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => onMaxTravel(m)}
-                    className={cn(
-                      "min-h-9 rounded-full border px-3 text-sm transition",
-                      maxTravel === m
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-700"
-                        : "border-gray-300 bg-white text-gray-600",
-                    )}
-                  >
-                    {m >= 240 ? "4시간+" : `${m}분`}
-                  </button>
-                ))}
-              </div>
             </div>
           </Sub>
 
-          <Sub label="추천에 포함할 것 · 동행">
+          <Sub label="추천에 포함할 것">
             <div className="flex flex-col gap-2">
               <ToggleRow
                 label="산림치유 프로그램"
@@ -736,16 +718,6 @@ function StepSurvey({
                 label="주변 관광·문화시설"
                 checked={prefs.wants_nearby}
                 onChange={(v) => onPrefs((p) => ({ ...p, wants_nearby: v }))}
-              />
-            </div>
-            <div className="mt-3">
-              <ChipRow
-                options={COMPANIONS.map((c) => ({
-                  value: c,
-                  label: COMPANION_LABELS[c],
-                }))}
-                value={companions}
-                onSelect={(v) => onCompanions(v as Companion)}
               />
             </div>
           </Sub>
