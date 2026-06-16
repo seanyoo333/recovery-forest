@@ -69,7 +69,7 @@ export type RankParams = {
 };
 
 // 실시간 기상 결측 시 폴백(보고서 대상지 평균 근방)
-const FALLBACK_PM25 = 20;
+export const FALLBACK_PM25 = 20;
 const FALLBACK_TEMP_C = 20;
 const FALLBACK_HUMIDITY = 60;
 const FALLBACK_WIND = 1.0;
@@ -194,14 +194,14 @@ const POST_MEASURE = {
 } as const;
 
 /** 피톤치드 시점 근거(보고서 p.79~80): 여름 정오 회피, 오전 권장. */
-function optimalTime(species: string, month: number): string {
+export function optimalTime(species: string, month: number): string {
   if (month >= 6 && month <= 9) return "오전 9~11시 (여름 정오는 농도 최저라 회피)";
   if (species === "편백" && month >= 2 && month <= 4)
     return "오전, 3월 전후가 편백 피톤치드 연중 최고";
   return "오전 9~11시";
 }
 
-function airLabel(pm25: number): string {
+export function airLabel(pm25: number): string {
   return pm25 <= 15 ? "쾌적" : pm25 <= 35 ? "양호" : "주의";
 }
 

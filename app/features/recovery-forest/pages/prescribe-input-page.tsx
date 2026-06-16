@@ -133,6 +133,11 @@ export default function PrescribeInputPage() {
     if (sigungu) params.set("sigungu", sigungu);
     params.set("visit_date", date);
     params.set("arrival_hour", String(arrivalHour));
+    // 순서 고정: 긴장,우울,분노,활력,피로,혼란 (결과 loader 의 parseKpomsb 와 일치)
+    params.set(
+      "kpomsb",
+      `${kpomsb.긴장},${kpomsb.우울},${kpomsb.분노},${kpomsb.활력},${kpomsb.피로},${kpomsb.혼란}`,
+    );
     if (note.trim()) params.set("note", note.trim());
 
     // "AI가 당신께 맞는 숲을 고르는 중..." — 잠시 머무는 순간을 의도적으로 둔다.

@@ -17,30 +17,86 @@ import {
   type KpomsbScores,
   type UserType,
 } from "../schemas/prescribe-input.schema";
+import { rankForests } from "../services/forest-ranking";
+import { loadRankableForests } from "../services/healing-forest.repository";
+import { buildPrescribeOutput } from "../services/prescribe-output.builder";
+import { makeRecoveryServerClient } from "~/lib/supabase.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "AI 맞춤 처방 · 회복의 숲" }];
 }
 
-export function loader({ request }: Route.LoaderArgs) {
+function parseKpomsb(raw: string | null): KpomsbScores | null {
+  if (!raw) return null;
+  const p = raw.split(",").map(Number);
+  if (p.length !== 6 || p.some((n) => !Number.isFinite(n))) return null;
+  // 순서: 긴장,우울,분노,활력,피로,혼란 (입력 submit 과 동일)
+  return { 긴장: p[0], 우울: p[1], 분노: p[2], 활력: p[3], 피로: p[4], 혼란: p[5] };
+}
+
+function monthFromDate(date: string): number {
+  const t = Date.parse(date);
+  return Number.isNaN(t) ? new Date().getMonth() + 1 : new Date(t).getMonth() + 1;
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
+  const sp = url.searchParams;
   const userType: UserType =
-    url.searchParams.get("user_type") === "explorer" ? "explorer" : "comfort";
-
-  const output = pickDemoOutput(userType);
-  const input =
+    sp.get("user_type") === "explorer" ? "explorer" : "comfort";
+  const goal = sp.get("health_goal") ?? "일반";
+  const label = sp.get("loc_label") ?? "";
+  const date = sp.get("visit_date") ?? "";
+  const note = (sp.get("note") ?? "").trim();
+  const lat = Number(sp.get("loc_lat"));
+  const lon = Number(sp.get("loc_lon"));
+  const arrivalHour = Number(sp.get("arrival_hour")) || 10;
+  const fallbackInput =
     userType === "explorer" ? EXPLORER_INPUT_DEMO : COMFORT_INPUT_DEMO;
+  const kpomsb = parseKpomsb(sp.get("kpomsb")) ?? fallbackInput.kpomsb_pre;
+  const month = monthFromDate(date);
 
-  // 입력에서 받은 표시값으로 살짝 덮어 개인화 느낌(픽스처 데모).
-  const label = url.searchParams.get("loc_label") ?? input.location.label ?? "";
-  const date = url.searchParams.get("visit_date") ?? input.visit_plan.date;
-  const goal = url.searchParams.get("health_goal") ?? output.user_summary.health_goal;
-  const note = (url.searchParams.get("note") ?? "").trim();
+  // 실제 엔진 경로: 좌표가 있으면 healing_forests 38개로 3축 랭킹 후 화면 스키마로 매핑.
+  if (Number.isFinite(lat) && Number.isFinite(lon) && lat !== 0 && lon !== 0) {
+    try {
+      const [client] = makeRecoveryServerClient(request);
+      const forests = await loadRankableForests(client);
+      if (forests.length > 0) {
+        const scored = rankForests({
+          user: { lat, lon },
+          userType,
+          forests,
+          month,
+          hour: arrivalHour,
+        });
+        const output = buildPrescribeOutput({
+          scored,
+          userType,
+          healthGoal: goal,
+          visitDate: date,
+          month,
+          arrivalHour,
+          note,
+          kpomsb,
+        });
+        return { output, kpomsb, overlay: { label, date, goal, note } };
+      }
+    } catch {
+      // env 미설정·DB 오류 시 픽스처로 폴백(데모 안전).
+    }
+  }
 
+  // 폴백: 좌표 없거나 데이터 로드 실패 → 픽스처 데모.
+  const output = pickDemoOutput(userType);
   return {
     output,
-    kpomsb: input.kpomsb_pre,
-    overlay: { label, date, goal, note },
+    kpomsb,
+    overlay: {
+      label: label || fallbackInput.location.label || "",
+      date: date || fallbackInput.visit_plan.date,
+      goal: goal || output.user_summary.health_goal,
+      note,
+    },
   };
 }
 
