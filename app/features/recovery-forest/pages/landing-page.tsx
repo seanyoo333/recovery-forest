@@ -26,12 +26,12 @@ export default function LandingPage() {
           회복의 숲을 찾다
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-gray-600">
-          산림 공공데이터와 AI가 오늘의 미세먼지·기상·체력·이동시간을 분석해
-          맞춤 산림치유 공간을 추천합니다.
+          지금의 마음과 출발지만 알려주시면, AI가 상태를 헤아리고 산림
+          공공데이터로 오늘 가장 알맞은 치유의 숲을 골라드립니다.
         </p>
         <Link
-          to="/recommend"
-          className="inline-flex h-14 items-center justify-center rounded-full bg-emerald-600 px-10 text-lg font-semibold text-white shadow-lg transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200"
+          to="/prescribe"
+          className="inline-flex h-14 items-center justify-center rounded-full bg-emerald-600 px-10 text-lg font-semibold text-white shadow-lg transition hover:bg-emerald-700 hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-emerald-200"
         >
           오늘의 회복 숲 찾기
         </Link>
@@ -40,30 +40,30 @@ export default function LandingPage() {
       <section className="grid gap-6 md:grid-cols-3">
         <FlowStep
           step="1"
-          title="내 상태 입력"
-          body="지역·관심사·체력·이동시간을 30초 만에 입력합니다."
+          title="마음 헤아리기"
+          body="지금 마음·출발지·날짜를 한 번에 하나씩, 1분이면 충분합니다."
         />
         <FlowStep
           step="2"
           title="데이터 분석"
-          body="산림청·기상청·에어코리아 5종 공공 API와 AI가 함께 분석합니다."
+          body="AI가 기분 상태를 해석하고, 거리·피톤치드·미세먼지 3축 엔진이 숲을 계산합니다."
         />
         <FlowStep
           step="3"
-          title="맞춤 추천"
-          body="회복점수 TOP 5 숲과 추천 이유·주의사항을 받습니다."
+          title="맞춤 숲 처방"
+          body="가장 알맞은 숲과 방문 동선·AI 실천 계획을 받습니다."
         />
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-gray-50 p-6">
         <h2 className="text-sm font-semibold text-gray-500">데이터 출처</h2>
         <ul className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700 md:grid-cols-3">
-          <li>산림청 치유의숲</li>
-          <li>산림청 둘레길</li>
-          <li>산림청 자연휴양림</li>
+          <li>산림청 치유의숲 38곳</li>
+          <li>에어코리아 실시간 미세먼지</li>
           <li>기상청 단기예보</li>
-          <li>에어코리아 미세먼지</li>
-          <li>4곳 치유의숲 피톤치드 실측</li>
+          <li>국립산림과학원 피톤치드 연구</li>
+          <li>K-POMS-B 기분 척도</li>
+          <li>카카오 지오코딩 좌표</li>
         </ul>
       </section>
 

@@ -13,10 +13,7 @@ export default function NavigationLayout() {
               to="/prescribe"
               className="font-medium text-emerald-700 hover:text-emerald-800"
             >
-              맞춤 처방
-            </Link>
-            <Link to="/recommend" className="text-gray-700 hover:text-emerald-700">
-              추천 받기
+              맞춤 처방 받기
             </Link>
             <Link to="/about" className="text-gray-700 hover:text-emerald-700">
               서비스 소개
