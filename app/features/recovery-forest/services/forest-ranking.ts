@@ -42,11 +42,14 @@ export type RankableForest = {
   latitude: number;
   longitude: number;
   treeSpecies: string[];
-  // 에어코리아/기상청 최근접(시·도) 실시간·예보(없으면 폴백값 사용)
+  // 에어코리아/기상청 최근접(시·도) 실시간·예보(없으면 폴백값 사용). 랭킹·지수용.
   pm25?: number | null;
   tempC?: number | null;
   humidityPct?: number | null;
   windMs?: number | null;
+  // 화면 표시용 "현재 실측" PM2.5(청정넷 매칭 시 청정넷, 아니면 에어코리아 현재). 랭킹엔 미사용.
+  observedPm25?: number | null;
+  pm25Source?: string;
 };
 
 export type LatLon = { lat: number; lon: number };

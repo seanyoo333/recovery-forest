@@ -12,8 +12,9 @@ import { USER_TYPES } from "./prescribe-input.schema";
 export const engineBreakdownSchema = z.object({
   distance_km: z.number(), // [엔진/API]
   phytoncide_index: z.number(), // [엔진] 0~100 상대 잠재력
-  pm25: z.number(), // [API] ㎍/㎥
+  pm25: z.number(), // [API] ㎍/㎥ — 화면 표시용 현재 실측
   air_label: z.string(), // 쾌적/양호/주의
+  pm25_source: z.string().optional(), // 청정넷 숲내 실측 / 에어코리아 시·도
   species: z.string(),
 });
 export type EngineBreakdown = z.infer<typeof engineBreakdownSchema>;

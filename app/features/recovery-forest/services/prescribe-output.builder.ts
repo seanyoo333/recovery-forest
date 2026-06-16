@@ -147,7 +147,8 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
 
   const ranking: RankingItem[] = top3.map((s, i) => {
     const species = dominantSpecies(s.forest.treeSpecies);
-    const pm25 = s.forest.pm25 ?? FALLBACK_PM25;
+    // 화면 표시값은 "현재 실측"(청정넷 매칭 시 청정넷, 아니면 에어코리아 현재).
+    const pm25 = s.forest.observedPm25 ?? s.forest.pm25 ?? FALLBACK_PM25;
     return {
       rank: i + 1,
       engine_score: s.total,
@@ -157,6 +158,7 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
         phytoncide_index: s.components.phyto,
         pm25,
         air_label: airLabel(pm25),
+        pm25_source: s.forest.pm25Source,
         species,
       },
       ai_reason: buildWhy(s, userType),

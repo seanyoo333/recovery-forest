@@ -241,6 +241,11 @@ export default function PrescribeResultPage({
                   value={`PM2.5 ${topRank.engine_breakdown.pm25} · ${topRank.engine_breakdown.air_label}`}
                 />
               </div>
+              {topRank.engine_breakdown.pm25_source ? (
+                <p className="text-[11px] text-gray-400">
+                  미세먼지 출처: {topRank.engine_breakdown.pm25_source} · 현재 실측
+                </p>
+              ) : null}
             </div>
 
             {/* AI 맞춤 실천 계획 */}
