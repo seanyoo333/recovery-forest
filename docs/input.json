@@ -1,0 +1,116 @@
+{
+  "input_schema": {
+    "session_id": "string — 익명 세션 식별자",
+    "submitted_at": "string(ISO8601) — 입력 제출 시각",
+    "user_type": "enum['comfort','explorer'] — comfort=가까움 우선, explorer=숲의 질(피톤치드) 우선",
+    "health_goal": "enum['수면','스트레스','피로','우울','면역','일반']",
+    "location": {
+      "lat": "number — 출발지 위도",
+      "lon": "number — 출발지 경도",
+      "label": "string(optional) — 예: '서울 강남구'"
+    },
+    "visit_plan": {
+      "date": "string(YYYY-MM-DD) — 방문 희망일",
+      "arrival_hour": "integer(0-23) — 도착 희망 시각(시)"
+    },
+    "transport": {
+      "mode": "enum['transit','car','walk']",
+      "needs_route": "boolean — 추천 동선 제공 여부",
+      "max_travel_minutes": "integer(optional) — 감내 편도 이동시간(분)"
+    },
+    "preferences": {
+      "wants_program": "boolean — 프로그램 추천 포함",
+      "wants_food": "boolean — 주변 맛집 추천 포함",
+      "wants_nearby": "boolean — 주변 관광/문화시설 포함",
+      "companions": "enum['solo','family','group'](optional)"
+    },
+    "kpomsb_pre": {
+      "긴장": "number — 낮을수록 좋음",
+      "우울": "number — 낮을수록 좋음",
+      "분노": "number — 낮을수록 좋음",
+      "활력": "number — 높을수록 좋음",
+      "피로": "number — 낮을수록 좋음",
+      "혼란": "number — 낮을수록 좋음"
+    },
+    "consent": {
+      "data_use_agreed": "boolean(required) — 데이터 활용 동의",
+      "followup_optin": "boolean — 사후설문 알림 수신 동의"
+    }
+  },
+  "comfort_example": {
+    "session_id": "anon_8f3a2c",
+    "submitted_at": "2026-06-15T09:10:00+09:00",
+    "user_type": "comfort",
+    "health_goal": "수면",
+    "location": {
+      "lat": 37.5012,
+      "lon": 127.0396,
+      "label": "서울 강남구"
+    },
+    "visit_plan": {
+      "date": "2026-06-20",
+      "arrival_hour": 10
+    },
+    "transport": {
+      "mode": "transit",
+      "needs_route": true,
+      "max_travel_minutes": 90
+    },
+    "preferences": {
+      "wants_program": true,
+      "wants_food": true,
+      "wants_nearby": false,
+      "companions": "solo"
+    },
+    "kpomsb_pre": {
+      "긴장": 12,
+      "우울": 8,
+      "분노": 5,
+      "활력": 6,
+      "피로": 14,
+      "혼란": 9
+    },
+    "consent": {
+      "data_use_agreed": true,
+      "followup_optin": true
+    }
+  },
+  "explorer_example": {
+    "session_id": "anon_2b7e91",
+    "submitted_at": "2026-06-15T20:30:00+09:00",
+    "user_type": "explorer",
+    "health_goal": "스트레스",
+    "location": {
+      "lat": 37.5547,
+      "lon": 126.9706,
+      "label": "서울 중구"
+    },
+    "visit_plan": {
+      "date": "2026-06-21",
+      "arrival_hour": 10
+    },
+    "transport": {
+      "mode": "car",
+      "needs_route": true,
+      "max_travel_minutes": 240
+    },
+    "preferences": {
+      "wants_program": true,
+      "wants_food": true,
+      "wants_nearby": true,
+      "companions": "family"
+    },
+    "kpomsb_pre": {
+      "긴장": 9,
+      "우울": 6,
+      "분노": 4,
+      "활력": 11,
+      "피로": 8,
+      "혼란": 7
+    },
+    "consent": {
+      "data_use_agreed": true,
+      "followup_optin": true
+    }
+  }
+}

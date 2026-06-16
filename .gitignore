@@ -149,3 +149,8 @@ dist
 .pnp.*
 .open-next/
 .vercel/
+
+# Python / Excel 임시
+__pycache__/
+*.pyc
+~$*

@@ -1,0 +1,265 @@
+{
+  "output_schema": {
+    "_note": "추천 결과 아웃풋. engine_* = 엔진 계산(규칙), ai_* = AI 추론(개인화). UI는 1등 상세 + 2·3등 요약 카드로 렌더.",
+    "session_id": "string — 입력과 동일",
+    "generated_at": "string(ISO8601)",
+    "user_summary": {
+      "user_type": "comfort | explorer",
+      "health_goal": "string",
+      "ai_state_reading": "string — [AI 추론] K-POMS-B 패턴 해석(진단 아님)"
+    },
+    "ranking": [
+      {
+        "rank": "integer — 1,2,3",
+        "engine_score": "number — [엔진] 종합점수",
+        "forest_name": "string",
+        "engine_breakdown": {
+          "distance_km": "number — [엔진/API]",
+          "phytoncide_index": "number — [엔진] 0~100 상대 잠재력",
+          "pm25": "number — [API] ㎍/㎥",
+          "air_label": "string — 쾌적/양호/주의",
+          "species": "string"
+        },
+        "ai_reason": "string — [AI 추론] 이 사용자 상태에 이 숲이 맞는 이유(1~2문장). 2·3위는 짧게."
+      }
+    ],
+    "top_pick_detail": {
+      "_note": "1위 숲에 대한 상세. AI 개인화 처방 + 부가정보(프로그램/동선/맛집/일정).",
+      "forest_name": "string",
+      "ai_personal_plan": ["string — [AI 추론] 상태 맞춤 실천 2~3개"],
+      "recommended_program": {
+        "_source": "[데이터/예시] 입력 데이터에 있으면 실제, 없으면 '예시' 표기",
+        "title": "string",
+        "is_example": "boolean — true면 '(예시)' 배지 표시"
+      },
+      "itinerary": {
+        "_source": "[API/V2] 동선·시간. 데모에선 예시.",
+        "date": "string",
+        "steps": [
+          {
+            "time": "string(HH:MM)",
+            "activity": "string",
+            "place": "string",
+            "link": "string(optional)"
+          }
+        ]
+      },
+      "nearby_food": [
+        {
+          "_source": "[구글 Places/V2]",
+          "name": "string",
+          "category": "string",
+          "rating": "number",
+          "link": "string(optional)"
+        }
+      ],
+      "ai_note": "string — [AI 추론] 근거(연구 기반)+권장 시점, 필요시 전문가 상담 권유",
+      "cta": "string — 다음 행동 유도 문구(처방 저장/방문 알림 설정 등)"
+    },
+    "disclaimers": ["string — 피톤치드=상대 잠재력, 미세먼지 방문 전 재확인 등"]
+  },
+  "example_comfort_output": {
+    "session_id": "anon_8f3a2c",
+    "generated_at": "2026-06-15T09:10:30+09:00",
+    "user_summary": {
+      "user_type": "comfort",
+      "health_goal": "수면",
+      "ai_state_reading": "긴장과 피로가 높고 활력이 낮은 편으로, 수면 문제와 함께 몸과 마음이 과하게 긴장·소진된 상태로 보입니다."
+    },
+    "ranking": [
+      {
+        "rank": 1,
+        "engine_score": 67.0,
+        "forest_name": "잣향기 푸른숲",
+        "engine_breakdown": {
+          "distance_km": 48,
+          "phytoncide_index": 52,
+          "pm25": 18,
+          "air_label": "양호",
+          "species": "잣나무"
+        },
+        "ai_reason": "소진된 상태에는 자극적인 일정보다 가깝고 조용한 회복이 맞습니다. 48km로 부담이 적어 이동 자체가 스트레스가 되지 않습니다."
+      },
+      {
+        "rank": 2,
+        "engine_score": 62.9,
+        "forest_name": "산음 치유의 숲",
+        "engine_breakdown": {
+          "distance_km": 65,
+          "phytoncide_index": 46,
+          "pm25": 16,
+          "air_label": "양호",
+          "species": "침활혼효림"
+        },
+        "ai_reason": "조금 더 멀지만 한적해, 사람 많은 곳이 부담스러울 때 대안이 됩니다."
+      },
+      {
+        "rank": 3,
+        "engine_score": 58.9,
+        "forest_name": "대관령 치유의 숲",
+        "engine_breakdown": {
+          "distance_km": 155,
+          "phytoncide_index": 80,
+          "pm25": 9,
+          "air_label": "쾌적",
+          "species": "소나무"
+        },
+        "ai_reason": "피톤치드는 더 높지만 거리가 멀어, 시간 여유가 있는 날 고려할 선택입니다."
+      }
+    ],
+    "top_pick_detail": {
+      "forest_name": "잣향기 푸른숲",
+      "ai_personal_plan": [
+        "도착 후 무리한 코스 대신 잣나무 그늘에서 20~30분 정좌 호흡으로 과각성 가라앉히기",
+        "수면 개선이 목표이므로 한낮보다 오전 빛을 쬐며 천천히 걷기",
+        "혼자 방문이니 일정에 쫓기지 말고 숲 소리에 집중하는 짧은 휴식을 중간에 넣기"
+      ],
+      "recommended_program": {
+        "title": "수면 개선 이완·아로마 명상",
+        "is_example": true
+      },
+      "itinerary": {
+        "date": "2026-06-20",
+        "steps": [
+          {
+            "time": "09:45",
+            "activity": "KTX 탑승",
+            "place": "청량리역"
+          },
+          {
+            "time": "11:00",
+            "activity": "산림치유 프로그램",
+            "place": "잣향기 푸른숲"
+          },
+          {
+            "time": "13:30",
+            "activity": "점심 (예시)",
+            "place": "인근 식당",
+            "link": "https://"
+          },
+          {
+            "time": "15:30",
+            "activity": "귀가 KTX",
+            "place": "인근역"
+          }
+        ]
+      },
+      "nearby_food": [
+        {
+          "name": "느티나무 손칼국수",
+          "category": "한식",
+          "rating": 4.4,
+          "link": "https://"
+        }
+      ],
+      "ai_note": "피톤치드 잠재력은 국립산림과학원 연구 기반의 상대 지표이며, 오전 9~11시 방문을 권합니다. 수면 곤란이 오래 지속되면 전문가 상담도 함께 고려해 보세요.",
+      "cta": "이 처방을 저장하고, 방문 3일 후 변화 기록 알림을 받아보세요."
+    },
+    "disclaimers": [
+      "피톤치드 잠재력 지수는 절대 농도가 아닌 상대 지표입니다.",
+      "미세먼지는 방문 1~2일 전 예보로 다시 확인하세요."
+    ]
+  },
+  "example_explorer_output": {
+    "session_id": "anon_2b7e91",
+    "generated_at": "2026-06-15T20:30:30+09:00",
+    "user_summary": {
+      "user_type": "explorer",
+      "health_goal": "스트레스",
+      "ai_state_reading": "전반적으로 활력이 높고 큰 이상은 없는 상태로, 치료보다는 질 높은 숲 경험을 통한 스트레스 해소·예방에 적합합니다."
+    },
+    "ranking": [
+      {
+        "rank": 1,
+        "engine_score": 86.7,
+        "forest_name": "축령산 편백 치유의 숲",
+        "engine_breakdown": {
+          "distance_km": 237,
+          "phytoncide_index": 100,
+          "pm25": 10,
+          "air_label": "쾌적",
+          "species": "편백"
+        },
+        "ai_reason": "활력이 충분해 거리 부담을 감당할 수 있고, 피톤치드 잠재력 100점의 편백림은 깊은 숲 경험을 원하는 분께 가장 잘 맞습니다."
+      },
+      {
+        "rank": 2,
+        "engine_score": 84.7,
+        "forest_name": "장흥 편백 치유의 숲",
+        "engine_breakdown": {
+          "distance_km": 319,
+          "phytoncide_index": 100,
+          "pm25": 12,
+          "air_label": "쾌적",
+          "species": "편백"
+        },
+        "ai_reason": "동일하게 피톤치드 최상위 편백림으로, 남도 여행을 겸할 때 좋은 선택입니다."
+      },
+      {
+        "rank": 3,
+        "engine_score": 76.5,
+        "forest_name": "대관령 치유의 숲",
+        "engine_breakdown": {
+          "distance_km": 155,
+          "phytoncide_index": 80,
+          "pm25": 9,
+          "air_label": "쾌적",
+          "species": "소나무"
+        },
+        "ai_reason": "편백보다는 낮지만 접근성이 좋아, 이동을 줄이고 싶을 때 균형 잡힌 대안입니다."
+      }
+    ],
+    "top_pick_detail": {
+      "forest_name": "축령산 편백 치유의 숲",
+      "ai_personal_plan": [
+        "활력이 좋은 만큼 편백 숲길을 1~2시간 능동적으로 걸으며 깊게 호흡하기",
+        "가족 동행이므로 함께 멈춰 향을 느끼는 지점을 정해 천천히 이동하기",
+        "스트레스 해소가 목표이니 휴대폰을 끄고 숲에 집중하는 디지털 디톡스 시간 갖기"
+      ],
+      "recommended_program": {
+        "title": "편백 숲길 걷기 명상",
+        "is_example": true
+      },
+      "itinerary": {
+        "date": "2026-06-21",
+        "steps": [
+          {
+            "time": "08:00",
+            "activity": "출발 (자가용)",
+            "place": "서울"
+          },
+          {
+            "time": "11:30",
+            "activity": "편백 숲길 명상",
+            "place": "축령산 편백 치유의 숲"
+          },
+          {
+            "time": "13:30",
+            "activity": "점심 (예시)",
+            "place": "장성 인근 식당",
+            "link": "https://"
+          },
+          {
+            "time": "15:00",
+            "activity": "주변 관광 (예시)",
+            "place": "축령산 일대"
+          }
+        ]
+      },
+      "nearby_food": [
+        {
+          "name": "축령산 산채정식",
+          "category": "한정식",
+          "rating": 4.5,
+          "link": "https://"
+        }
+      ],
+      "ai_note": "피톤치드 잠재력은 국립산림과학원 연구(편백>소나무>낙엽송>잣, p<.01) 기반의 상대 지표이며, 오전 9~11시 방문을 권합니다.",
+      "cta": "이 처방을 저장하고, 방문 후 변화를 기록해 다음 숲 추천을 받아보세요."
+    },
+    "disclaimers": [
+      "피톤치드 잠재력 지수는 절대 농도가 아닌 상대 지표입니다.",
+      "미세먼지는 방문 1~2일 전 예보로 다시 확인하세요."
+    ]
+  }
+}
