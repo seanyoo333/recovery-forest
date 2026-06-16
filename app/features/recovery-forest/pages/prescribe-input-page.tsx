@@ -101,7 +101,7 @@ export default function PrescribeInputPage() {
   function selectMood(key: SimpleMoodKey) {
     setMoodKey(key);
     setUserTypeOverride(null);
-    goNext(); // 고르면 자연스럽게 다음으로
+    // 자동 전환하지 않음 — 주관식을 적을 수 있게. "다음" 버튼으로 진행.
   }
 
   function todayStr() {
@@ -233,7 +233,10 @@ export default function PrescribeInputPage() {
           {step === 0 ? (
             <StepMood
               moodKey={moodKey}
+              note={note}
               onSelect={selectMood}
+              onNote={setNote}
+              onNext={goNext}
               onFillComfort={() => fillExample(COMFORT_INPUT_DEMO)}
               onFillExplorer={() => fillExample(EXPLORER_INPUT_DEMO)}
             />
@@ -253,9 +256,7 @@ export default function PrescribeInputPage() {
           {step === 2 ? (
             <StepDate
               date={date}
-              consent={consent}
               onDate={setDate}
-              onConsent={setConsent}
               today={todayStr()}
               onNext={goNext}
               onSkip={submit}
@@ -266,7 +267,7 @@ export default function PrescribeInputPage() {
             <StepSurvey
               userType={userType}
               kpomsb={kpomsb}
-              note={note}
+              consent={consent}
               arrivalHour={arrivalHour}
               mode={mode}
               prefs={prefs}
@@ -274,7 +275,7 @@ export default function PrescribeInputPage() {
               onKpomsb={(axis, v) =>
                 setKpomsb((prev) => ({ ...prev, [axis]: v }))
               }
-              onNote={setNote}
+              onConsent={setConsent}
               onArrivalHour={setArrivalHour}
               onMode={setMode}
               onPrefs={setPrefs}
@@ -293,12 +294,18 @@ export default function PrescribeInputPage() {
 
 function StepMood({
   moodKey,
+  note,
   onSelect,
+  onNote,
+  onNext,
   onFillComfort,
   onFillExplorer,
 }: {
   moodKey: SimpleMoodKey | "";
+  note: string;
   onSelect: (key: SimpleMoodKey) => void;
+  onNote: (v: string) => void;
+  onNext: () => void;
   onFillComfort: () => void;
   onFillExplorer: () => void;
 }) {
@@ -341,9 +348,22 @@ function StepMood({
         })}
       </div>
 
-      <p className="text-center text-xs text-gray-400">
-        하나를 고르면 다음으로 천천히 넘어가요.
-      </p>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm text-gray-600">
+          지금 마음을 글로 남겨주셔도 좋아요{" "}
+          <span className="text-gray-400">(선택)</span>
+        </span>
+        <textarea
+          value={note}
+          onChange={(e) => onNote(e.target.value)}
+          rows={2}
+          maxLength={200}
+          placeholder="예: 요즘 잠이 얕고 자꾸 지쳐요. 조용히 쉬고 싶어요."
+          className="resize-none rounded-xl border border-gray-300/80 bg-white/80 p-3 text-base leading-relaxed outline-none focus:border-emerald-400"
+        />
+      </label>
+
+      <NextButton onClick={onNext} disabled={!moodKey} />
 
       <div className="flex flex-wrap items-center justify-center gap-2 border-t border-gray-200/70 pt-4 text-xs">
         <span className="text-gray-400">빠른 시연:</span>
@@ -451,29 +471,26 @@ function StepOrigin({
 
 /* ───────────────────────── 스텝 3 · 날짜 + 동의 ───────────────────────── */
 
+// UTC 기준으로 일관 처리(로컬/UTC 혼용 시 오늘=내일이 되는 버그 방지).
 function addDays(ymd: string, days: number): string {
-  const t = Date.parse(`${ymd}T00:00:00`);
+  const t = Date.parse(`${ymd}T00:00:00Z`);
   return new Date(t + days * 86400000).toISOString().slice(0, 10);
 }
 function nextSaturday(ymd: string): string {
-  const d = new Date(`${ymd}T00:00:00`);
-  const diff = (6 - d.getUTCDay() + 7) % 7 || 7; // 다가오는 토요일(오늘이 토요일이면 다음 주)
+  const dow = new Date(`${ymd}T00:00:00Z`).getUTCDay();
+  const diff = (6 - dow + 7) % 7 || 7; // 다가오는 토요일(오늘이 토요일이면 다음 주)
   return addDays(ymd, diff);
 }
 
 function StepDate({
   date,
-  consent,
   onDate,
-  onConsent,
   today,
   onNext,
   onSkip,
 }: {
   date: string;
-  consent: boolean;
   onDate: (v: string) => void;
-  onConsent: (v: boolean) => void;
   today: string;
   onNext: () => void;
   onSkip: () => void;
@@ -525,19 +542,6 @@ function StepDate({
         />
       </label>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-gray-100/70 p-4 text-sm text-gray-600">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => onConsent(e.target.checked)}
-          className="mt-0.5 size-5 accent-emerald-600"
-        />
-        <span>
-          입력한 상태는 의료 진단이 아닌 주관적 자가보고이며, 맞춤 추천 생성에만
-          활용하는 데 동의합니다.
-        </span>
-      </label>
-
       <div className="flex flex-col gap-3">
         <NextButton onClick={onNext} label="기분도 살펴볼게요" />
         <button
@@ -557,13 +561,13 @@ function StepDate({
 function StepSurvey({
   userType,
   kpomsb,
-  note,
+  consent,
   arrivalHour,
   mode,
   prefs,
   onUserType,
   onKpomsb,
-  onNote,
+  onConsent,
   onArrivalHour,
   onMode,
   onPrefs,
@@ -571,13 +575,13 @@ function StepSurvey({
 }: {
   userType: UserType | null;
   kpomsb: Partial<KpomsbScores>;
-  note: string;
+  consent: boolean;
   arrivalHour: number;
   mode: TransportMode;
   prefs: { wants_program: boolean; wants_food: boolean; wants_nearby: boolean };
   onUserType: (t: UserType) => void;
   onKpomsb: (axis: KpomsbAxis, v: number) => void;
-  onNote: (v: string) => void;
+  onConsent: (v: boolean) => void;
   onArrivalHour: (v: number) => void;
   onMode: (v: TransportMode) => void;
   onPrefs: (
@@ -620,21 +624,6 @@ function StepSurvey({
           </span>
         </p>
       </div>
-
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-semibold text-gray-800">
-          지금 마음을 글로 남겨주세요{" "}
-          <span className="font-normal text-gray-400">(선택)</span>
-        </span>
-        <textarea
-          value={note}
-          onChange={(e) => onNote(e.target.value)}
-          rows={2}
-          maxLength={200}
-          placeholder="예: 요즘 잠이 얕고 자꾸 지쳐요. 조용히 쉬고 싶어요."
-          className="resize-none rounded-xl border border-gray-300/80 bg-white/80 p-3 text-base leading-relaxed outline-none focus:border-emerald-400"
-        />
-      </label>
 
       <Sub label="지금 기분 상태 (K-POMS-B)" hint="최근 일주일 기준">
         <KpomsbLevelGroup value={kpomsb} onChange={onKpomsb} />
@@ -723,6 +712,19 @@ function StepSurvey({
           </Sub>
         </div>
       </details>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-gray-100/70 p-4 text-sm text-gray-600">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => onConsent(e.target.checked)}
+          className="mt-0.5 size-5 accent-emerald-600"
+        />
+        <span>
+          입력한 상태는 의료 진단이 아닌 주관적 자가보고이며, 맞춤 추천 생성에만
+          활용하는 데 동의합니다.
+        </span>
+      </label>
 
       <button
         type="button"

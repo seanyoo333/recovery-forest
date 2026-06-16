@@ -25,16 +25,26 @@ describe("처방 입력 — 스텝 플로우", () => {
     expect(dots.length).toBe(4);
   });
 
-  it("마음 카드를 고르면 다음 스텝(출발지)으로 부드럽게 넘어간다", () => {
+  it("마음을 고르고 다음을 누르면 출발지 스텝으로 넘어간다", () => {
     renderPage();
     fireEvent.click(screen.getByText("많이 지쳐 있어요"));
+    // 자동 전환하지 않음 — 주관식을 적을 수 있게. 첫 질문이 그대로 보인다.
+    expect(screen.getByText("오늘, 어떤 휴식이 필요하세요?")).toBeTruthy();
+    fireEvent.click(screen.getByText("천천히 다음으로"));
     expect(screen.getByText("어디서 출발하세요?")).toBeTruthy();
-    expect(screen.queryByText("오늘, 어떤 휴식이 필요하세요?")).toBeNull();
+  });
+
+  it("주관식 입력이 동작한다", () => {
+    renderPage();
+    const ta = screen.getByPlaceholderText(/요즘 잠이 얕고/);
+    fireEvent.change(ta, { target: { value: "조용히 쉬고 싶어요" } });
+    expect((ta as HTMLTextAreaElement).value).toBe("조용히 쉬고 싶어요");
   });
 
   it("뒤로 가기로 이전 스텝으로 돌아간다", () => {
     renderPage();
     fireEvent.click(screen.getByText("많이 지쳐 있어요"));
+    fireEvent.click(screen.getByText("천천히 다음으로"));
     fireEvent.click(screen.getByText("이전"));
     expect(screen.getByText("오늘, 어떤 휴식이 필요하세요?")).toBeTruthy();
   });
