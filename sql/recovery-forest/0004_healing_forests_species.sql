@@ -22,6 +22,10 @@ drop policy if exists "species_base_scores public read" on public.species_base_s
 create policy "species_base_scores public read" on public.species_base_scores
   for select to anon, authenticated using (true);
 
+-- RLS 정책만으로는 부족 — 테이블 레벨 GRANT 가 있어야 anon(PostgREST)이 읽는다.
+grant select on public.healing_forests to anon, authenticated;
+grant select on public.species_base_scores to anon, authenticated;
+
 insert into public.species_base_scores (species, base, note) values
   ('편백', 85, '침엽 우세종 최고(보고서 p.88: 동일 기온서도 최고)'),
   ('소나무', 65, '보고서 순위 2위'),

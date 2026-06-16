@@ -17,9 +17,13 @@ import {
   type KpomsbScores,
   type UserType,
 } from "../schemas/prescribe-input.schema";
-import { rankForests } from "../services/forest-ranking";
+import { generatePrescriptionNarrative } from "../services/ai-prescription.service";
+import { optimalTime, rankForests } from "../services/forest-ranking";
 import { loadRankableForests } from "../services/healing-forest.repository";
-import { buildPrescribeOutput } from "../services/prescribe-output.builder";
+import {
+  applyNarrative,
+  buildPrescribeOutput,
+} from "../services/prescribe-output.builder";
 import { makeRecoveryServerClient } from "~/lib/supabase.server";
 
 export function meta(_args: Route.MetaArgs) {
@@ -79,6 +83,29 @@ export async function loader({ request }: Route.LoaderArgs) {
           note,
           kpomsb,
         });
+
+        // AI 서술(LLM): 1순위 개인화 문구를 덮어쓴다. 실패/키없음이면 규칙 템플릿 유지.
+        const top = output.ranking[0];
+        const narrative = await generatePrescriptionNarrative({
+          user: {
+            user_type: userType,
+            health_goal: goal,
+            free_text: note,
+            kpomsb_pre: kpomsb,
+          },
+          engine_pick: {
+            name: top.forest_name,
+            score: top.engine_score,
+            phytoncide_index: top.engine_breakdown.phytoncide_index,
+            distance_km: top.engine_breakdown.distance_km,
+            pm25: top.engine_breakdown.pm25,
+            air_label: top.engine_breakdown.air_label,
+            species: top.engine_breakdown.species,
+            visit_time_tip: optimalTime(top.engine_breakdown.species, month),
+          },
+        });
+        if (narrative) applyNarrative(output, narrative);
+
         return { output, kpomsb, overlay: { label, date, goal, note } };
       }
     } catch {

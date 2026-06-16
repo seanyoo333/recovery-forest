@@ -1,3 +1,4 @@
+import type { Narrative } from "./ai-prescription.service";
 import { dominantSpecies } from "./phytoncide-index";
 import {
   airLabel,
@@ -201,4 +202,19 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
     },
     disclaimers: DISCLAIMERS,
   };
+}
+
+/**
+ * LLM 서술(Narrative)을 1순위 AI 필드에 덮어쓴다. 엔진 숫자·숲은 그대로 둔다.
+ * narrative 가 null 이면 호출하지 않으므로, 빌더의 규칙 템플릿이 그대로 남는다.
+ */
+export function applyNarrative(
+  output: PrescribeOutput,
+  narrative: Narrative,
+): PrescribeOutput {
+  output.user_summary.ai_state_reading = narrative.state_reading;
+  if (output.ranking[0]) output.ranking[0].ai_reason = narrative.why_this_forest;
+  output.top_pick_detail.ai_personal_plan = narrative.personal_plan;
+  output.top_pick_detail.ai_note = narrative.note;
+  return output;
 }
