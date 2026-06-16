@@ -59,10 +59,17 @@ describe("처방 출력 빌더 (엔진 → 화면 스키마)", () => {
     }
   });
 
-  it("회복 포인트 4칸과 트레이드오프 한 줄을 생성한다", () => {
+  it("강점 막대용 점수(접근성·대기질)와 피톤치드 근거, 트레이드오프를 채운다", () => {
     const out = build("comfort");
-    expect(out.top_pick_detail.recovery_points).toHaveLength(4);
-    expect(out.top_pick_detail.recovery_points?.[0].icon).toBeTruthy();
+    const b = out.ranking[0].engine_breakdown;
+    expect(b.distance_score).toBeGreaterThanOrEqual(0);
+    expect(b.air_score).toBeGreaterThanOrEqual(0);
+    expect(b.phyto_note).toContain("국립산림과학원");
     expect(out.top_pick_detail.tradeoff).toContain("1위");
+  });
+
+  it("주변 먹거리 샘플(예시)을 채운다", () => {
+    const out = build("comfort");
+    expect(out.top_pick_detail.nearby_food.length).toBeGreaterThan(0);
   });
 });

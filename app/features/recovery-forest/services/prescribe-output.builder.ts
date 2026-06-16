@@ -11,9 +11,9 @@ import {
 import type { KpomsbScores } from "../schemas/prescribe-input.schema";
 import type {
   ForestDetail,
+  NearbyFood,
   PrescribeOutput,
   RankingItem,
-  RecoveryPoint,
 } from "../schemas/prescribe-output.schema";
 
 /**
@@ -121,41 +121,17 @@ function cta(userType: UserType): string {
     : "이 처방을 저장하고, 방문 후 변화를 기록해 다음 숲 추천을 받아보세요.";
 }
 
-const GOAL_HEAL_DESC: Record<string, string> = {
-  수면: "조용한 숲길에서 잠의 리듬을 되찾아요",
-  스트레스: "긴장을 풀고 마음의 여유를 찾아요",
-  피로: "지친 몸과 마음을 천천히 회복해요",
-  우울: "오전 햇빛과 숲 기운으로 기분을 환기해요",
-  면역: "사계절 숲 기운으로 컨디션을 채워요",
-};
-
-/** "오늘의 회복 포인트" 4칸 — 수종·목표·유형·축에서 규칙 생성(점수 거부감 완화). */
-function recoveryPoints(
-  species: string,
-  healthGoal: string,
-  userType: UserType,
-  phyto: number,
-): RecoveryPoint[] {
-  const phytoStrong = phyto >= 50;
-  return [
-    {
-      icon: "tree",
-      title: `피톤치드 ${phytoStrong ? "가득한" : "품은"} ${species}림`,
-      desc: phytoStrong
-        ? "스트레스 완화에 도움이 될 수 있어요"
-        : "숲 향을 천천히 들이마셔 보세요",
-    },
-    userType === "comfort"
-      ? { icon: "walk", title: "가벼운 산책 코스", desc: "부담 없이 천천히 즐길 수 있어요" }
-      : { icon: "walk", title: "충분한 숲길 코스", desc: "능동적으로 걸으며 깊이 느껴요" },
-    {
-      icon: "meditation",
-      title: "정서 안정 · 마음 힐링",
-      desc: GOAL_HEAL_DESC[healthGoal] ?? "자연 속에서 마음을 가다듬어요",
-    },
-    { icon: "camera", title: "주변 관광과 연계", desc: "자연과 볼거리를 함께 즐겨요" },
-  ];
+/** 피톤치드 근거 한 줄 — 수종 순위(보고서) 기반. 강점 섹션 주인공 자막. */
+function phytoNote(species: string, phyto: number): string {
+  const rank = species === "편백" ? "최상위" : phyto >= 60 ? "상위" : phyto >= 40 ? "중상위" : "보통";
+  return `${species}림 ${rank} · 국립산림과학원 연구 근거`;
 }
+
+/** 주변 먹거리 샘플(예시) — API 연동 전 데모용. is_example 로 '예시' 표기. */
+const SAMPLE_FOOD: NearbyFood[] = [
+  { name: "산채비빔밥 명가", category: "한식", rating: 4.4 },
+  { name: "숲속 손두부", category: "한식", rating: 4.2 },
+];
 
 /** 정직성 한 줄 — 가장 약한 축을 유형 우선순위와 대비해 솔직히 안내. */
 function tradeoff(s: ForestScore, userType: UserType): string {
@@ -193,7 +169,6 @@ function detailFor(
     },
     itinerary: itinerary(visitDate, arrivalHour, s.forest.name),
     ai_note: aiNote(species, month),
-    recovery_points: recoveryPoints(species, healthGoal, userType, s.components.phyto),
     tradeoff: tradeoff(s, userType),
   };
 }
@@ -213,7 +188,10 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
       forest_name: s.forest.name,
       engine_breakdown: {
         distance_km: s.components.distanceKm,
+        distance_score: s.components.distance,
         phytoncide_index: s.components.phyto,
+        phyto_note: phytoNote(species, s.components.phyto),
+        air_score: s.components.air,
         pm25,
         air_label: airLabel(pm25),
         pm25_source: s.forest.pm25Source,
@@ -248,15 +226,9 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
         is_example: true,
       },
       itinerary: itinerary(visitDate, arrivalHour, top.forest.name),
-      nearby_food: [],
+      nearby_food: SAMPLE_FOOD,
       ai_note: aiNote(topSpecies, month),
       cta: cta(userType),
-      recovery_points: recoveryPoints(
-        topSpecies,
-        healthGoal,
-        userType,
-        top.components.phyto,
-      ),
       tradeoff: tradeoff(top, userType),
     },
     disclaimers: DISCLAIMERS,

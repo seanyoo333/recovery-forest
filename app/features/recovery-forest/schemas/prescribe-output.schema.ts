@@ -11,7 +11,10 @@ import { USER_TYPES } from "./prescribe-input.schema";
 
 export const engineBreakdownSchema = z.object({
   distance_km: z.number(), // [엔진/API]
-  phytoncide_index: z.number(), // [엔진] 0~100 상대 잠재력
+  distance_score: z.number().optional(), // [엔진] 접근성 0~100 (막대용)
+  phytoncide_index: z.number(), // [엔진] 0~100 상대 잠재력 (강점 주인공)
+  phyto_note: z.string().optional(), // 피톤치드 근거 한 줄
+  air_score: z.number().optional(), // [엔진] 대기질 0~100 (막대용)
   pm25: z.number(), // [API] ㎍/㎥ — 화면 표시용 현재 실측
   air_label: z.string(), // 쾌적/양호/주의
   pm25_source: z.string().optional(), // 청정넷 숲내 실측 / 에어코리아 시·도
@@ -32,14 +35,6 @@ export const recommendedProgramSchema = z.object({
   is_example: z.boolean(), // true면 "(예시)" 배지
 });
 
-/** "오늘의 회복 포인트" 4칸 — 점수 대신 혜택을 감성적으로(상태·수종 기반 규칙 생성). */
-export const recoveryPointSchema = z.object({
-  icon: z.string(), // "tree" | "walk" | "meditation" | "camera" 등
-  title: z.string(),
-  desc: z.string(),
-});
-export type RecoveryPoint = z.infer<typeof recoveryPointSchema>;
-
 export const nearbyFoodSchema = z.object({
   name: z.string(),
   category: z.string(),
@@ -57,7 +52,6 @@ export const forestDetailSchema = z.object({
     steps: z.array(itineraryStepSchema),
   }),
   ai_note: z.string(), // [AI 추론] 근거+시점
-  recovery_points: z.array(recoveryPointSchema).optional(),
   tradeoff: z.string().optional(), // 정직성 한 줄(약한 축 솔직 안내)
 });
 export type ForestDetail = z.infer<typeof forestDetailSchema>;
@@ -84,7 +78,6 @@ export const topPickDetailSchema = z.object({
   nearby_food: z.array(nearbyFoodSchema),
   ai_note: z.string(),
   cta: z.string(),
-  recovery_points: z.array(recoveryPointSchema).optional(),
   tradeoff: z.string().optional(),
 });
 export type TopPickDetail = z.infer<typeof topPickDetailSchema>;

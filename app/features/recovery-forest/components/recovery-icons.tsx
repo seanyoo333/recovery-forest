@@ -6,22 +6,9 @@ import {
   Home,
   Leaf,
   MapPin,
-  TreePine,
   Utensils,
   type LucideIcon,
 } from "lucide-react";
-
-/** 회복 포인트 icon 키 → lucide 아이콘. */
-const POINT_ICONS: Record<string, LucideIcon> = {
-  tree: TreePine,
-  walk: Footprints,
-  meditation: Flower2,
-  camera: Camera,
-};
-
-export function recoveryPointIcon(key: string): LucideIcon {
-  return POINT_ICONS[key] ?? Leaf;
-}
 
 /** 동선 활동 문구 → 대표 아이콘(타임라인 썸네일용). */
 export function activityIcon(activity: string): LucideIcon {
