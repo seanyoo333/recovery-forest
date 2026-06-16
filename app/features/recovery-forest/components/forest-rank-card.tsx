@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 
 import type { RankingItem } from "../schemas/prescribe-output.schema";
+import { forestImage } from "./forest-image";
 import { ProvenanceBadge } from "./provenance-badge";
 import { VisitTimeline } from "./visit-timeline";
 
@@ -74,7 +75,10 @@ export function ForestRankCard({ item }: { item: RankingItem }) {
                   {d.itinerary.date}
                 </span>
               </div>
-              <VisitTimeline steps={d.itinerary.steps} />
+              <VisitTimeline
+                steps={d.itinerary.steps}
+                forestImage={forestImage(b.species)}
+              />
             </div>
 
             <div className="rounded-xl border border-gray-200 p-3 text-sm">

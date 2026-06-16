@@ -13,6 +13,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/prescribe-result-page";
 
 import { ForestRankCard } from "../components/forest-rank-card";
+import { FOOD_IMAGE, forestImage } from "../components/forest-image";
 import { ForestStrengths } from "../components/forest-strengths";
 import { KpomsbRadar } from "../components/kpomsb-radar";
 import { ProvenanceBadge } from "../components/provenance-badge";
@@ -40,6 +41,7 @@ export default function PrescribeResultPage({
   const topRank = output.ranking[0];
   const b = topRank.engine_breakdown;
   const rest = output.ranking.slice(1);
+  const heroImage = forestImage(b.species);
 
   return (
     <div className="bg-gradient-to-b from-emerald-50/70 to-white">
@@ -50,7 +52,7 @@ export default function PrescribeResultPage({
             <div
               aria-hidden
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: "url(/recovery-forest.png)" }}
+              style={{ backgroundImage: `url(${heroImage})` }}
             />
             <div
               aria-hidden
@@ -174,7 +176,7 @@ export default function PrescribeResultPage({
             <h2 className="text-base font-semibold text-gray-900">여행 일정</h2>
             <span className="text-sm text-gray-400">{overlay.date}</span>
           </div>
-          <VisitTimeline steps={top.itinerary.steps} />
+          <VisitTimeline steps={top.itinerary.steps} forestImage={heroImage} />
         </section>
 
         {/* ⑥ 주변 — 먹거리·볼거리·교통 (샘플 + 예시 배지) */}
@@ -191,14 +193,23 @@ export default function PrescribeResultPage({
                 <Utensils className="size-3.5" aria-hidden />
                 먹거리
               </p>
-              {top.nearby_food.map((f) => (
-                <p key={f.name} className="text-sm text-gray-800">
-                  {f.name}{" "}
-                  <span className="text-gray-400">
-                    {f.category} · ★{f.rating}
-                  </span>
-                </p>
-              ))}
+              <div className="flex gap-2.5">
+                <img
+                  src={FOOD_IMAGE}
+                  alt=""
+                  className="size-14 shrink-0 rounded-xl object-cover shadow-sm"
+                />
+                <div className="flex flex-col gap-0.5">
+                  {top.nearby_food.map((f) => (
+                    <p key={f.name} className="text-sm text-gray-800">
+                      {f.name}{" "}
+                      <span className="text-gray-400">
+                        {f.category} · ★{f.rating}
+                      </span>
+                    </p>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-400">

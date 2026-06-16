@@ -1,11 +1,24 @@
 import type { ItineraryStep } from "../schemas/prescribe-output.schema";
+import { FOOD_IMAGE } from "./forest-image";
 import { activityIcon } from "./recovery-icons";
 
+function stepImage(activity: string, forestImage: string): string {
+  if (activity.includes("점심") || activity.includes("식사") || activity.includes("먹"))
+    return FOOD_IMAGE;
+  return forestImage;
+}
+
 /**
- * 방문 동선 타임라인(카드형). 각 스텝에 placeholder 썸네일 + 활동 아이콘 + 시간·활동·장소.
- * 사진은 데모 플레이스홀더(recovery-forest.png) — 추후 단계별 실제 사진으로 교체.
+ * 방문 동선 타임라인(카드형). 각 스텝에 사진 썸네일 + 활동 아이콘 + 시간·활동·장소.
+ * forestImage = 수종별 숲 사진(스텝이 식사면 음식 사진). 데모 스톡 — 추후 교체.
  */
-export function VisitTimeline({ steps }: { steps: ItineraryStep[] }) {
+export function VisitTimeline({
+  steps,
+  forestImage = "/recovery-forest.png",
+}: {
+  steps: ItineraryStep[];
+  forestImage?: string;
+}) {
   return (
     <ol className="flex flex-col gap-3">
       {steps.map((step, i) => {
@@ -19,7 +32,7 @@ export function VisitTimeline({ steps }: { steps: ItineraryStep[] }) {
               <div
                 aria-hidden
                 className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: "url(/recovery-forest.png)" }}
+                style={{ backgroundImage: `url(${stepImage(step.activity, forestImage)})` }}
               />
               <div aria-hidden className="absolute inset-0 bg-emerald-950/30" />
               <span className="absolute inset-0 flex items-center justify-center text-white">
