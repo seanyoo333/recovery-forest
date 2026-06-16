@@ -248,7 +248,19 @@ export default function PrescribeResultPage({
                 <Camera className="size-3.5" aria-hidden />
                 볼거리
               </p>
-              <p className="text-sm text-gray-800">출렁다리 · 자연휴양림 산책로</p>
+              <div className="flex gap-2.5">
+                <img
+                  src="/bridge.jpg"
+                  alt=""
+                  className="size-14 shrink-0 rounded-xl object-cover shadow-sm"
+                />
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-sm text-gray-800">
+                    출렁다리 <span className="text-gray-400">자연 명소</span>
+                  </p>
+                  <p className="text-sm text-gray-800">자연휴양림 산책로</p>
+                </div>
+              </div>
             </div>
           </div>
           <p className="flex items-center gap-1.5 border-t border-gray-100 pt-3 text-sm text-gray-600">

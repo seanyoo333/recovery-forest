@@ -6,6 +6,7 @@
 - `forest-hinoki.jpg` — 편백림(햇살 비치는 ヒノキ林). Wikimedia Commons.
 - `forest-pine.jpg` — 소나무 숲길(La Palma, path to Time). Wikimedia Commons.
 - `food-bibimbap.jpg` — 비빔밥(Korean food). Wikimedia Commons.
+- `bridge.jpg` — 출렁다리(볼거리). 직접 추가.
 - `recovery-forest.png` — 기본 숲 능선길(기존 보유).
 
 수종 → 사진 매핑: `app/features/recovery-forest/components/forest-image.ts`
