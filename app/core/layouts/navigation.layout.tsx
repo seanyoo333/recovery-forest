@@ -9,6 +9,12 @@ export default function NavigationLayout() {
             회복의 숲
           </Link>
           <div className="flex items-center gap-4 text-sm">
+            <Link
+              to="/prescribe"
+              className="font-medium text-emerald-700 hover:text-emerald-800"
+            >
+              맞춤 처방
+            </Link>
             <Link to="/recommend" className="text-gray-700 hover:text-emerald-700">
               추천 받기
             </Link>

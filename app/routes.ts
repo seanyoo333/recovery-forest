@@ -21,6 +21,15 @@ export default [
       ),
     ]),
 
+    // K-POMS-B 기반 AI 맞춤 처방 (새 모델 — 데모 픽스처)
+    ...prefix("/prescribe", [
+      index("features/recovery-forest/pages/prescribe-input-page.tsx"),
+      route(
+        "/result",
+        "features/recovery-forest/pages/prescribe-result-page.tsx",
+      ),
+    ]),
+
     route(
       "/forests/:forestId",
       "features/recovery-forest/pages/forest-detail-page.tsx",
