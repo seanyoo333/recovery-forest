@@ -37,10 +37,12 @@ export type RankableForest = {
   id?: string;
   name: string;
   region?: string;
+  /** 단축 시·도(에어코리아 sidoName) — 실시간 미세먼지·기상 최근접 조회용. */
+  sido?: string;
   latitude: number;
   longitude: number;
   treeSpecies: string[];
-  // 청정넷 최근접 관측소 실시간(없으면 폴백값 사용)
+  // 에어코리아/기상청 최근접(시·도) 실시간·예보(없으면 폴백값 사용)
   pm25?: number | null;
   tempC?: number | null;
   humidityPct?: number | null;

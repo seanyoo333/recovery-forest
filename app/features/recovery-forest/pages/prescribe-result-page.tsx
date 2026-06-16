@@ -18,6 +18,7 @@ import {
   type UserType,
 } from "../schemas/prescribe-input.schema";
 import { generatePrescriptionNarrative } from "../services/ai-prescription.service";
+import { enrichForests } from "../services/forest-enrich.service";
 import { optimalTime, rankForests } from "../services/forest-ranking";
 import { loadRankableForests } from "../services/healing-forest.repository";
 import {
@@ -66,10 +67,14 @@ export async function loader({ request }: Route.LoaderArgs) {
       const [client] = makeRecoveryServerClient(request);
       const forests = await loadRankableForests(client);
       if (forests.length > 0) {
+        // 실시간/예보 미세먼지·기상 주입(실패해도 폴백 상수로 graceful degrade).
+        const enriched = await enrichForests(forests, date, arrivalHour).catch(
+          () => forests,
+        );
         const scored = rankForests({
           user: { lat, lon },
           userType,
-          forests,
+          forests: enriched,
           month,
           hour: arrivalHour,
         });

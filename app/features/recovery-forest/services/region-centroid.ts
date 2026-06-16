@@ -64,3 +64,12 @@ export function userCoordsFromRegion(sido: string, _sigungu: string): LatLon {
   const key = resolveSidoKey(sido);
   return key ? SIDO_CENTROIDS[key] : FALLBACK_COORDS;
 }
+
+/**
+ * 전체 주소("경기도 양평군 …", "전남 장흥군 …")의 첫 토큰에서 단축 시·도 키를 뽑는다.
+ * 반환값은 SIDO_CENTROIDS 키이자 에어코리아 sidoName(서울/경기/전남 …)과 동일.
+ */
+export function sidoFromAddress(address: string): string | null {
+  const first = address.trim().split(/\s+/)[0] ?? "";
+  return resolveSidoKey(first);
+}

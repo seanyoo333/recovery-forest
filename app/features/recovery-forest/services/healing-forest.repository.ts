@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { RankableForest } from "./forest-ranking";
+import { sidoFromAddress } from "./region-centroid";
 
 /**
  * healing_forests(38개 실데이터: 카카오 지오코딩 좌표 + 수종)를 처방 엔진 입력
@@ -14,6 +15,7 @@ type HealingForestRow = {
   seq: number;
   name: string;
   region: string | null;
+  address: string | null;
   lat: number | null;
   lon: number | null;
   dominant_species: string | null;
@@ -24,7 +26,7 @@ export async function loadRankableForests(
 ): Promise<RankableForest[]> {
   const { data, error } = await client
     .from("healing_forests")
-    .select("seq, name, region, lat, lon, dominant_species")
+    .select("seq, name, region, address, lat, lon, dominant_species")
     .not("lat", "is", null)
     .not("lon", "is", null);
   if (error) throw error;
@@ -36,6 +38,8 @@ export async function loadRankableForests(
       id: String(r.seq),
       name: r.name,
       region: r.region ?? undefined,
+      // 주소 첫 토큰 → 단축 시·도(에어코리아/기상청 최근접 조회 키).
+      sido: (r.address ? sidoFromAddress(r.address) : null) ?? undefined,
       latitude: r.lat as number,
       longitude: r.lon as number,
       // 수종 미입력이면 빈 배열 → 엔진이 미상(중립)으로 폴백.
