@@ -32,6 +32,14 @@ export const recommendedProgramSchema = z.object({
   is_example: z.boolean(), // true면 "(예시)" 배지
 });
 
+/** "오늘의 회복 포인트" 4칸 — 점수 대신 혜택을 감성적으로(상태·수종 기반 규칙 생성). */
+export const recoveryPointSchema = z.object({
+  icon: z.string(), // "tree" | "walk" | "meditation" | "camera" 등
+  title: z.string(),
+  desc: z.string(),
+});
+export type RecoveryPoint = z.infer<typeof recoveryPointSchema>;
+
 export const nearbyFoodSchema = z.object({
   name: z.string(),
   category: z.string(),
@@ -49,6 +57,8 @@ export const forestDetailSchema = z.object({
     steps: z.array(itineraryStepSchema),
   }),
   ai_note: z.string(), // [AI 추론] 근거+시점
+  recovery_points: z.array(recoveryPointSchema).optional(),
+  tradeoff: z.string().optional(), // 정직성 한 줄(약한 축 솔직 안내)
 });
 export type ForestDetail = z.infer<typeof forestDetailSchema>;
 
@@ -74,6 +84,8 @@ export const topPickDetailSchema = z.object({
   nearby_food: z.array(nearbyFoodSchema),
   ai_note: z.string(),
   cta: z.string(),
+  recovery_points: z.array(recoveryPointSchema).optional(),
+  tradeoff: z.string().optional(),
 });
 export type TopPickDetail = z.infer<typeof topPickDetailSchema>;
 

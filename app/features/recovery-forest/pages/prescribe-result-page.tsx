@@ -1,146 +1,41 @@
-import { BookmarkPlus, Leaf, MapPin, RotateCcw, Utensils } from "lucide-react";
-import { Link } from "react-router";
+import {
+  BookmarkPlus,
+  Leaf,
+  MapPin,
+  RotateCcw,
+  Route as RouteIcon,
+  Scale,
+  Utensils,
+} from "lucide-react";
+import { Link, useLocation } from "react-router";
 
 import type { Route } from "./+types/prescribe-result-page";
 
 import { ForestRankCard } from "../components/forest-rank-card";
 import { KpomsbRadar } from "../components/kpomsb-radar";
 import { ProvenanceBadge } from "../components/provenance-badge";
+import { RecoveryPoints } from "../components/recovery-points";
 import { VisitTimeline } from "../components/visit-timeline";
+import { USER_TYPE_LABELS } from "../schemas/prescribe-input.schema";
 import {
-  COMFORT_INPUT_DEMO,
-  EXPLORER_INPUT_DEMO,
-  pickDemoOutput,
-} from "../fixtures/prescription-demo";
-import {
-  USER_TYPE_LABELS,
-  type KpomsbScores,
-  type UserType,
-} from "../schemas/prescribe-input.schema";
-import { generatePrescriptionNarrative } from "../services/ai-prescription.service";
-import { enrichForests } from "../services/forest-enrich.service";
-import { optimalTime, rankForests } from "../services/forest-ranking";
-import { loadRankableForests } from "../services/healing-forest.repository";
-import {
-  applyNarrative,
-  buildPrescribeOutput,
-} from "../services/prescribe-output.builder";
-import { makeRecoveryServerClient } from "~/lib/supabase.server";
+  loadPrescription,
+  type PrescriptionData,
+} from "../services/prescription-loader";
 
 export function meta(_args: Route.MetaArgs) {
   return [{ title: "AI 맞춤 처방 · 회복의 숲" }];
 }
 
-function parseKpomsb(raw: string | null): KpomsbScores | null {
-  if (!raw) return null;
-  const p = raw.split(",").map(Number);
-  if (p.length !== 6 || p.some((n) => !Number.isFinite(n))) return null;
-  // 순서: 긴장,우울,분노,활력,피로,혼란 (입력 submit 과 동일)
-  return { 긴장: p[0], 우울: p[1], 분노: p[2], 활력: p[3], 피로: p[4], 혼란: p[5] };
-}
-
-function monthFromDate(date: string): number {
-  const t = Date.parse(date);
-  return Number.isNaN(t) ? new Date().getMonth() + 1 : new Date(t).getMonth() + 1;
-}
-
 export async function loader({ request }: Route.LoaderArgs) {
-  const url = new URL(request.url);
-  const sp = url.searchParams;
-  const userType: UserType =
-    sp.get("user_type") === "explorer" ? "explorer" : "comfort";
-  const goal = sp.get("health_goal") ?? "일반";
-  const label = sp.get("loc_label") ?? "";
-  const date = sp.get("visit_date") ?? "";
-  const note = (sp.get("note") ?? "").trim();
-  const lat = Number(sp.get("loc_lat"));
-  const lon = Number(sp.get("loc_lon"));
-  const arrivalHour = Number(sp.get("arrival_hour")) || 10;
-  const fallbackInput =
-    userType === "explorer" ? EXPLORER_INPUT_DEMO : COMFORT_INPUT_DEMO;
-  const kpomsb = parseKpomsb(sp.get("kpomsb")) ?? fallbackInput.kpomsb_pre;
-  const month = monthFromDate(date);
-
-  // 실제 엔진 경로: 좌표가 있으면 healing_forests 38개로 3축 랭킹 후 화면 스키마로 매핑.
-  if (Number.isFinite(lat) && Number.isFinite(lon) && lat !== 0 && lon !== 0) {
-    try {
-      const [client] = makeRecoveryServerClient(request);
-      const forests = await loadRankableForests(client);
-      if (forests.length > 0) {
-        // 실시간/예보 미세먼지·기상 주입(실패해도 폴백 상수로 graceful degrade).
-        const enriched = await enrichForests(forests, date, arrivalHour).catch(
-          () => forests,
-        );
-        const scored = rankForests({
-          user: { lat, lon },
-          userType,
-          forests: enriched,
-          month,
-          hour: arrivalHour,
-        });
-        const output = buildPrescribeOutput({
-          scored,
-          userType,
-          healthGoal: goal,
-          visitDate: date,
-          month,
-          arrivalHour,
-          note,
-          kpomsb,
-        });
-
-        // AI 서술(LLM): 1순위 개인화 문구를 덮어쓴다. 실패/키없음이면 규칙 템플릿 유지.
-        const top = output.ranking[0];
-        const narrative = await generatePrescriptionNarrative({
-          user: {
-            user_type: userType,
-            health_goal: goal,
-            free_text: note,
-            kpomsb_pre: kpomsb,
-          },
-          engine_pick: {
-            name: top.forest_name,
-            score: top.engine_score,
-            phytoncide_index: top.engine_breakdown.phytoncide_index,
-            distance_km: top.engine_breakdown.distance_km,
-            pm25: top.engine_breakdown.pm25,
-            air_label: top.engine_breakdown.air_label,
-            species: top.engine_breakdown.species,
-            visit_time_tip: optimalTime(top.engine_breakdown.species, month),
-          },
-        });
-        if (narrative) applyNarrative(output, narrative);
-
-        return { output, kpomsb, overlay: { label, date, goal, note } };
-      }
-    } catch {
-      // env 미설정·DB 오류 시 픽스처로 폴백(데모 안전).
-    }
-  }
-
-  // 폴백: 좌표 없거나 데이터 로드 실패 → 픽스처 데모.
-  const output = pickDemoOutput(userType);
-  return {
-    output,
-    kpomsb,
-    overlay: {
-      label: label || fallbackInput.location.label || "",
-      date: date || fallbackInput.visit_plan.date,
-      goal: goal || output.user_summary.health_goal,
-      note,
-    },
-  };
+  return loadPrescription(request);
 }
 
 export default function PrescribeResultPage({
   loaderData,
 }: Route.ComponentProps) {
-  const { output, kpomsb, overlay } = loaderData as {
-    output: ReturnType<typeof pickDemoOutput>;
-    kpomsb: KpomsbScores;
-    overlay: { label: string; date: string; goal: string; note: string };
-  };
+  const { output, kpomsb, overlay } = loaderData as PrescriptionData;
 
+  const location = useLocation();
   const top = output.top_pick_detail;
   const topRank = output.ranking[0];
   const rest = output.ranking.slice(1);
@@ -190,8 +85,8 @@ export default function PrescribeResultPage({
 
         {/* 1위 상세 — 처방전(타임라인 여정형) */}
         <section className="overflow-hidden rounded-3xl border border-emerald-200 bg-white shadow-lg shadow-emerald-950/10">
-          {/* 숲 사진을 헤더 배경으로 — 몰입감 */}
-          <header className="relative flex min-h-[160px] items-end overflow-hidden p-6">
+          {/* B-1 숲 대표 사진(데모 플레이스홀더) — "가고 싶다"의 핵심 */}
+          <header className="relative flex min-h-[240px] items-end overflow-hidden p-6">
             <div
               aria-hidden
               className="absolute inset-0 bg-cover bg-center"
@@ -199,54 +94,85 @@ export default function PrescribeResultPage({
             />
             <div
               aria-hidden
-              className="absolute inset-0 bg-gradient-to-t from-emerald-950/85 via-emerald-950/40 to-emerald-950/10"
+              className="absolute inset-0 bg-gradient-to-t from-emerald-950/90 via-emerald-950/45 to-emerald-950/5"
             />
-            <div className="relative flex w-full items-end justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-bold tracking-wide text-emerald-100">
-                  오늘의 처방 · 1순위
-                </span>
-                <h2 className="flex items-center gap-2 text-2xl font-bold text-white">
-                  <Leaf className="size-6 text-emerald-300" aria-hidden />
-                  {top.forest_name}
-                </h2>
+            <div className="relative flex w-full flex-col gap-3">
+              <div className="flex items-end justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-bold tracking-wide text-emerald-100">
+                    오늘의 처방 · 1순위
+                  </span>
+                  <h2 className="flex items-center gap-2 text-2xl font-bold text-white">
+                    <Leaf className="size-6 text-emerald-300" aria-hidden />
+                    {top.forest_name}
+                  </h2>
+                </div>
+                {/* B-3 점수 → 매칭률 */}
+                <div className="flex shrink-0 flex-col items-center rounded-2xl bg-white/15 px-4 py-2 backdrop-blur-sm">
+                  <span className="text-3xl leading-none font-bold tabular-nums text-white">
+                    {Math.round(topRank.engine_score)}%
+                  </span>
+                  <span className="mt-1 text-[10px] text-emerald-50/90">
+                    나와 맞아요
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col items-end">
-                <span className="text-3xl font-bold tabular-nums text-white">
-                  {topRank.engine_score}
-                </span>
-                <span className="text-[10px] text-emerald-100/80">
-                  엔진 종합점수
-                </span>
-              </div>
+              <p className="text-sm text-emerald-50/90">
+                자연이 주는 치유로, 오늘의 나를 회복하세요
+              </p>
             </div>
           </header>
 
           <div className="flex flex-col gap-6 p-6">
-            {/* 엔진 계산 지표 */}
-            <div className="flex flex-col gap-2">
-              <ProvenanceBadge kind="engine" label="엔진 계산 지표" />
-              <div className="flex flex-wrap gap-2 text-sm">
-                <Metric label="수종" value={topRank.engine_breakdown.species} />
-                <Metric
-                  label="거리"
-                  value={`${topRank.engine_breakdown.distance_km}km`}
-                />
-                <Metric
-                  label="피톤치드 잠재력"
-                  value={`${topRank.engine_breakdown.phytoncide_index}/100`}
-                />
-                <Metric
-                  label="미세먼지"
-                  value={`PM2.5 ${topRank.engine_breakdown.pm25} · ${topRank.engine_breakdown.air_label}`}
-                />
-              </div>
-              {topRank.engine_breakdown.pm25_source ? (
-                <p className="text-[11px] text-gray-400">
-                  미세먼지 출처: {topRank.engine_breakdown.pm25_source} · 현재 실측
+            {/* B-4 트레이드오프 — 약점도 솔직히 */}
+            {top.tradeoff ? (
+              <div className="flex items-start gap-2.5 rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+                <Scale className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                <p className="text-sm leading-relaxed text-amber-900">
+                  {top.tradeoff}
                 </p>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
+
+            {/* B-2 오늘의 회복 포인트 4칸 */}
+            {top.recovery_points && top.recovery_points.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <h3 className="text-base font-semibold text-gray-900">
+                  오늘의 회복 포인트
+                </h3>
+                <RecoveryPoints points={top.recovery_points} />
+              </div>
+            ) : null}
+
+            {/* 측정 지표 — 근거로 접어두기(A4 유지, 숫자 거부감 완화) */}
+            <details className="rounded-2xl border border-gray-100 bg-gray-50/60">
+              <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium text-gray-600">
+                <ProvenanceBadge kind="engine" />
+                측정 지표 자세히 보기
+              </summary>
+              <div className="flex flex-col gap-2 border-t border-gray-100 p-4">
+                <div className="flex flex-wrap gap-2 text-sm">
+                  <Metric label="수종" value={topRank.engine_breakdown.species} />
+                  <Metric
+                    label="거리"
+                    value={`${topRank.engine_breakdown.distance_km}km`}
+                  />
+                  <Metric
+                    label="피톤치드 잠재력"
+                    value={`${topRank.engine_breakdown.phytoncide_index}/100`}
+                  />
+                  <Metric
+                    label="미세먼지"
+                    value={`PM2.5 ${topRank.engine_breakdown.pm25} · ${topRank.engine_breakdown.air_label}`}
+                  />
+                </div>
+                {topRank.engine_breakdown.pm25_source ? (
+                  <p className="text-[11px] text-gray-400">
+                    미세먼지 출처: {topRank.engine_breakdown.pm25_source} · 현재 실측
+                  </p>
+                ) : null}
+              </div>
+            </details>
 
             {/* AI 맞춤 실천 계획 */}
             <div className="flex flex-col gap-3 rounded-2xl bg-indigo-50/60 p-5">
@@ -316,6 +242,13 @@ export default function PrescribeResultPage({
               </p>
             </div>
 
+            {/* 여행 일정표 화면으로(동일 처방) */}
+            <Link
+              to={{ pathname: "/prescribe/itinerary", search: location.search }}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-3.5 font-semibold text-white shadow-sm transition hover:bg-emerald-700 hover:brightness-105"
+            >
+              <RouteIcon className="size-5" aria-hidden />이 처방으로 여행 일정 보기
+            </Link>
           </div>
         </section>
 

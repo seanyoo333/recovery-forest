@@ -20,6 +20,10 @@ export default [
         "/result",
         "features/recovery-forest/pages/prescribe-result-page.tsx",
       ),
+      route(
+        "/itinerary",
+        "features/recovery-forest/pages/prescribe-itinerary-page.tsx",
+      ),
     ]),
 
     route("/about", "features/recovery-forest/pages/about-page.tsx"),

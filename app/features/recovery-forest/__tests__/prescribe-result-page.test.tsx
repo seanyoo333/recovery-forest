@@ -37,7 +37,7 @@ describe("처방 결과 페이지", () => {
     expect(text).toContain("잣향기 푸른숲");
     expect(text).toContain("청량리역"); // 타임라인 스텝
     expect(text).toContain("AI 맞춤 실천 계획");
-    expect(text).toContain("엔진 계산 지표");
+    expect(text).toContain("측정 지표 자세히 보기"); // 근거(엔진 지표)는 접어둠
     expect(text).toContain("산음 치유의 숲"); // 2순위 요약 카드
   });
 });

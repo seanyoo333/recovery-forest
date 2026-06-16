@@ -58,4 +58,11 @@ describe("처방 출력 빌더 (엔진 → 화면 스키마)", () => {
       expect(out.ranking[1].detail).toBeTruthy();
     }
   });
+
+  it("회복 포인트 4칸과 트레이드오프 한 줄을 생성한다", () => {
+    const out = build("comfort");
+    expect(out.top_pick_detail.recovery_points).toHaveLength(4);
+    expect(out.top_pick_detail.recovery_points?.[0].icon).toBeTruthy();
+    expect(out.top_pick_detail.tradeoff).toContain("1위");
+  });
 });

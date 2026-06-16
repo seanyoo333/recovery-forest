@@ -13,6 +13,7 @@ import type {
   ForestDetail,
   PrescribeOutput,
   RankingItem,
+  RecoveryPoint,
 } from "../schemas/prescribe-output.schema";
 
 /**
@@ -120,23 +121,80 @@ function cta(userType: UserType): string {
     : "이 처방을 저장하고, 방문 후 변화를 기록해 다음 숲 추천을 받아보세요.";
 }
 
+const GOAL_HEAL_DESC: Record<string, string> = {
+  수면: "조용한 숲길에서 잠의 리듬을 되찾아요",
+  스트레스: "긴장을 풀고 마음의 여유를 찾아요",
+  피로: "지친 몸과 마음을 천천히 회복해요",
+  우울: "오전 햇빛과 숲 기운으로 기분을 환기해요",
+  면역: "사계절 숲 기운으로 컨디션을 채워요",
+};
+
+/** "오늘의 회복 포인트" 4칸 — 수종·목표·유형·축에서 규칙 생성(점수 거부감 완화). */
+function recoveryPoints(
+  species: string,
+  healthGoal: string,
+  userType: UserType,
+  phyto: number,
+): RecoveryPoint[] {
+  const phytoStrong = phyto >= 50;
+  return [
+    {
+      icon: "tree",
+      title: `피톤치드 ${phytoStrong ? "가득한" : "품은"} ${species}림`,
+      desc: phytoStrong
+        ? "스트레스 완화에 도움이 될 수 있어요"
+        : "숲 향을 천천히 들이마셔 보세요",
+    },
+    userType === "comfort"
+      ? { icon: "walk", title: "가벼운 산책 코스", desc: "부담 없이 천천히 즐길 수 있어요" }
+      : { icon: "walk", title: "충분한 숲길 코스", desc: "능동적으로 걸으며 깊이 느껴요" },
+    {
+      icon: "meditation",
+      title: "정서 안정 · 마음 힐링",
+      desc: GOAL_HEAL_DESC[healthGoal] ?? "자연 속에서 마음을 가다듬어요",
+    },
+    { icon: "camera", title: "주변 관광과 연계", desc: "자연과 볼거리를 함께 즐겨요" },
+  ];
+}
+
+/** 정직성 한 줄 — 가장 약한 축을 유형 우선순위와 대비해 솔직히 안내. */
+function tradeoff(s: ForestScore, userType: UserType): string {
+  const c = s.components;
+  const axes = [
+    { key: "distance", name: "가까움", score: c.distance },
+    { key: "phyto", name: "피톤치드", score: c.phyto },
+    { key: "air", name: "공기 맑기", score: c.air },
+  ];
+  const weak = axes.reduce((a, b) => (b.score < a.score ? b : a));
+  const priorityName = userType === "comfort" ? "가까움" : "피톤치드";
+  const priorityDesc =
+    userType === "comfort" ? "가까움과 편안함" : "피톤치드와 숲의 질";
+
+  if (weak.name === priorityName) {
+    return `${priorityName}이 최상은 아니지만, 종합적으로 지금의 당신께 가장 균형 잡힌 선택이라 1위로 골랐어요.`;
+  }
+  return `${weak.name}은 최상은 아니지만, ${priorityDesc}이 더 중요한 당신껜 이 숲이 1위예요.`;
+}
+
 function detailFor(
-  scoredForestName: string,
+  s: ForestScore,
   userType: UserType,
   healthGoal: string,
-  species: string,
   visitDate: string,
   month: number,
   arrivalHour: number,
 ): ForestDetail {
+  const species = dominantSpecies(s.forest.treeSpecies);
   return {
     ai_personal_plan: personalPlan(userType, healthGoal, species),
     recommended_program: {
       title: PROGRAM_EXAMPLES[healthGoal] ?? "산림치유 기본 프로그램",
       is_example: true,
     },
-    itinerary: itinerary(visitDate, arrivalHour, scoredForestName),
+    itinerary: itinerary(visitDate, arrivalHour, s.forest.name),
     ai_note: aiNote(species, month),
+    recovery_points: recoveryPoints(species, healthGoal, userType, s.components.phyto),
+    tradeoff: tradeoff(s, userType),
   };
 }
 
@@ -166,15 +224,7 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
       detail:
         i === 0
           ? undefined
-          : detailFor(
-              s.forest.name,
-              userType,
-              healthGoal,
-              species,
-              visitDate,
-              month,
-              arrivalHour,
-            ),
+          : detailFor(s, userType, healthGoal, visitDate, month, arrivalHour),
     };
   });
 
@@ -201,6 +251,13 @@ export function buildPrescribeOutput(args: BuildArgs): PrescribeOutput {
       nearby_food: [],
       ai_note: aiNote(topSpecies, month),
       cta: cta(userType),
+      recovery_points: recoveryPoints(
+        topSpecies,
+        healthGoal,
+        userType,
+        top.components.phyto,
+      ),
+      tradeoff: tradeoff(top, userType),
     },
     disclaimers: DISCLAIMERS,
   };
