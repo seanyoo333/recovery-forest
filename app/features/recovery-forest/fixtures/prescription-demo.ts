@@ -79,7 +79,7 @@ export const COMFORT_DEMO: PrescribeOutput = {
         phytoncide_index: 46,
         pm25: 16,
         air_label: "양호",
-        species: "침활혼효림",
+        species: "혼효림",
       },
       ai_reason: "조금 더 멀지만 한적해, 사람 많은 곳이 부담스러울 때 대안이 됩니다.",
       detail: {

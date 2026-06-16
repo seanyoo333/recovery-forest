@@ -152,7 +152,7 @@ export const SAMPLE_FORESTS: RankableForest[] = [
   { name: "장흥 편백 치유의 숲", region: "전남", latitude: 34.68, longitude: 126.91, treeSpecies: ["편백"], pm25: 12, tempC: 27, humidityPct: 72, windMs: 1.2 },
   { name: "축령산 편백 치유의 숲", region: "전남", latitude: 35.42, longitude: 126.86, treeSpecies: ["편백"], pm25: 10, tempC: 26, humidityPct: 70, windMs: 1.0 },
   { name: "잣향기 푸른숲", region: "경기", latitude: 37.83, longitude: 127.39, treeSpecies: ["잣나무"], pm25: 18, tempC: 25, humidityPct: 65, windMs: 1.5 },
-  { name: "산음 치유의 숲", region: "경기", latitude: 37.65, longitude: 127.70, treeSpecies: ["침활혼효림"], pm25: 16, tempC: 25, humidityPct: 66, windMs: 1.4 },
+  { name: "산음 치유의 숲", region: "경기", latitude: 37.65, longitude: 127.70, treeSpecies: ["혼효림"], pm25: 16, tempC: 25, humidityPct: 66, windMs: 1.4 },
   { name: "대관령 치유의 숲", region: "강원", latitude: 37.68, longitude: 128.72, treeSpecies: ["소나무"], pm25: 9, tempC: 23, humidityPct: 68, windMs: 2.2 },
   { name: "부산 치유의 숲", region: "부산", latitude: 35.27, longitude: 129.14, treeSpecies: ["기타활엽수"], pm25: 22, tempC: 28, humidityPct: 74, windMs: 1.8 },
 ];

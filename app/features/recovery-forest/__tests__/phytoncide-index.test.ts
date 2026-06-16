@@ -33,7 +33,7 @@ describe("phytoncidePotentialIndex — 수종 순위", () => {
   it("should_fall_back_to_default_for_unknown_species", () => {
     const unknown = phytoncidePotentialIndex({ species: "미상수종", ...cond });
     const broadleaf = phytoncidePotentialIndex({ species: "기타활엽수", ...cond });
-    // 미상(DEFAULT_BASE 28) > 기타활엽수(22)
+    // 미매핑 수종 = DEFAULT_BASE(30, 미상) > 기타활엽수(22)
     expect(unknown).toBeGreaterThan(broadleaf);
   });
 });
@@ -87,11 +87,11 @@ describe("phytoncidePotentialIndex — 기상 방향 (p.88, p<.01)", () => {
 
 describe("dominantSpecies — tree_species 배열 어댑터", () => {
   it("should_pick_highest_base_species", () => {
-    expect(dominantSpecies(["편백", "신갈나무"])).toBe("편백");
+    expect(dominantSpecies(["편백", "기타활엽수"])).toBe("편백");
     expect(dominantSpecies(["잣나무", "소나무"])).toBe("소나무");
   });
 
-  it("should_default_for_empty_array", () => {
-    expect(dominantSpecies([])).toBe("기타활엽수");
+  it("should_default_to_unknown_for_empty_array", () => {
+    expect(dominantSpecies([])).toBe("미상");
   });
 });

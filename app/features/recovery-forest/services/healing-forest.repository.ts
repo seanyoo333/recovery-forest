@@ -16,7 +16,7 @@ type HealingForestRow = {
   region: string | null;
   lat: number | null;
   lon: number | null;
-  species: string | null;
+  dominant_species: string | null;
 };
 
 export async function loadRankableForests(
@@ -24,7 +24,7 @@ export async function loadRankableForests(
 ): Promise<RankableForest[]> {
   const { data, error } = await client
     .from("healing_forests")
-    .select("seq, name, region, lat, lon, species")
+    .select("seq, name, region, lat, lon, dominant_species")
     .not("lat", "is", null)
     .not("lon", "is", null);
   if (error) throw error;
@@ -38,7 +38,7 @@ export async function loadRankableForests(
       region: r.region ?? undefined,
       latitude: r.lat as number,
       longitude: r.lon as number,
-      // 수종 미상이면 빈 배열 → 엔진이 기타활엽수로 폴백.
-      treeSpecies: r.species ? [r.species] : [],
+      // 수종 미입력이면 빈 배열 → 엔진이 미상(중립)으로 폴백.
+      treeSpecies: r.dominant_species ? [r.dominant_species] : [],
     }));
 }

@@ -9,7 +9,7 @@ type Row = {
   region: string | null;
   lat: number | null;
   lon: number | null;
-  species: string | null;
+  dominant_species: string | null;
 };
 
 /** PostgREST 빌더 흉내: from().select().not().not() 가 thenable 로 resolve. */
@@ -26,7 +26,7 @@ function mockClient(rows: Row[]): SupabaseClient {
 describe("healing-forest repository", () => {
   it("healing_forests 행을 RankableForest 로 매핑한다", async () => {
     const client = mockClient([
-      { seq: 3, name: "잣향기 푸른숲", region: "경기도", lat: 37.77, lon: 127.33, species: "잣나무" },
+      { seq: 3, name: "잣향기 푸른숲", region: "경기도", lat: 37.77, lon: 127.33, dominant_species: "잣나무" },
     ]);
     const forests = await loadRankableForests(client);
     expect(forests).toHaveLength(1);
@@ -38,9 +38,9 @@ describe("healing-forest repository", () => {
     });
   });
 
-  it("수종 미상은 빈 treeSpecies 로 둔다(엔진이 폴백)", async () => {
+  it("수종 미입력은 빈 treeSpecies 로 둔다(엔진이 미상 폴백)", async () => {
     const client = mockClient([
-      { seq: 1, name: "산음 치유의숲", region: "경기도", lat: 37.6, lon: 127.5, species: null },
+      { seq: 1, name: "산음 치유의숲", region: "경기도", lat: 37.6, lon: 127.5, dominant_species: null },
     ]);
     const forests = await loadRankableForests(client);
     expect(forests[0].treeSpecies).toEqual([]);
